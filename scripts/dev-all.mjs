@@ -2,6 +2,8 @@ import { spawn, spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 
 const isWindows = process.platform === "win32";
+const exposeToLan = process.argv.includes("--lan");
+const host = exposeToLan ? "0.0.0.0" : "127.0.0.1";
 const projectRoot = fileURLToPath(new URL("../", import.meta.url));
 const nextCli = fileURLToPath(new URL("../node_modules/next/dist/bin/next", import.meta.url));
 const wranglerCli = fileURLToPath(new URL("../node_modules/wrangler/bin/wrangler.js", import.meta.url));
@@ -15,8 +17,19 @@ function run(cli, args) {
 }
 
 const children = [
-  run(wranglerCli, ["dev", "--config", "backend/wrangler.jsonc", "--local", "--persist-to", ".wrangler/state", "--port", "8787"]),
-  run(nextCli, ["dev", "--webpack", "--hostname", "127.0.0.1", "--port", "3000"]),
+  run(wranglerCli, [
+    "dev",
+    "--config",
+    "backend/wrangler.jsonc",
+    "--local",
+    "--persist-to",
+    ".wrangler/state",
+    "--ip",
+    host,
+    "--port",
+    "8787",
+  ]),
+  run(nextCli, ["dev", "--webpack", "--hostname", host, "--port", "3000"]),
 ];
 
 function stop(signal) {

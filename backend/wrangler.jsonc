@@ -3,17 +3,17 @@
   "name": "judo-exam-api",
   "main": "src/index.ts",
   "compatibility_date": "2026-05-22",
+  "workers_dev": true,
+  "preview_urls": false,
   "vars": {
-    "FRONTEND_ORIGIN": "*",
+    "FRONTEND_ORIGIN": "https://judo-exam-platform.judo-rogerio-cruz.workers.dev",
     "SUPER_ADMIN_EMAIL": "admin@judorogeriocruz.com.br"
   },
   "d1_databases": [
     {
       "binding": "DB",
       "database_name": "judo-exam-db",
-      // Funciona no desenvolvimento local. Troque pelo UUID retornado por
-      // `pnpm wrangler d1 create judo-exam-db` antes do primeiro deploy.
-      "database_id": "00000000-0000-0000-0000-000000000000",
+      "database_id": "931ec123-99d2-4fab-a04f-7a82206d1ee1",
       "migrations_dir": "migrations"
     }
   ]

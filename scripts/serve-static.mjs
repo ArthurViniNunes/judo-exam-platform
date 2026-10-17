@@ -1,9 +1,11 @@
 import { createReadStream, existsSync, statSync } from "node:fs";
 import { createServer } from "node:http";
+import { networkInterfaces } from "node:os";
 import { extname, isAbsolute, join, normalize, relative, resolve } from "node:path";
 
 const root = resolve(process.argv[2] || "out");
 const port = Number(process.argv[3] || process.env.PORT || 3000);
+const host = process.argv[4] || process.env.HOST || "127.0.0.1";
 
 if (!existsSync(root)) {
   console.error(`Diretório ${root} não encontrado. Execute \"pnpm build\" primeiro.`);
@@ -44,6 +46,17 @@ createServer((request, response) => {
     "Cache-Control": extname(filePath) === ".html" ? "no-cache" : "public, max-age=31536000, immutable",
   });
   createReadStream(filePath).pipe(response);
-}).listen(port, "127.0.0.1", () => {
+}).listen(port, host, () => {
   console.log(`Frontend disponível em http://127.0.0.1:${port}`);
+
+  if (host === "0.0.0.0") {
+    const addresses = Object.values(networkInterfaces())
+      .flat()
+      .filter((address) => address?.family === "IPv4" && !address.internal)
+      .map((address) => address.address);
+
+    for (const address of new Set(addresses)) {
+      console.log(`Celulares na mesma rede: http://${address}:${port}`);
+    }
+  }
 });

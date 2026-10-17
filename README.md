@@ -97,6 +97,18 @@ Terminal 2 — somente o frontend:
 corepack pnpm dev
 ```
 
+### Testar pelo celular na mesma rede Wi-Fi
+
+Para liberar temporariamente o ambiente de desenvolvimento na rede local, conecte o computador e o celular ao mesmo Wi-Fi e execute:
+
+```powershell
+corepack pnpm dev:lan
+```
+
+O terminal do Next.js mostra um endereço de rede semelhante a `http://192.168.0.10:3000`. Abra esse endereço no navegador do celular. Se o Windows solicitar permissão de firewall, permita apenas em **Redes privadas**.
+
+Esse modo serve para testes acompanhados. Ele depende do computador ligado, não usa HTTPS e não deve ser exposto diretamente à internet. Para outras pessoas acessarem de qualquer rede, publique frontend, API e banco na Cloudflare conforme as seções abaixo.
+
 ### Erros comuns no Windows
 
 - **`pnpm não é reconhecido`**: use sempre `corepack pnpm` como nos exemplos acima.
@@ -126,6 +138,14 @@ pnpm start
 
 ## Backend independente e disponível 24/7 sem custo
 
+### Ambiente publicado
+
+- Site: <https://judo-exam-platform.judo-rogerio-cruz.workers.dev>
+- API: <https://judo-exam-api.judo-rogerio-cruz.workers.dev>
+- Saúde da API: <https://judo-exam-api.judo-rogerio-cruz.workers.dev/health>
+
+O banco D1 `judo-exam-db`, a API e o frontend já estão publicados na conta Cloudflare configurada. Os passos abaixo servem para manutenção ou para recriar a infraestrutura em outra conta.
+
 A alternativa indicada para este volume é **Cloudflare Workers + D1 no plano Free**. É serverless: não existe uma máquina ligada continuamente, mas a URL fica disponível o tempo todo e a infraestrutura escala a zero quando ninguém usa. Isso evita suspensão por inatividade típica de alguns hosts gratuitos.
 
 Em 14 de outubro de 2026, o plano gratuito documentava até 100 mil chamadas de Worker por dia, 5 milhões de linhas lidas/dia, 100 mil linhas gravadas/dia e 5 GB totais no D1. Para uma associação com pouco tráfego, há bastante margem. Ao exceder uma cota diária, novas operações falham até a renovação à meia-noite UTC; portanto, “sem gastos” significa permanecer dentro dessas cotas, e não uma garantia contratual de serviço ilimitado.
@@ -150,7 +170,7 @@ pnpm wrangler login
 pnpm wrangler d1 create judo-exam-db
 ```
 
-O comando retorna um `database_id`. Copie esse UUID para `backend/wrangler.jsonc`, substituindo `00000000-0000-0000-0000-000000000000`.
+O comando retorna um `database_id`. Ao recriar a infraestrutura em outra conta, substitua no `backend/wrangler.jsonc` o UUID do banco atualmente configurado.
 
 ### 3. Criar as tabelas e dados iniciais
 
@@ -188,11 +208,11 @@ Resposta esperada:
 
 ### 5. Restringir o CORS
 
-Durante a configuração inicial, `FRONTEND_ORIGIN` está como `*`. Depois que o frontend tiver uma URL pública, edite `backend/wrangler.jsonc`:
+Depois que o frontend tiver uma URL pública, mantenha `FRONTEND_ORIGIN` em `backend/wrangler.jsonc` restrito a esse endereço:
 
 ```jsonc
 "vars": {
-  "FRONTEND_ORIGIN": "https://seu-projeto.pages.dev"
+  "FRONTEND_ORIGIN": "https://judo-exam-platform.sua-conta.workers.dev"
 }
 ```
 
@@ -200,17 +220,20 @@ Mais de uma origem pode ser informada separando-as por vírgula. Publique novame
 
 ## Hospedar o frontend gratuitamente
 
-O frontend é totalmente estático e pode ser hospedado no Cloudflare Pages, GitHub Pages, Netlify ou qualquer servidor de arquivos. No Cloudflare Pages, requisições a arquivos estáticos são gratuitas e ilimitadas segundo a [documentação de preços](https://developers.cloudflare.com/pages/functions/pricing/).
+O frontend é totalmente estático. Para projetos novos, a Cloudflare recomenda **Workers Static Assets**, que entrega os arquivos pelo mesmo ambiente global dos Workers e não exige um servidor ligado.
 
-Para Cloudflare Pages:
+Depois de publicar a API, gere o frontend apontando para a URL dela e publique os arquivos de `out/`:
 
-1. Envie este projeto para um repositório GitHub ou GitLab.
-2. No painel Cloudflare, abra **Workers & Pages → Create application → Pages → Import an existing Git repository**.
-3. Configure **Build command** como `pnpm build` e **Build output directory** como `out`.
-4. Em **Environment variables**, adicione `NEXT_PUBLIC_API_URL` com a URL do Worker publicado.
-5. Faça o deploy e depois restrinja o `FRONTEND_ORIGIN` do backend à URL recebida.
+```powershell
+$env:NEXT_PUBLIC_API_URL="https://sua-api.workers.dev"
+corepack pnpm build
+corepack pnpm frontend:deploy
+Remove-Item Env:NEXT_PUBLIC_API_URL
+```
 
-O fluxo corresponde ao [guia oficial para export estático do Next.js](https://developers.cloudflare.com/pages/framework-guides/nextjs/deploy-a-static-nextjs-site/).
+A configuração está em `wrangler.frontend.jsonc`. O comando retorna uma URL como `https://judo-exam-platform.sua-conta.workers.dev`. Depois do primeiro deploy, restrinja `FRONTEND_ORIGIN` do backend a essa URL e publique a API novamente.
+
+Referência oficial: [Workers Static Assets](https://developers.cloudflare.com/workers/static-assets/).
 
 ## Scripts
 
@@ -219,11 +242,14 @@ O fluxo corresponde ao [guia oficial para export estático do Next.js](https://d
 | `pnpm dev` | Frontend local na porta 3000 |
 | `pnpm backend:dev` | API e D1 local na porta 8787 |
 | `pnpm dev:all` | Frontend e backend juntos |
+| `pnpm dev:lan` | Frontend e backend acessíveis por celulares na mesma rede |
 | `pnpm backend:migrate:local` | Aplica migrações no banco local |
 | `pnpm backend:migrate:remote` | Aplica migrações no D1 de produção |
 | `pnpm backend:deploy` | Publica apenas o backend |
+| `pnpm frontend:deploy` | Publica o frontend estático no Cloudflare Workers |
 | `pnpm build` | Gera o frontend estático em `out/` |
 | `pnpm start` | Serve localmente o build estático |
+| `pnpm start:lan` | Serve o build estático para dispositivos na mesma rede |
 | `pnpm lint` | Verifica regras de código |
 | `pnpm typecheck` | Verifica os tipos TypeScript |
 
@@ -255,6 +281,7 @@ app/                         interface Next.js
 backend/src/index.ts         API do Worker
 backend/migrations/          schema e dados iniciais do D1
 backend/wrangler.jsonc       configuração local e de deploy
+wrangler.frontend.jsonc      publica o frontend como Workers Static Assets
 lib/api.ts                   cliente HTTP do frontend
 lib/practical-exams.ts       técnicas, sorteios e vídeos da avaliação técnica
 lib/kata-exams.ts            katas, técnicas e cálculo da avaliação de kata
