@@ -16,20 +16,23 @@ function run(cli, args) {
   });
 }
 
+const backendArgs = [
+  "dev",
+  "--config",
+  "backend/wrangler.jsonc",
+  "--local",
+  "--persist-to",
+  ".wrangler/state",
+  "--ip",
+  host,
+  "--port",
+  "8787",
+];
+const frontendArgs = ["dev", "--webpack", "--hostname", host, "--port", "3000"];
+
 const children = [
-  run(wranglerCli, [
-    "dev",
-    "--config",
-    "backend/wrangler.jsonc",
-    "--local",
-    "--persist-to",
-    ".wrangler/state",
-    "--ip",
-    host,
-    "--port",
-    "8787",
-  ]),
-  run(nextCli, ["dev", "--webpack", "--hostname", host, "--port", "3000"]),
+  run(wranglerCli, backendArgs),
+  run(nextCli, frontendArgs),
 ];
 
 function stop(signal) {

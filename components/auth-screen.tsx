@@ -1,6 +1,16 @@
 "use client";
 
-import { ArrowRight, CheckCircle2, Eye, EyeOff, LockKeyhole, Moon, ShieldCheck, Sun, UserRoundPlus } from "lucide-react";
+import {
+  ArrowRight,
+  CheckCircle2,
+  Eye,
+  EyeOff,
+  LockKeyhole,
+  Moon,
+  ShieldCheck,
+  Sun,
+  UserRoundPlus,
+} from "lucide-react";
 import Image from "next/image";
 import { FormEvent, useState } from "react";
 import { apiRequest, setAuthToken } from "@/lib/api";
@@ -10,7 +20,13 @@ const LOGO = "https://media.base44.com/images/public/6a9b8ceb32f349c5600d2fdc/ec
 
 type AuthResponse = { token: string; expiresAt: string; user: AuthUser };
 
-export function AuthScreen({ dark, setDark, onAuthenticated }: { dark: boolean; setDark: (value: boolean) => void; onAuthenticated: (user: AuthUser) => void }) {
+type AuthScreenProps = {
+  dark: boolean;
+  setDark: (value: boolean) => void;
+  onAuthenticated: (user: AuthUser) => void;
+};
+
+export function AuthScreen({ dark, setDark, onAuthenticated }: AuthScreenProps) {
   const [mode, setMode] = useState<"login" | "register">("login");
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -29,9 +45,13 @@ export function AuthScreen({ dark, setDark, onAuthenticated }: { dark: boolean; 
     }
     setBusy(true);
     try {
-      const response = await apiRequest<AuthResponse>(mode === "login" ? "/api/auth/login" : "/api/auth/register", {
+      const endpoint = mode === "login" ? "/api/auth/login" : "/api/auth/register";
+      const body = mode === "login"
+        ? { email, password }
+        : { name, email, password };
+      const response = await apiRequest<AuthResponse>(endpoint, {
         method: "POST",
-        body: JSON.stringify(mode === "login" ? { email, password } : { name, email, password }),
+        body: JSON.stringify(body),
       });
       setAuthToken(response.token);
       onAuthenticated(response.user);
@@ -42,8 +62,8 @@ export function AuthScreen({ dark, setDark, onAuthenticated }: { dark: boolean; 
     }
   };
 
-  const changeMode = (next: "login" | "register") => {
-    setMode(next);
+  const changeMode = (nextMode: "login" | "register") => {
+    setMode(nextMode);
     setError("");
     setPassword("");
     setConfirmPassword("");

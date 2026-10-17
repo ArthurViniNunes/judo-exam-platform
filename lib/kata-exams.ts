@@ -83,9 +83,14 @@ export const EMPTY_KATA_MARK: KataMark = {
 
 export function createKataExam(kataId: KataId, mode: KataMode): KataGroup[] {
   const kata = KATAS.find((item) => item.id === kataId) ?? KATAS[0];
-  const groups = kataId === "nage-no-kata" && mode === "partial"
-    ? kata.groups.filter((group) => ["opening", "te-waza", "koshi-waza", "ashi-waza", "closing"].includes(group.id))
-    : kata.groups;
+  const groups =
+    kataId === "nage-no-kata" && mode === "partial"
+      ? kata.groups.filter((group) =>
+          ["opening", "te-waza", "koshi-waza", "ashi-waza", "closing"].includes(
+            group.id,
+          ),
+        )
+      : kata.groups;
 
   return groups.map((group) => ({
     id: group.id,
@@ -100,7 +105,13 @@ export function createKataExam(kataId: KataId, mode: KataMode): KataGroup[] {
 
 export function kataMarkDeductions(mark: KataMark | undefined) {
   if (!mark) return 0;
-  return Number(mark.small1) + Number(mark.small2) + Number(mark.medium) * 3 + Number(mark.large) * 5 + Number(mark.severe) * 10;
+  return (
+    Number(mark.small1) +
+    Number(mark.small2) +
+    Number(mark.medium) * 3 +
+    Number(mark.large) * 5 +
+    Number(mark.severe) * 10
+  );
 }
 
 export function calculateKataResult(groups: KataGroup[], marks: Record<string, KataMark>): KataResult {
@@ -113,17 +124,14 @@ export function calculateKataResult(groups: KataGroup[], marks: Record<string, K
     : 10;
   const score = severeApplied ? rawScore / 2 : rawScore;
 
-  const errorCounts = reviewed.reduce(
-    (counts, technique) => {
-      const mark = marks[technique.id];
-      counts.small += Number(mark.small1) + Number(mark.small2);
-      counts.medium += Number(mark.medium);
-      counts.large += Number(mark.large);
-      counts.severe += Number(mark.severe);
-      return counts;
-    },
-    { small: 0, medium: 0, large: 0, severe: 0 },
-  );
+  const errorCounts = reviewed.reduce((counts, technique) => {
+    const mark = marks[technique.id];
+    counts.small += Number(mark.small1) + Number(mark.small2);
+    counts.medium += Number(mark.medium);
+    counts.large += Number(mark.large);
+    counts.severe += Number(mark.severe);
+    return counts;
+  }, { small: 0, medium: 0, large: 0, severe: 0 });
 
   return {
     score: Math.round(score * 10) / 10,
@@ -133,7 +141,9 @@ export function calculateKataResult(groups: KataGroup[], marks: Record<string, K
     reviewedCount: reviewed.length,
     groups: groups.map((group) => {
       const groupDeductions = group.techniques.reduce((sum, technique) => sum + kataMarkDeductions(marks[technique.id]), 0);
-      const groupScore = group.techniques.reduce((sum, technique) => sum + itemScore(technique), 0) / group.techniques.length;
+      const groupScore =
+        group.techniques.reduce((sum, technique) => sum + itemScore(technique), 0) /
+        group.techniques.length;
       return { name: group.name, score: Math.round(groupScore * 10) / 10, deductions: groupDeductions };
     }),
     errorCounts,

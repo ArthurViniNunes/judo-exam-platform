@@ -7,7 +7,9 @@ export const API_URL = (
 const AUTH_TOKEN_KEY = "ajrc-auth-token";
 
 export function getAuthToken() {
-  return typeof window === "undefined" ? null : window.localStorage.getItem(AUTH_TOKEN_KEY);
+  return typeof window === "undefined"
+    ? null
+    : window.localStorage.getItem(AUTH_TOKEN_KEY);
 }
 
 export function setAuthToken(token: string | null) {
@@ -25,13 +27,15 @@ export class ApiError extends Error {
 
 export async function apiRequest<T>(path: string, init?: RequestInit): Promise<T> {
   const token = getAuthToken();
+  const headers = {
+    ...(init?.body ? { "Content-Type": "application/json" } : {}),
+    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    ...init?.headers,
+  };
+
   const response = await fetch(`${API_URL}${path}`, {
     ...init,
-    headers: {
-      ...(init?.body ? { "Content-Type": "application/json" } : {}),
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
-      ...init?.headers,
-    },
+    headers,
   });
 
   if (!response.ok) {
@@ -44,7 +48,9 @@ export async function apiRequest<T>(path: string, init?: RequestInit): Promise<T
     }
     if (response.status === 401 && path !== "/api/auth/login") {
       setAuthToken(null);
-      if (typeof window !== "undefined") window.dispatchEvent(new Event("ajrc:session-expired"));
+      if (typeof window !== "undefined") {
+        window.dispatchEvent(new Event("ajrc:session-expired"));
+      }
     }
     throw new ApiError(message, response.status);
   }

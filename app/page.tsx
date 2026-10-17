@@ -1320,7 +1320,8 @@ export default function App() {
   useEffect(() => {
     const savedTheme = window.localStorage.getItem("ajrc-theme");
     const timer = window.setTimeout(() => {
-      setDark(savedTheme ? savedTheme === "dark" : window.matchMedia("(prefers-color-scheme: dark)").matches);
+      const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+      setDark(savedTheme ? savedTheme === "dark" : prefersDark);
       setThemeReady(true);
     }, 0);
     return () => window.clearTimeout(timer);
@@ -1333,7 +1334,7 @@ export default function App() {
       return () => window.clearTimeout(timer);
     }
     apiRequest<{ user: AuthUser }>("/api/auth/me")
-      .then((response) => setUser(response.user))
+      .then(({ user: authenticatedUser }) => setUser(authenticatedUser))
       .catch(() => setUser(null))
       .finally(() => setAuthReady(true));
   }, []);
@@ -1343,7 +1344,10 @@ export default function App() {
   }, [dark, themeReady]);
 
   useEffect(() => {
-    const expire = () => { setUser(null); setView("home"); };
+    const expire = () => {
+      setUser(null);
+      setView("home");
+    };
     window.addEventListener("ajrc:session-expired", expire);
     return () => window.removeEventListener("ajrc:session-expired", expire);
   }, []);
@@ -1365,26 +1369,44 @@ export default function App() {
 
   const saveTechnicalEvaluation = (practicalResult: PracticalResult) => {
     const beltName = PRACTICAL_BELTS.find((item) => item.id === belt)?.name ?? belt;
+    const evaluation = {
+      id: crypto.randomUUID(),
+      athlete,
+      belt: beltName,
+      type: "técnica" as const,
+      score: practicalResult.score * 10,
+      result: practicalResult.approved ? "Aprovado" : "Reexame necessário",
+      detail: practicalResult.detail,
+    };
+
     void apiRequest("/api/evaluations", {
       method: "POST",
-      body: JSON.stringify({
-        id: crypto.randomUUID(),
-        athlete,
-        belt: beltName,
-        type: "técnica",
-        score: practicalResult.score * 10,
-        result: practicalResult.approved ? "Aprovado" : "Reexame necessário",
-        detail: practicalResult.detail,
-      }),
+      body: JSON.stringify(evaluation),
     }).catch(() => undefined);
   };
 
   const saveKataEvaluation = (evaluationResult: KataResult) => {
     const kataName = KATAS.find((item) => item.id === kataId)?.name ?? kataId;
-    const detail = `Descontos: ${evaluationResult.totalDeductions}. ${evaluationResult.severeApplied ? "Fator de erro grave aplicado." : "Sem fator de erro grave."}${evaluationResult.notes ? ` Observações: ${evaluationResult.notes}` : ""}`;
+    const severeNote = evaluationResult.severeApplied
+      ? "Fator de erro grave aplicado."
+      : "Sem fator de erro grave.";
+    const observations = evaluationResult.notes
+      ? ` Observações: ${evaluationResult.notes}`
+      : "";
+    const detail = `Descontos: ${evaluationResult.totalDeductions}. ${severeNote}${observations}`;
+    const evaluation = {
+      id: crypto.randomUUID(),
+      athlete,
+      belt: kataName,
+      type: "kata" as const,
+      score: evaluationResult.score * 10,
+      result: "Registro técnico",
+      detail,
+    };
+
     void apiRequest("/api/evaluations", {
       method: "POST",
-      body: JSON.stringify({ id: crypto.randomUUID(), athlete, belt: kataName, type: "kata", score: evaluationResult.score * 10, result: "Registro técnico", detail }),
+      body: JSON.stringify(evaluation),
     }).catch(() => undefined);
   };
 

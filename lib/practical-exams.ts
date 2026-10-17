@@ -8,7 +8,14 @@ export const CATEGORY_ORDER = [
 ] as const;
 
 export type PracticalCategory = (typeof CATEGORY_ORDER)[number];
-export type PracticalBeltId = "gray" | "blue" | "yellow" | "orange" | "green" | "purple" | "brown";
+export type PracticalBeltId =
+  | "gray"
+  | "blue"
+  | "yellow"
+  | "orange"
+  | "green"
+  | "purple"
+  | "brown";
 
 type DrawRule = {
   count: number;
@@ -303,7 +310,9 @@ export const SCORE_OPTIONS = [
 
 export function beltNeedsDraw(beltId: PracticalBeltId) {
   const belt = PRACTICAL_BELTS.find((item) => item.id === beltId);
-  return Boolean(belt && Object.values(belt.categories).some((category) => category?.draws?.length));
+  return Boolean(
+    belt && Object.values(belt.categories).some((category) => category?.draws?.length),
+  );
 }
 
 function shuffled<T>(items: T[], random: () => number) {
@@ -328,7 +337,8 @@ export function createPracticalExam(beltId: PracticalBeltId, random: () => numbe
 
     definition.draws?.forEach((rule) => {
       const source = PRACTICAL_BELTS.find((item) => item.id === rule.from);
-      const pool = source?.categories[categoryName]?.fixed.filter((name) => !used.has(name)) ?? [];
+      const pool =
+        source?.categories[categoryName]?.fixed.filter((name) => !used.has(name)) ?? [];
       shuffled(pool, random).slice(0, rule.count).forEach((name, index) => {
         used.add(name);
         drawn.push({
@@ -339,7 +349,10 @@ export function createPracticalExam(beltId: PracticalBeltId, random: () => numbe
       });
     });
 
-    const fixed = definition.fixed.map((name, index) => ({ id: `${categoryName}-fixed-${index}-${name}`, name }));
+    const fixed = definition.fixed.map((name, index) => ({
+      id: `${categoryName}-fixed-${index}-${name}`,
+      name,
+    }));
     return [{ name: categoryName, techniques: [...drawn, ...fixed] }];
   });
 }

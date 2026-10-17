@@ -9,7 +9,14 @@ function initials(name: string) {
   return name.split(/\s+/).slice(0, 2).map((part) => part[0]?.toUpperCase()).join("");
 }
 
-export function ProfileDialog({ user, dark, onClose, onSaved }: { user: AuthUser; dark: boolean; onClose: () => void; onSaved: (user: AuthUser) => void }) {
+type ProfileDialogProps = {
+  user: AuthUser;
+  dark: boolean;
+  onClose: () => void;
+  onSaved: (user: AuthUser) => void;
+};
+
+export function ProfileDialog({ user, dark, onClose, onSaved }: ProfileDialogProps) {
   const [name, setName] = useState(user.name);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
@@ -21,7 +28,7 @@ export function ProfileDialog({ user, dark, onClose, onSaved }: { user: AuthUser
     return () => window.removeEventListener("keydown", closeOnEscape);
   }, [onClose]);
 
-  const submit = async (event: FormEvent) => {
+  const submit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setError("");
     setSaved(false);

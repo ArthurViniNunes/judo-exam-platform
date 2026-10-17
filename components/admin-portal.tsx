@@ -33,34 +33,75 @@ import { FormEvent, ReactNode, useCallback, useEffect, useMemo, useState } from 
 import { apiRequest } from "@/lib/api";
 import type { AuthUser, DashboardData, ExamMatrix, ManagedUser, StudentRecord } from "@/lib/platform";
 
-const LOGO = "https://media.base44.com/images/public/6a9b8ceb32f349c5600d2fdc/ecc432c62_41508.png/v1/fit/w_176,h_176,q_90,usm_0.66_1.00_0.01,enc_webp,quality_auto/ecc432c62_41508.webp";
+const LOGO =
+  "https://media.base44.com/images/public/6a9b8ceb32f349c5600d2fdc/ecc432c62_41508.png/v1/fit/w_176,h_176,q_90,usm_0.66_1.00_0.01,enc_webp,quality_auto/ecc432c62_41508.webp";
 type AdminSection = "overview" | "students" | "matrices" | "team";
-type MatrixCategoryDraft = { id: string; name: string; techniques: string };
+type MatrixCategoryDraft = {
+  id: string;
+  name: string;
+  techniques: string;
+};
 
-const categoryNames = ["Nage Waza", "Renraku-Henka Waza", "Kaeshi Waza", "Osaekomi Waza", "Shime Waza", "Kansetsu Waza"];
-const emptyDashboard: DashboardData = { summary: { evaluations: 0, students: 0, average: 0, approvalRate: 0 }, months: [], byType: [], recent: [] };
+const categoryNames = [
+  "Nage Waza",
+  "Renraku-Henka Waza",
+  "Kaeshi Waza",
+  "Osaekomi Waza",
+  "Shime Waza",
+  "Kansetsu Waza",
+];
+const emptyDashboard: DashboardData = {
+  summary: { evaluations: 0, students: 0, average: 0, approvalRate: 0 },
+  months: [],
+  byType: [],
+  recent: [],
+};
 
 function initials(name: string) {
-  return name.split(/\s+/).slice(0, 2).map((part) => part[0]?.toUpperCase()).join("");
+  return name
+    .split(/\s+/)
+    .slice(0, 2)
+    .map((part) => part[0]?.toUpperCase())
+    .join("");
 }
 
 function formatDate(value: string, withTime = false) {
   if (!value) return "—";
   const date = new Date(value.endsWith("Z") ? value : `${value}Z`);
-  return new Intl.DateTimeFormat("pt-BR", withTime ? { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" } : { day: "2-digit", month: "short", year: "numeric" }).format(date);
+  const options: Intl.DateTimeFormatOptions = withTime
+    ? { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" }
+    : { day: "2-digit", month: "short", year: "numeric" };
+
+  return new Intl.DateTimeFormat("pt-BR", options).format(date);
 }
 
-function scoreLabel(score: number) { return (score / 10).toFixed(1); }
+function scoreLabel(score: number) {
+  return (score / 10).toFixed(1);
+}
 
 function LoadingBlock({ label = "Carregando dados…" }: { label?: string }) {
   return <div className="management-loading" role="status"><span /><p>{label}</p></div>;
 }
 
-function EmptyState({ icon, title, detail, action }: { icon: ReactNode; title: string; detail: string; action?: ReactNode }) {
+type EmptyStateProps = {
+  icon: ReactNode;
+  title: string;
+  detail: string;
+  action?: ReactNode;
+};
+
+function EmptyState({ icon, title, detail, action }: EmptyStateProps) {
   return <div className="management-empty"><span>{icon}</span><h3>{title}</h3><p>{detail}</p>{action}</div>;
 }
 
-function Metric({ icon, value, label, note }: { icon: ReactNode; value: string; label: string; note: string }) {
+type MetricProps = {
+  icon: ReactNode;
+  value: string;
+  label: string;
+  note: string;
+};
+
+function Metric({ icon, value, label, note }: MetricProps) {
   return <article className="management-metric"><span>{icon}</span><div><strong>{value}</strong><p>{label}</p><small>{note}</small></div></article>;
 }
 
