@@ -1,0 +1,43 @@
+import { spawn, spawnSync } from "node:child_process";
+import { fileURLToPath } from "node:url";
+
+const isWindows = process.platform === "win32";
+const projectRoot = fileURLToPath(new URL("../", import.meta.url));
+const nextCli = fileURLToPath(new URL("../node_modules/next/dist/bin/next", import.meta.url));
+const wranglerCli = fileURLToPath(new URL("../node_modules/wrangler/bin/wrangler.js", import.meta.url));
+
+function run(cli, args) {
+  return spawn(process.execPath, [cli, ...args], {
+    cwd: projectRoot,
+    stdio: "inherit",
+    windowsHide: true,
+  });
+}
+
+const children = [
+  run(wranglerCli, ["dev", "--config", "backend/wrangler.jsonc", "--local", "--persist-to", ".wrangler/state", "--port", "8787"]),
+  run(nextCli, ["dev", "--webpack", "--hostname", "127.0.0.1", "--port", "3000"]),
+];
+
+function stop(signal) {
+  for (const child of children) {
+    if (!child.pid) continue;
+    if (isWindows) {
+      spawnSync("taskkill", ["/pid", String(child.pid), "/t", "/f"], {
+        stdio: "ignore",
+        windowsHide: true,
+      });
+    } else {
+      child.kill(signal);
+    }
+  }
+}
+
+process.on("SIGINT", () => stop("SIGINT"));
+process.on("SIGTERM", () => stop("SIGTERM"));
+
+const result = await Promise.race(
+  children.map((child) => new Promise((resolve) => child.once("exit", (code) => resolve(code ?? 1)))),
+);
+stop("SIGTERM");
+process.exit(result);

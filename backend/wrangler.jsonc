@@ -1,0 +1,19 @@
+{
+  "$schema": "../node_modules/wrangler/config-schema.json",
+  "name": "judo-exam-api",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-05-22",
+  "vars": {
+    "FRONTEND_ORIGIN": "*"
+  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "judo-exam-db",
+      // Funciona no desenvolvimento local. Troque pelo UUID retornado por
+      // `pnpm wrangler d1 create judo-exam-db` antes do primeiro deploy.
+      "database_id": "00000000-0000-0000-0000-000000000000",
+      "migrations_dir": "migrations"
+    }
+  ]
+}
