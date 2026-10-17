@@ -263,6 +263,13 @@ CLOUDFLARE_API_TOKEN
 
 O token deve ser restrito à conta do projeto e ter permissões para editar Workers e D1. Nunca grave credenciais em arquivos versionados.
 
+O GitHub Actions é o único responsável pela publicação automática. Mantenha
+**Disable builds** ativado em **Settings → Builds** tanto no Worker
+`judo-exam-api` quanto no `judo-exam-platform`. A integração Git nativa da
+Cloudflare não coordena a migração D1 com os dois deploys e, neste monorepo,
+tentaria usar `npx wrangler deploy` sem escolher entre
+`backend/wrangler.jsonc` e `wrangler.frontend.jsonc`.
+
 ## Documentação técnica
 
 - [Visão de arquitetura](docs/architecture/README.md): limites, diagramas, fluxos e invariantes;
