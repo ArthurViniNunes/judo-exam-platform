@@ -13,10 +13,9 @@ Aplicação web da Associação Judô Rogério Cruz para aplicar, registrar e ac
 - mostra histórico, média e evolução por aluno;
 - oferece um painel com volume de avaliações, médias, aprovação e registros recentes;
 - permite ao Super Admin criar matrizes técnicas com categorias, técnicas, kata e regras de aprovação;
-- mantém um banco de questões administrável para a área teórica;
 - direciona a avaliação teórica do atleta para os Google Forms oficiais configurados na interface.
 
-As avaliações técnica e de kata são processadas na aplicação e persistidas na API. A avaliação teórica usa os formulários externos definidos em `app/page.tsx`; o banco de questões da API é mantido para administração e consulta autenticada.
+As avaliações técnica e de kata são processadas na aplicação e persistidas na API. A avaliação teórica usa exclusivamente os formulários externos definidos em `components/exam-public.tsx`.
 
 ## Arquitetura
 
@@ -29,7 +28,7 @@ Cloudflare Worker (API) ---- Cloudflare D1 / SQLite
 ```
 
 - **Frontend:** Next.js com `output: "export"`, gerando arquivos estáticos em `out/`.
-- **Backend:** Cloudflare Worker independente em `backend/src/index.ts`.
+- **Backend:** Cloudflare Worker modular; `backend/src/index.ts` apenas compõe as rotas e os módulos de negócio ficam no mesmo diretório.
 - **Banco:** D1 em produção e D1 local persistido pelo Wrangler em `.wrangler/state`.
 - **Autenticação:** sessões de sete dias; tokens não são armazenados em texto no banco. As senhas usam PBKDF2 com SHA-256 e 100.000 iterações.
 - **Perfis:** `super_admin` tem visão global, gerencia equipe e cria matrizes; `evaluator` acessa seus próprios alunos e avaliações.
@@ -187,13 +186,14 @@ corepack pnpm backend:migrate:local
 corepack pnpm backend:migrate:remote
 ```
 
-O schema cobre questões, usuários, sessões, alunos, avaliações, matrizes, categorias e técnicas. O estado local fica em `.wrangler/state` e não deve ser commitado.
+O schema ativo cobre usuários, sessões, alunos, avaliações, matrizes, categorias e técnicas. A tabela histórica de questões permanece apenas em migrações já aplicadas e não possui rota ou interface. O estado local fica em `.wrangler/state` e não deve ser commitado.
 
 ## Build e validação
 
 Execute antes de publicar:
 
 ```powershell
+corepack pnpm test
 corepack pnpm lint
 corepack pnpm typecheck
 corepack pnpm build
@@ -266,22 +266,37 @@ CLOUDFLARE_API_TOKEN
 
 O token deve ser restrito à conta do projeto e ter permissões para editar Workers e D1. Nunca grave credenciais em arquivos versionados.
 
+## Documentação técnica
+
+- [Visão de arquitetura](docs/architecture/README.md): limites, diagramas, fluxos e invariantes;
+- [ADRs](docs/architecture/adr/README.md): decisões, alternativas e consequências;
+- [Runbook](docs/operations/runbook.md): checklist de exame, diagnóstico e rollback;
+- [Guia de contribuição](CONTRIBUTING.md): regras de mudança e validação.
+
+Diagramas são escritos em Mermaid e ficam versionados junto do código que descrevem.
+
 ## Estrutura principal
 
 ```text
-app/page.tsx                  Fluxos públicos e telas de avaliação
+app/page.tsx                  Estado global e composição dos fluxos
 app/globals.css               Estilos globais e temas
 components/auth-screen.tsx    Login e criação de conta
-components/admin-portal.tsx   Painel de gestão conectado à API
+components/admin-portal*.tsx  Módulos do painel de gestão
+components/technical-exam.tsx Fluxo da avaliação prática
+components/kata-exam.tsx      Fluxo da avaliação de kata
 components/profile-dialog.tsx Edição do perfil autenticado
 lib/api.ts                    Cliente HTTP e token de sessão
 lib/kata-exams.ts             Definições e cálculo de kata
-lib/practical-exams.ts        Matrizes técnicas e vídeos
+lib/practical-exams.ts        Matrizes, sorteio e vídeos
+lib/practical-scoring.ts      Regra pura de aprovação prática
 lib/platform.ts               Tipos compartilhados do domínio
-backend/src/index.ts          Rotas e regras do Worker
+backend/src/index.ts          Composição das rotas do Worker
+backend/src/*.ts              Autenticação, domínio e casos de uso
 backend/migrations/           Migrações do D1
+tests/                        Regressões das regras de negócio
 scripts/dev-all.mjs           Inicialização local dos dois serviços
 scripts/serve-static.mjs      Servidor local do build estático
+docs/                         Arquitetura, ADRs e operação
 ```
 
 ## Segurança e limitações conhecidas
@@ -295,7 +310,7 @@ Antes do uso real:
 5. faça backups periódicos do D1 e teste a restauração;
 6. revise os links e o conteúdo das matrizes antes de cada ciclo de exames.
 
-O frontend contém alguns dados demonstrativos e telas administrativas legadas no código. O painel conectado ao backend é o fluxo de gestão usado para dados reais; indicadores ou componentes que não fazem chamadas à API não devem ser tratados como fonte de dados de produção.
+As avaliações são dados pessoais operacionais. Antes de ampliar o uso, documente a base legal, o prazo de retenção, o responsável por exportações e o procedimento para correção ou exclusão de registros.
 
 ## Licença e operação
 
