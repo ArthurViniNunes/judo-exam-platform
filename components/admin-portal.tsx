@@ -1,9 +1,8 @@
 "use client";
 
-import { BookOpenCheck, LayoutDashboard, ShieldCheck, Users } from "lucide-react";
+import { LayoutDashboard, ShieldCheck, Users } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Overview, StudentsView } from "@/components/admin-overview";
-import { MatricesView } from "@/components/admin-portal-matrices";
 import {
   type AdminSection,
   emptyDashboard,
@@ -14,7 +13,6 @@ import { apiRequest } from "@/lib/api";
 import type {
   AuthUser,
   DashboardData,
-  ExamMatrix,
   ManagedUser,
   StudentRecord,
 } from "@/lib/platform";
@@ -40,7 +38,6 @@ export function AdminPortal({
   const [mobileMenu, setMobileMenu] = useState(false);
   const [dashboard, setDashboard] = useState<DashboardData>(emptyDashboard);
   const [students, setStudents] = useState<StudentRecord[]>([]);
-  const [matrices, setMatrices] = useState<ExamMatrix[]>([]);
   const [users, setUsers] = useState<ManagedUser[]>([]);
   const [evaluatorId, setEvaluatorId] = useState("");
   const [loading, setLoading] = useState(true);
@@ -58,17 +55,15 @@ export function AdminPortal({
         user.role === "super_admin"
           ? apiRequest<ManagedUser[]>("/api/users")
           : Promise.resolve([]);
-      const [nextDashboard, nextStudents, nextMatrices, nextUsers] =
+      const [nextDashboard, nextStudents, nextUsers] =
         await Promise.all([
           apiRequest<DashboardData>(`/api/dashboard${suffix}`),
           apiRequest<StudentRecord[]>(`/api/students${suffix}`),
-          apiRequest<ExamMatrix[]>("/api/matrices"),
           userRequest,
         ]);
 
       setDashboard(nextDashboard);
       setStudents(nextStudents);
-      setMatrices(nextMatrices);
       setUsers(nextUsers);
     } catch (caught) {
       setLoadError(
@@ -90,7 +85,6 @@ export function AdminPortal({
     () => [
       { id: "overview" as const, label: "Resumo", icon: <LayoutDashboard size={19} /> },
       { id: "students" as const, label: "Alunos", icon: <Users size={19} /> },
-      { id: "matrices" as const, label: "Matrizes", icon: <BookOpenCheck size={19} /> },
       ...(user.role === "super_admin"
         ? [{ id: "team" as const, label: "Equipe", icon: <ShieldCheck size={19} /> }]
         : []),
@@ -140,14 +134,6 @@ export function AdminPortal({
               users={users}
               evaluatorId={evaluatorId}
               setEvaluatorId={setEvaluatorId}
-            />
-          )}
-          {section === "matrices" && (
-            <MatricesView
-              matrices={matrices}
-              loading={loading}
-              canManage={user.role === "super_admin"}
-              reload={() => void loadData()}
             />
           )}
           {section === "team" && user.role === "super_admin" && (

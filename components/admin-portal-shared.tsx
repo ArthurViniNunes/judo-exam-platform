@@ -1,8 +1,7 @@
 import type { ReactNode } from "react";
 import type { DashboardData } from "@/lib/platform";
 
-export type AdminSection = "overview" | "students" | "matrices" | "team";
-export type MatrixCategoryDraft = { id: string; name: string; techniques: string };
+export type AdminSection = "overview" | "students" | "team";
 
 type EmptyStateProps = {
   icon: ReactNode;
@@ -17,15 +16,6 @@ type MetricProps = {
   label: string;
   note: string;
 };
-
-export const categoryNames = [
-  "Nage Waza",
-  "Renraku-Henka Waza",
-  "Kaeshi Waza",
-  "Osaekomi Waza",
-  "Shime Waza",
-  "Kansetsu Waza",
-];
 
 export const emptyDashboard: DashboardData = {
   summary: { evaluations: 0, students: 0, average: 0, approvalRate: 0 },

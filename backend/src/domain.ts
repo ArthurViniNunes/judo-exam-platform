@@ -3,7 +3,6 @@ import type {
   EvaluationInput,
   EvaluationRow,
   EvaluationType,
-  MatrixInput,
 } from "./contracts";
 
 export function normalizeEmail(value: string) {
@@ -36,35 +35,6 @@ export function isEvaluation(value: unknown): value is EvaluationInput {
       typeof item.score === "number" &&
       item.score >= 0 &&
       item.score <= 100,
-  );
-}
-
-export function isMatrix(value: unknown): value is MatrixInput {
-  if (!value || typeof value !== "object") return false;
-  const item = value as Partial<MatrixInput>;
-
-  return Boolean(
-    item.name?.trim() &&
-      typeof item.hasKata === "boolean" &&
-      Number.isFinite(item.minimumScore) &&
-      item.minimumScore! >= 0 &&
-      item.minimumScore! <= 10 &&
-      Number.isInteger(item.maxCategoriesBelowFive) &&
-      item.maxCategoriesBelowFive! >= 0 &&
-      Array.isArray(item.categories) &&
-      item.categories.length > 0 &&
-      item.categories.every(
-        (category) =>
-          category.name?.trim() &&
-          Array.isArray(category.techniques) &&
-          category.techniques.some((technique) => technique.trim()),
-      ) &&
-      (!item.hasKata ||
-        [
-          "nage-no-kata-partial",
-          "nage-no-kata-complete",
-          "katame-no-kata",
-        ].includes(item.kataType || "")),
   );
 }
 

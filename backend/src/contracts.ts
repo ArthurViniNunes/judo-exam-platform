@@ -1,11 +1,6 @@
 export type Role = "super_admin" | "evaluator";
 export type UserStatus = "invited" | "active" | "disabled";
 export type EvaluationType = "teórica" | "técnica" | "kata";
-export type KataType =
-  | "nage-no-kata-partial"
-  | "nage-no-kata-complete"
-  | "katame-no-kata";
-
 export type AuthUser = {
   id: string;
   email: string;
@@ -23,22 +18,6 @@ export type EvaluationInput = {
   result?: string;
   matrixId?: string;
   detail?: string;
-};
-
-export type MatrixCategoryInput = {
-  name: string;
-  techniques: string[];
-};
-
-export type MatrixInput = {
-  name: string;
-  description?: string;
-  hasKata: boolean;
-  kataType?: KataType | null;
-  minimumScore: number;
-  maxCategoriesBelowFive: number;
-  status?: "draft" | "active";
-  categories: MatrixCategoryInput[];
 };
 
 export type EvaluationRow = {

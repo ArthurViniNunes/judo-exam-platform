@@ -7,7 +7,6 @@ import {
   listStudents,
 } from "./evaluations";
 import { corsHeaders, json, requireSuperAdmin } from "./http";
-import { createMatrix, listMatrices } from "./matrices";
 import { authenticate } from "./security";
 import { inviteUser, listUsers, updateUserStatus } from "./users";
 
@@ -83,13 +82,6 @@ async function handleAuthenticatedRoute(
   }
   if (url.pathname === "/api/evaluations" && request.method === "POST") {
     return createEvaluation(request, env, user);
-  }
-  if (url.pathname === "/api/matrices" && request.method === "GET") {
-    return listMatrices(request, env, user);
-  }
-  if (url.pathname === "/api/matrices" && request.method === "POST") {
-    const denied = requireSuperAdmin(request, env, user);
-    return denied || createMatrix(request, env, user);
   }
   if (url.pathname === "/api/users" && request.method === "GET") {
     const denied = requireSuperAdmin(request, env, user);

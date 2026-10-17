@@ -39,20 +39,6 @@ export type StudentRecord = {
   evaluations: EvaluationRecord[];
 };
 
-export type ExamMatrix = {
-  id: string;
-  name: string;
-  description: string | null;
-  hasKata: boolean;
-  kataType: "nage-no-kata-partial" | "nage-no-kata-complete" | "katame-no-kata" | null;
-  minimumScore: number;
-  maxCategoriesBelowFive: number;
-  status: "draft" | "active" | "archived";
-  creatorName: string;
-  createdAt: string;
-  categories: { id: string; name: string; techniques: string[] }[];
-};
-
 export type ManagedUser = {
   id: string;
   email: string;
