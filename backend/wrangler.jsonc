@@ -4,7 +4,8 @@
   "main": "src/index.ts",
   "compatibility_date": "2026-05-22",
   "vars": {
-    "FRONTEND_ORIGIN": "*"
+    "FRONTEND_ORIGIN": "*",
+    "SUPER_ADMIN_EMAIL": "admin@judorogeriocruz.com.br"
   },
   "d1_databases": [
     {

@@ -1,0 +1,2 @@
+# Copie para backend/.dev.vars. Nunca versione o arquivo real.
+SUPER_ADMIN_INITIAL_PASSWORD="TroqueEstaSenha123!"
