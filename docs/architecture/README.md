@@ -21,7 +21,7 @@ explicam por que a arquitetura chegou a este formato estão no
 C4Context
   title Contexto da Plataforma de Exames
   Person(evaluator, "Avaliador", "Aplica exames e acompanha seus alunos")
-  Person(admin, "Super Admin", "Gerencia avaliadores, matrizes e visão global")
+  Person(admin, "Super Admin", "Gerencia avaliadores e possui visão global")
   System(platform, "Plataforma de Exames", "Avaliações técnicas, kata e administração")
   System_Ext(forms, "Google Forms", "Exames teóricos oficiais")
   System_Ext(youtube, "YouTube", "Vídeos de referência das técnicas")
@@ -38,7 +38,7 @@ C4Container
   Person(user, "Usuário autenticado")
   Container(frontend, "Frontend estático", "Next.js / React", "Interface, fluxo dos exames e regras puras de pontuação")
   Container(api, "API", "Cloudflare Worker", "Autenticação, autorização, validação e persistência")
-  ContainerDb(db, "Banco", "Cloudflare D1", "Usuários, sessões, alunos, avaliações e matrizes")
+  ContainerDb(db, "Banco", "Cloudflare D1", "Usuários, sessões, alunos e avaliações")
 
   Rel(user, frontend, "HTTPS")
   Rel(frontend, api, "JSON/HTTPS + Bearer token")
@@ -54,7 +54,7 @@ components/                  apresentação e fluxos por área
   technical-exam.tsx         avaliação prática
   kata-exam.tsx              avaliação de kata
 lib/                         domínio executado no navegador e contratos da API
-  practical-exams.ts         catálogo e sorteio de técnicas
+  practical-exams.ts         catálogo, seleção automática e vídeos
   practical-scoring.ts       regra de aprovação da prática
   kata-exams.ts              catálogo e pontuação de kata
 backend/src/                 módulos do Worker
@@ -62,7 +62,6 @@ backend/src/                 módulos do Worker
   auth.ts                    casos de uso de autenticação e perfil
   security.ts                senha, sessão e autenticação da requisição
   evaluations.ts             consultas e escrita de avaliações
-  matrices.ts                matrizes personalizadas
   users.ts                   equipe e convites
   domain.ts                  validações e transformações puras
   http.ts                    respostas, CORS e autorização comum
@@ -85,7 +84,7 @@ sequenceDiagram
   participant DB as D1
 
   A->>UI: Escolhe aluno e faixa
-  UI->>UI: Monta matriz e realiza sorteios
+  UI->>UI: Monta o exame e seleciona técnicas anteriores
   A->>UI: Avalia cada técnica
   UI->>D: calculatePracticalResult(exam, scores)
   D-->>UI: Nota, categorias e resultado
@@ -103,9 +102,6 @@ erDiagram
   USERS ||--o{ SESSIONS : possui
   USERS ||--o{ EVALUATIONS : aplica
   STUDENTS ||--o{ EVALUATIONS : recebe
-  USERS ||--o{ EXAM_MATRICES : cria
-  EXAM_MATRICES ||--|{ MATRIX_CATEGORIES : contém
-  MATRIX_CATEGORIES ||--|{ MATRIX_TECHNIQUES : contém
 
   USERS {
     text id PK
@@ -120,28 +116,24 @@ erDiagram
     text type
     integer score
   }
-  EXAM_MATRICES {
-    text id PK
-    text created_by FK
-    real minimum_score
-    integer max_categories_below_five
-  }
 ```
 
 ## Invariantes
 
 - o backend deriva o avaliador da sessão; o cliente não escolhe a autoria;
 - um avaliador comum só consulta as próprias avaliações;
-- apenas o Super Admin convida usuários e cria matrizes;
+- apenas o Super Admin convida e gerencia usuários;
 - IDs de avaliações são idempotentes por avaliador;
 - a nota persistida usa a escala inteira de 0 a 100; a interface exibe 0 a 10;
 - kata não participa do indicador de aprovação de exames técnicos;
 - erro grave de kata divide a nota geral por dois uma única vez;
-- sorteios não repetem uma técnica fixa na mesma categoria.
+- seleções automáticas não repetem uma técnica fixa na mesma categoria;
+- o catálogo de técnicas e as regras de aprovação não são configuráveis pela interface;
+- sequências de Renraku-Henka usam a média das avaliações de seus movimentos.
 
 ## Qualidade e observabilidade
 
-`pnpm test` protege regras de aprovação, kata, sorteio e agregações
+`pnpm test` protege regras de aprovação, kata, seleção automática e agregações
 administrativas. `pnpm typecheck`, `pnpm lint` e `pnpm build` são barreiras de
 entrega. O Worker registra falhas em JSON e habilita logs e traces com amostragem
 de 10% para traces.

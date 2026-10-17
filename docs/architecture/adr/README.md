@@ -11,3 +11,4 @@ anterior.
 | [002](002-autenticacao-e-autorizacao.md) | Sessões próprias e RBAC no backend | Aceita |
 | [003](003-monolito-modular.md) | Monólito modular por capacidade de negócio | Aceita |
 | [004](004-entrega-e-qualidade.md) | CI/CD, testes de domínio e migrações aditivas | Aceita |
+| [005](005-catalogo-fixo-exames.md) | Catálogo oficial de exames não configurável | Aceita |

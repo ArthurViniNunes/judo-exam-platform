@@ -24,7 +24,7 @@ O segredo local fica em `backend/.dev.vars`, nunca no Git. Use
 2. Abra o site em um celular usando rede móvel e Wi-Fi.
 3. Entre com uma conta de avaliador e atualize o nome do perfil.
 4. Faça uma avaliação técnica de teste e confirme seu aparecimento no painel.
-5. Confirme vídeos, Google Forms e matrizes que serão usados no dia.
+5. Confirme vídeos, Google Forms e o catálogo técnico que serão usados no dia.
 6. Teste uma conta de Super Admin e uma de avaliador comum.
 7. Exporte ou registre um ponto de recuperação do D1 conforme a política da
    associação.

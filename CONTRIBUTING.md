@@ -41,7 +41,7 @@ Use mensagens no imperativo e agrupe por intenção:
 
 ```text
 refactor(api): separa autenticação e avaliações por domínio
-test: cobre regras de pontuação e sorteio
+test: cobre regras de pontuação e seleção automática
 docs: registra arquitetura e operação da plataforma
 ```
 

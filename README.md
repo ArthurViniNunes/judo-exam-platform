@@ -6,13 +6,13 @@ Aplicação web da Associação Judô Rogério Cruz para aplicar, registrar e ac
 
 - autentica avaliadores e Super Admins com contas individuais;
 - permite que o Super Admin autorize e desative avaliadores;
-- aplica avaliações técnicas por graduação, com sorteio de técnicas quando a matriz exigir;
-- oferece vídeos de apoio do YouTube para as técnicas cadastradas;
+- aplica avaliações técnicas por graduação, selecionando automaticamente técnicas de faixas anteriores quando necessário;
+- avalia separadamente cada movimento de uma sequência de `Renraku-Henka Waza` e usa a média no resultado;
+- oferece vídeos de apoio do YouTube com reprodução iniciada ao abrir a referência;
 - aplica `Nage-no-Kata` parcial ou completo e `Katame-no-Kata`;
 - registra notas, observações, modalidade, graduação e avaliador;
 - mostra histórico, média e evolução por aluno;
 - oferece um painel com volume de avaliações, médias, aprovação e registros recentes;
-- permite ao Super Admin criar matrizes técnicas com categorias, técnicas, kata e regras de aprovação;
 - direciona a avaliação teórica do atleta para os Google Forms oficiais configurados na interface.
 
 As avaliações técnica e de kata são processadas na aplicação e persistidas na API. A avaliação teórica usa exclusivamente os formulários externos definidos em `components/exam-public.tsx`.
@@ -31,7 +31,7 @@ Cloudflare Worker (API) ---- Cloudflare D1 / SQLite
 - **Backend:** Cloudflare Worker modular; `backend/src/index.ts` apenas compõe as rotas e os módulos de negócio ficam no mesmo diretório.
 - **Banco:** D1 em produção e D1 local persistido pelo Wrangler em `.wrangler/state`.
 - **Autenticação:** sessões de sete dias; tokens não são armazenados em texto no banco. As senhas usam PBKDF2 com SHA-256 e 100.000 iterações.
-- **Perfis:** `super_admin` tem visão global, gerencia equipe e cria matrizes; `evaluator` acessa seus próprios alunos e avaliações.
+- **Perfis:** `super_admin` tem visão global e gerencia a equipe; `evaluator` acessa seus próprios alunos e avaliações.
 - **Cliente HTTP:** `lib/api.ts` envia o token Bearer e trata expiração da sessão.
 
 ## Requisitos
@@ -119,7 +119,9 @@ Não há envio automático de convite, recuperação de senha ou redefinição p
 
 ### Avaliação técnica
 
-As matrizes técnicas ficam em `lib/practical-exams.ts`. Elas organizam as técnicas por graduação e por categoria, incluindo `Nage Waza`, `Renraku-Henka Waza`, `Kaeshi Waza`, `Osaekomi Waza`, `Shime Waza` e `Kansetsu Waza`. Algumas faixas sorteiam técnicas de graduações anteriores.
+O catálogo técnico oficial fica em `lib/practical-exams.ts`. Ele organiza as técnicas por graduação e categoria, incluindo `Nage Waza`, `Renraku-Henka Waza`, `Kaeshi Waza`, `Osaekomi Waza`, `Shime Waza` e `Kansetsu Waza`. Quando uma faixa exige técnicas anteriores, a seleção é feita automaticamente ao iniciar o exame e a origem sorteada aparece no próprio card.
+
+Em `Renraku-Henka Waza`, cada movimento separado por `→` recebe sua própria avaliação no mesmo card. A média desses movimentos compõe a nota da sequência.
 
 Os links de apoio ficam no objeto `TECHNIQUE_VIDEOS`, no mesmo arquivo. A chave precisa ser exatamente igual ao nome da técnica:
 
@@ -130,7 +132,7 @@ export const TECHNIQUE_VIDEOS: Record<string, string> = {
 };
 ```
 
-Preserve a grafia exata já usada pela matriz, inclusive os caracteres `→` e `×`. São aceitos links `youtube.com/watch`, `youtu.be`, `youtube.com/shorts` e `youtube.com/embed`. Sem um link válido, a aplicação informa que o vídeo ainda não foi cadastrado.
+Preserve a grafia exata já usada pelo catálogo, inclusive os caracteres `→` e `×`. São aceitos links `youtube.com/watch`, `youtu.be`, `youtube.com/shorts` e `youtube.com/embed`. Sem um link válido, o botão de referência não aparece.
 
 ### Avaliação de kata
 
@@ -166,11 +168,6 @@ Todas as rotas abaixo, exceto `/`, `/health` e login/registro, exigem `Authoriza
 | `GET` | `/api/students` | autenticado | Lista alunos e seus históricos |
 | `GET` | `/api/evaluations` | autenticado | Lista avaliações permitidas ao usuário |
 | `POST` | `/api/evaluations` | autenticado | Registra uma avaliação |
-| `GET` | `/api/questions` | autenticado | Lista questões, com filtro opcional por faixa |
-| `POST` | `/api/questions` | Super Admin | Cria questão |
-| `DELETE` | `/api/questions/:id` | Super Admin | Exclui questão |
-| `GET` | `/api/matrices` | autenticado | Lista matrizes visíveis ao usuário |
-| `POST` | `/api/matrices` | Super Admin | Cria matriz |
 | `GET` | `/api/users` | Super Admin | Lista usuários e métricas |
 | `POST` | `/api/users/invite` | Super Admin | Autoriza um e-mail |
 | `PATCH` | `/api/users/:id` | Super Admin | Ativa ou desativa um avaliador |
@@ -186,7 +183,7 @@ corepack pnpm backend:migrate:local
 corepack pnpm backend:migrate:remote
 ```
 
-O schema ativo cobre usuários, sessões, alunos, avaliações, matrizes, categorias e técnicas. A tabela histórica de questões permanece apenas em migrações já aplicadas e não possui rota ou interface. O estado local fica em `.wrangler/state` e não deve ser commitado.
+O schema ativo cobre usuários, sessões, alunos e avaliações. Tabelas históricas de questões e matrizes permanecem nas migrações já aplicadas para evitar uma operação destrutiva, mas não possuem rotas ou interfaces ativas. O estado local fica em `.wrangler/state` e não deve ser commitado.
 
 ## Build e validação
 
@@ -287,7 +284,7 @@ components/kata-exam.tsx      Fluxo da avaliação de kata
 components/profile-dialog.tsx Edição do perfil autenticado
 lib/api.ts                    Cliente HTTP e token de sessão
 lib/kata-exams.ts             Definições e cálculo de kata
-lib/practical-exams.ts        Matrizes, sorteio e vídeos
+lib/practical-exams.ts        Catálogo, seleção automática e vídeos
 lib/practical-scoring.ts      Regra pura de aprovação prática
 lib/platform.ts               Tipos compartilhados do domínio
 backend/src/index.ts          Composição das rotas do Worker
@@ -308,7 +305,7 @@ Antes do uso real:
 3. configure rate limiting para login no ambiente de produção;
 4. defina política de privacidade, retenção e exportação dos dados dos alunos;
 5. faça backups periódicos do D1 e teste a restauração;
-6. revise os links e o conteúdo das matrizes antes de cada ciclo de exames.
+6. revise os links e o catálogo técnico antes de cada ciclo de exames.
 
 As avaliações são dados pessoais operacionais. Antes de ampliar o uso, documente a base legal, o prazo de retenção, o responsável por exportações e o procedimento para correção ou exclusão de registros.
 
