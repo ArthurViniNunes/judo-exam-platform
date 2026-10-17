@@ -7,6 +7,7 @@ Aplicação web para os exames da Associação Judô Rogério Cruz. O projeto fu
 - **Frontend:** Next.js 16/React 19 exportado como HTML, CSS e JavaScript estáticos.
 - **Backend:** API independente em Cloudflare Workers.
 - **Banco:** Cloudflare D1 (SQLite distribuído) em produção e SQLite local gerenciado pelo Wrangler no desenvolvimento.
+- **Autenticação:** sessões individuais com senha derivada por PBKDF2, convites por e-mail e papéis de `Super Admin` e `Avaliador`.
 - **Modo de contingência:** se a API estiver indisponível, o frontend continua utilizável com os dados já salvos no `localStorage`. O painel mostra `API conectada` ou `Modo local`.
 
 Na área pública, a avaliação teórica direciona o atleta aos formulários oficiais no Google Forms. As avaliações técnica e de kata permanecem integradas à aplicação. O backend persiste as questões administradas e os resultados dessas avaliações; os dados demonstrativos das outras áreas do painel ainda são estáticos.
@@ -67,6 +68,17 @@ Acesse:
 - Frontend: <http://127.0.0.1:3000>
 - API: <http://127.0.0.1:8787>
 - Saúde da API: <http://127.0.0.1:8787/health>
+
+Conta inicial para desenvolvimento local:
+
+```text
+E-mail: admin@judorogeriocruz.com.br
+Senha: TroqueEstaSenha123!
+```
+
+Essa senha fica somente em `backend/.dev.vars`, que é ignorado pelo Git. Altere-a antes de compartilhar o ambiente local. O Super Admin autoriza os e-mails na seção **Equipe**; depois disso, cada avaliador escolhe **Criar conta** na tela de entrada e define a própria senha.
+
+O nome mostrado nas avaliações vem da conta autenticada. Cada usuário pode alterá-lo em **Menu → Ver e editar perfil** ou tocando no próprio nome na Administração; a atualização também passa a identificar seus registros anteriores.
 
 O banco local é persistido em `.wrangler/state` e não é enviado ao repositório.
 
@@ -142,6 +154,16 @@ O comando retorna um `database_id`. Copie esse UUID para `backend/wrangler.jsonc
 
 ### 3. Criar as tabelas e dados iniciais
 
+Defina a senha inicial do Super Admin como segredo do Worker:
+
+```bash
+pnpm wrangler secret put SUPER_ADMIN_INITIAL_PASSWORD --config backend/wrangler.jsonc
+```
+
+O e-mail inicial fica em `SUPER_ADMIN_EMAIL`, dentro de `backend/wrangler.jsonc`. Para usar outro endereço, altere essa variável antes da primeira autenticação.
+
+Depois aplique as migrações:
+
 ```bash
 pnpm backend:migrate:remote
 ```
@@ -216,6 +238,15 @@ O fluxo corresponde ao [guia oficial para export estático do Next.js](https://d
 | `DELETE` | `/api/questions/:id` | Exclui questão |
 | `GET` | `/api/evaluations` | Lista os 100 resultados mais recentes |
 | `POST` | `/api/evaluations` | Registra um resultado |
+| `POST` | `/api/auth/login` | Inicia uma sessão |
+| `POST` | `/api/auth/register` | Ativa um e-mail previamente autorizado |
+| `GET` | `/api/auth/me` | Valida a sessão atual |
+| `PATCH` | `/api/auth/profile` | Atualiza o nome do usuário autenticado |
+| `GET` | `/api/dashboard` | Retorna estatísticas permitidas ao usuário |
+| `GET` | `/api/students` | Lista alunos e evolução por avaliador |
+| `GET/POST` | `/api/matrices` | Consulta ou cria matrizes de exame |
+| `GET` | `/api/users` | Lista usuários para o Super Admin |
+| `POST` | `/api/users/invite` | Autoriza um novo e-mail |
 
 ## Estrutura principal
 
@@ -234,6 +265,15 @@ scripts/serve-static.mjs     servidor local do build estático
 
 ## Segurança antes de uso real
 
-Esta versão mantém a área administrativa sem login e permite alterações na API sem autenticação. Isso é adequado para demonstração ou uso controlado, mas **não para uma administração exposta à internet**. A coleta e a correção dos exames teóricos passam a seguir as configurações de segurança dos Google Forms vinculados.
+Toda a aplicação exige uma conta. Avaliadores enxergam somente avaliações e alunos vinculados a eles; o Super Admin possui visão global, autoriza e desativa acessos e cria matrizes. As senhas são derivadas com PBKDF2 e as sessões são armazenadas no D1 apenas como hashes.
 
-Antes de cadastrar dados pessoais ou aplicar provas reais, implemente autenticação, perfis de acesso, correção no servidor, rate limiting, política de privacidade e backups/exportações periódicas do D1. O CORS restringe navegadores, mas não substitui autenticação.
+Antes do primeiro uso real:
+
+1. Troque a senha inicial do Super Admin.
+2. Restrinja `FRONTEND_ORIGIN` à URL exata do frontend.
+3. Cadastre apenas e-mails conhecidos na seção **Equipe**.
+4. Configure rate limiting no endpoint de login.
+5. Defina política de privacidade, retenção e exportação dos dados dos alunos.
+6. Faça exportações periódicas do D1 e teste a restauração.
+
+O sistema ainda não envia convites ou recuperação de senha por e-mail. A coleta e a correção dos exames teóricos seguem as configurações de segurança dos Google Forms vinculados.
