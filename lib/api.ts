@@ -1,6 +1,6 @@
 const DEFAULT_API_URL = "http://127.0.0.1:8787";
 
-export const API_URL = (
+const API_URL = (
   process.env.NEXT_PUBLIC_API_URL || DEFAULT_API_URL
 ).replace(/\/$/, "");
 
@@ -18,7 +18,7 @@ export function setAuthToken(token: string | null) {
   else window.localStorage.removeItem(AUTH_TOKEN_KEY);
 }
 
-export class ApiError extends Error {
+class ApiError extends Error {
   constructor(message: string, public readonly status: number) {
     super(message);
     this.name = "ApiError";

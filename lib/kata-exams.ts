@@ -1,13 +1,13 @@
 export type KataId = "nage-no-kata" | "katame-no-kata";
 export type KataMode = "partial" | "complete";
 
-export type KataTechnique = {
+type KataTechnique = {
   id: string;
   name: string;
   videoTechnique?: string;
 };
 
-export type KataGroup = {
+type KataGroup = {
   id: string;
   name: string;
   techniques: KataTechnique[];

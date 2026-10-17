@@ -1,4 +1,4 @@
-export const CATEGORY_ORDER = [
+const CATEGORY_ORDER = [
   "Nage Waza",
   "Renraku-Henka Waza",
   "Kaeshi Waza",
@@ -27,7 +27,7 @@ type CategoryDefinition = {
   draws?: DrawRule[];
 };
 
-export type PracticalBelt = {
+type PracticalBelt = {
   id: PracticalBeltId;
   name: string;
   kyu: string;
@@ -332,7 +332,7 @@ export function createPracticalExam(beltId: PracticalBeltId, random: () => numbe
     const definition = belt.categories[categoryName];
     if (!definition) return [];
 
-    const used = new Set<string>();
+    const used = new Set<string>(definition.fixed);
     const drawn: ExamTechnique[] = [];
 
     definition.draws?.forEach((rule) => {
