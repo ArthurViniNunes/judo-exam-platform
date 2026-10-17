@@ -9,6 +9,12 @@
     "FRONTEND_ORIGIN": "https://judo-exam-platform.judo-rogerio-cruz.workers.dev",
     "SUPER_ADMIN_EMAIL": "admin@judorogeriocruz.com.br"
   },
+  "observability": {
+    "logs": {
+      "enabled": true,
+      "invocation_logs": true
+    }
+  },
   "d1_databases": [
     {
       "binding": "DB",
