@@ -1,12 +1,18 @@
 "use client";
 
 import { useState } from "react";
+import { Activity, Check, ChevronRight, CircleHelp } from "lucide-react";
 import {
-  Activity, ArrowLeft, Check, CheckCircle2, ChevronDown, ChevronRight, CircleHelp,
-} from "lucide-react";
-import {
-  EMPTY_KATA_MARK, KATAS, calculateKataResult, createKataExam, kataMarkDeductions,
-  type KataErrors, type KataId, type KataMark, type KataMode, type KataResult,
+  EMPTY_KATA_MARK,
+  KATAS,
+  calculateKataResult,
+  createKataExam,
+  kataMarkDeductions,
+  type KataErrors,
+  type KataId,
+  type KataMark,
+  type KataMode,
+  type KataResult,
 } from "@/lib/kata-exams";
 import { TECHNIQUE_VIDEOS, toYouTubeEmbedUrl } from "@/lib/practical-exams";
 import { Brand, TechniqueVideoDialog } from "./exam-public";
@@ -62,10 +68,10 @@ export function KataSetup({
             <legend>EXTENSÃO DO NAGE-NO-KATA</legend>
             <div className="kata-mode-options">
               <button type="button" className={mode === "partial" ? "selected" : ""} onClick={() => setMode("partial")} aria-pressed={mode === "partial"}>
-                <strong>Parcial</strong><small>11 itens · 3 grupos e cerimônias</small>
+                <strong>Parcial</strong><small>Até Ashi-waza, incluindo as cerimônias</small>
               </button>
               <button type="button" className={mode === "complete" ? "selected" : ""} onClick={() => setMode("complete")} aria-pressed={mode === "complete"}>
-                <strong>Completo</strong><small>17 itens · 5 grupos e cerimônias</small>
+                <strong>Completo</strong><small>Apresentação integral, incluindo as cerimônias</small>
               </button>
             </div>
           </fieldset>
@@ -96,39 +102,41 @@ export function KataForm({
 }) {
   const kata = KATAS.find((item) => item.id === kataId) ?? KATAS[0];
   const exam = createKataExam(kataId, mode);
-  const [groupIndex, setGroupIndex] = useState(0);
   const [marks, setMarks] = useState<Record<string, KataMark>>({});
-  const [openTechnique, setOpenTechnique] = useState<string | null>(null);
   const [videoTechnique, setVideoTechnique] = useState<string | null>(null);
   const [notes, setNotes] = useState("");
-  const group = exam[groupIndex];
   const liveResult = calculateKataResult(exam, marks);
   const totalTechniques = exam.reduce((sum, item) => sum + item.techniques.length, 0);
-  const groupComplete = group.techniques.every((technique) => marks[technique.id]?.reviewed);
-  const allComplete = exam.every((item) => item.techniques.every((technique) => marks[technique.id]?.reviewed));
+  const progress = totalTechniques ? (liveResult.reviewedCount / totalTechniques) * 100 : 0;
+  const allComplete = exam.every((group) =>
+    group.techniques.every((technique) => marks[technique.id]?.reviewed),
+  );
 
-  const updateMark = (techniqueId: string, field: keyof KataErrors, value: boolean) => {
+  const updateMark = (techniqueId: string, field: keyof KataErrors) => {
+    setMarks((current) => {
+      const mark = current[techniqueId] ?? EMPTY_KATA_MARK;
+      return {
+        ...current,
+        [techniqueId]: { ...mark, [field]: !mark[field], reviewed: true },
+      };
+    });
+  };
+
+  const clearMark = (techniqueId: string) => {
     setMarks((current) => ({
       ...current,
-      [techniqueId]: { ...(current[techniqueId] ?? EMPTY_KATA_MARK), [field]: value },
+      [techniqueId]: { ...EMPTY_KATA_MARK, reviewed: true },
     }));
   };
 
-  const confirmMark = (techniqueId: string) => {
-    setMarks((current) => ({
-      ...current,
-      [techniqueId]: { ...(current[techniqueId] ?? EMPTY_KATA_MARK), reviewed: true },
-    }));
-    setOpenTechnique(null);
+  const scrollToGroup = (groupId: string) => {
+    document.getElementById(`kata-group-${groupId}`)?.scrollIntoView({
+      behavior: "smooth",
+      block: "start",
+    });
   };
 
-  const next = () => {
-    if (groupIndex < exam.length - 1) {
-      setGroupIndex((current) => current + 1);
-      setOpenTechnique(null);
-      window.scrollTo({ top: 0, behavior: "smooth" });
-      return;
-    }
+  const finish = () => {
     onFinish({ ...calculateKataResult(exam, marks), notes: notes.trim() });
   };
 
@@ -139,95 +147,95 @@ export function KataForm({
         <div><strong>{athleteName}</strong><span>{kata.name} · {kataId === "nage-no-kata" && mode === "partial" ? "Parcial" : "Completo"}</span></div>
         <button className="text-button" onClick={onExit}>Sair</button>
       </header>
-      <div className="technical-layout">
+      <div className="technical-layout kata-continuous-layout">
         <aside className="steps-panel kata-steps">
           <span className="eyebrow">ORDEM DO KATA</span>
           <h2>{kata.name}</h2>
-          {exam.map((item, index) => {
-            const complete = item.techniques.every((technique) => marks[technique.id]?.reviewed);
+          {exam.map((group, index) => {
+            const complete = group.techniques.every((technique) => marks[technique.id]?.reviewed);
             return (
-              <button key={item.id} className={index === groupIndex ? "active" : complete ? "done" : ""} onClick={() => { setGroupIndex(index); setOpenTechnique(null); }}>
+              <button key={group.id} className={complete ? "done" : ""} onClick={() => scrollToGroup(group.id)}>
                 <i>{complete ? <Check size={15} /> : index + 1}</i>
-                <span><strong>{item.name}</strong><small>{item.techniques.length} {item.techniques.length === 1 ? "item" : "técnicas"}</small></span>
+                <span><strong>{group.name}</strong><small>{complete ? "Concluído" : "Pendente"}</small></span>
               </button>
             );
           })}
-          <div className="autosave"><CheckCircle2 size={16} /> {liveResult.reviewedCount} de {totalTechniques} itens avaliados</div>
+          <div className="exam-progress-block">
+            <span>Progresso da avaliação</span>
+            <div className="exam-progress" role="progressbar" aria-label="Progresso da avaliação de kata" aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(progress)}>
+              <i style={{ width: `${progress}%` }} />
+            </div>
+          </div>
         </aside>
-        <div className="technical-content">
+        <main className="technical-content kata-continuous-content">
           <div className="section-title">
-            <div><span>ETAPA {groupIndex + 1} DE {exam.length}</span><h1>{group.name}</h1></div>
+            <div><span>AVALIAÇÃO CONTÍNUA</span><h1>{kata.name}</h1></div>
             <div className="live-score kata-live-score"><span>NOTA ATUAL</span><strong>{liveResult.reviewedCount ? liveResult.score.toFixed(1) : "—"}</strong></div>
           </div>
           <div className="kata-error-guide" aria-label="Critérios de erro">
-            <span><b>−1</b> Pequeno <small>até 2 por técnica</small></span>
-            <span><b>−3</b> Médio</span>
-            <span><b>−5</b> Grande</span>
-            <span><b>−10</b> Grave/esquecimento <small>nota geral ÷ 2 uma vez</small></span>
+            <span><b>−1</b> Pequeno <small>Desvio discreto. Pode ser marcado duas vezes.</small></span>
+            <span><b>−3</b> Médio <small>Erro claro que afeta parte da execução.</small></span>
+            <span><b>−5</b> Grande <small>Compromete um elemento essencial da técnica.</small></span>
+            <span><b>−10</b> Grave/esquecimento <small>Divide a nota geral por 2 uma única vez.</small></span>
           </div>
-          <div className="criteria-list kata-criteria">
-            {group.techniques.map((technique, itemIndex) => {
-              const mark = marks[technique.id] ?? EMPTY_KATA_MARK;
-              const deduction = kataMarkDeductions(mark);
-              const isOpen = openTechnique === technique.id;
-              const hasVideo = Boolean(technique.videoTechnique && toYouTubeEmbedUrl(TECHNIQUE_VIDEOS[technique.videoTechnique] ?? ""));
-              return (
-                <article key={technique.id} className={`technique-card ${mark.reviewed ? "scored" : ""} ${isOpen ? "open" : ""}`}>
-                  <div className={`technique-card-head ${hasVideo ? "" : "without-video"}`}>
-                    <button className="technique-card-trigger" onClick={() => setOpenTechnique(isOpen ? null : technique.id)} aria-expanded={isOpen} aria-controls={`kata-errors-${technique.id}`}>
-                      <span className="technique-number">{String(itemIndex + 1).padStart(2, "0")}</span>
-                      <span className="technique-copy"><strong>{technique.name}</strong><small>{mark.reviewed ? "Avaliação registrada" : "Toque para registrar erros"}</small></span>
-                      {mark.reviewed ? (
-                        <span className={`selected-rating kata-mark-summary ${deduction ? "has-errors" : "clear"}`}>
-                          {deduction ? `−${deduction} pts${mark.severe ? " · ÷2" : ""}` : "Sem erros"}
-                        </span>
-                      ) : <span className="rate-prompt">Avaliar</span>}
-                      <ChevronDown className="card-chevron" size={19} />
-                    </button>
-                    {hasVideo && technique.videoTechnique && (
-                      <button className="video-help" onClick={() => setVideoTechnique(technique.videoTechnique ?? null)} aria-label={`Ver vídeo de ${technique.name}`} title="Ver vídeo da técnica">
-                        <CircleHelp size={20} />
-                      </button>
-                    )}
-                  </div>
-                  {isOpen && (
-                    <div className="kata-error-menu" id={`kata-errors-${technique.id}`}>
-                      <div className={`kata-error-option small ${mark.small1 || mark.small2 ? "selected" : ""}`}>
-                        <span className="kata-penalty">−1</span>
-                        <span className="kata-error-copy"><strong>Erro pequeno</strong><small>Desvio discreto que não compromete a execução.</small></span>
-                        <span className="kata-small-checks" aria-label="Erros pequenos">
-                          <label><input type="checkbox" checked={mark.small1} onChange={(event) => updateMark(technique.id, "small1", event.target.checked)} /><span>1</span></label>
-                          <label><input type="checkbox" checked={mark.small2} onChange={(event) => updateMark(technique.id, "small2", event.target.checked)} /><span>2</span></label>
-                        </span>
-                      </div>
-                      {([
-                        ["medium", "Erro médio", "Erro claro que afeta uma parte da execução.", "−3"],
-                        ["large", "Erro grande", "Falha que compromete um elemento essencial da técnica.", "−5"],
-                        ["severe", "Erro grave ou esquecimento", "Desconta 10 pontos e divide a nota geral por 2 uma única vez.", "−10"],
-                      ] as const).map(([field, label, description, penalty]) => (
-                        <label key={field} className={`kata-error-option ${field} ${mark[field] ? "selected" : ""}`}>
-                          <span className="kata-penalty">{penalty}</span>
-                          <span className="kata-error-copy"><strong>{label}</strong><small>{description}</small></span>
-                          <input type="checkbox" checked={mark[field]} onChange={(event) => updateMark(technique.id, field, event.target.checked)} />
-                        </label>
-                      ))}
-                      <button className="primary kata-confirm" onClick={() => confirmMark(technique.id)}><Check size={17} /> {deduction ? "SALVAR ERROS" : "CONFIRMAR SEM ERROS"}</button>
-                    </div>
-                  )}
-                </article>
-              );
-            })}
+          <div className="kata-continuous">
+            {exam.map((group) => (
+              <section className="kata-group-section" id={`kata-group-${group.id}`} key={group.id}>
+                <header><span>Grupo do kata</span><h2>{group.name}</h2></header>
+                <div className="criteria-list kata-quick-list">
+                  {group.techniques.map((technique, itemIndex) => {
+                    const mark = marks[technique.id] ?? EMPTY_KATA_MARK;
+                    const deduction = kataMarkDeductions(mark);
+                    const hasVideo = Boolean(technique.videoTechnique && toYouTubeEmbedUrl(TECHNIQUE_VIDEOS[technique.videoTechnique] ?? ""));
+                    return (
+                      <article key={technique.id} className={`technique-card kata-quick-card ${mark.reviewed ? "scored" : ""}`}>
+                        <div className={`kata-quick-head ${hasVideo ? "" : "without-video"}`}>
+                          <span className="technique-number">{String(itemIndex + 1).padStart(2, "0")}</span>
+                          <span className="technique-copy"><strong>{technique.name}</strong><small>{mark.reviewed ? (deduction ? `−${deduction} pontos registrados` : "Sem erros registrados") : "Selecione o resultado abaixo"}</small></span>
+                          {hasVideo && technique.videoTechnique && (
+                            <button className="video-help" onClick={() => setVideoTechnique(technique.videoTechnique ?? null)} aria-label={`Ver vídeo de ${technique.name}`} title="Ver vídeo da técnica">
+                              <CircleHelp size={20} />
+                            </button>
+                          )}
+                        </div>
+                        <div className="kata-quick-controls" role="group" aria-label={`Erros em ${technique.name}`}>
+                          <button className={`kata-clear ${mark.reviewed && deduction === 0 ? "selected" : ""}`} onClick={() => clearMark(technique.id)} aria-pressed={mark.reviewed && deduction === 0}>
+                            <Check size={16} /><span>Sem erros</span>
+                          </button>
+                          {(["small1", "small2"] as const).map((field, index) => (
+                            <button key={field} className={`kata-penalty-button small ${mark[field] ? "selected" : ""}`} onClick={() => updateMark(technique.id, field)} aria-pressed={mark[field]} aria-label={`Erro pequeno ${index + 1} em ${technique.name}`}>
+                              <b>−1</b><span>Pequeno {index + 1}</span>
+                            </button>
+                          ))}
+                          {([
+                            ["medium", "−3", "Médio"],
+                            ["large", "−5", "Grande"],
+                            ["severe", "−10", "Grave"],
+                          ] as const).map(([field, penalty, label]) => (
+                            <button key={field} className={`kata-penalty-button ${field} ${mark[field] ? "selected" : ""}`} onClick={() => updateMark(technique.id, field)} aria-pressed={mark[field]}>
+                              <b>{penalty}</b><span>{label}</span>
+                            </button>
+                          ))}
+                        </div>
+                      </article>
+                    );
+                  })}
+                </div>
+              </section>
+            ))}
           </div>
           <label className="notes-field">OBSERVAÇÕES DO AVALIADOR
             <textarea value={notes} onChange={(event) => setNotes(event.target.value)} placeholder="Registre aspectos técnicos, ritmo, postura e orientações..." />
           </label>
-          <div className="quiz-actions">
-            <button className="outline" disabled={groupIndex === 0} onClick={() => { setGroupIndex((current) => current - 1); setOpenTechnique(null); }}><ArrowLeft size={17} /> ETAPA ANTERIOR</button>
-            <button className="primary" disabled={!groupComplete || (groupIndex === exam.length - 1 && !allComplete)} onClick={next}>{groupIndex === exam.length - 1 ? "CONCLUIR AVALIAÇÃO" : "PRÓXIMA ETAPA"} <ChevronRight size={17} /></button>
+          <div className="quiz-actions kata-finish-action">
+            <button className="primary" disabled={!allComplete} onClick={finish}>CONCLUIR AVALIAÇÃO <ChevronRight size={17} /></button>
           </div>
-        </div>
+        </main>
       </div>
-      <div className="mobile-score-dock"><span>{liveResult.reviewedCount}/{totalTechniques} avaliados</span><strong>Nota atual {liveResult.reviewedCount ? liveResult.score.toFixed(1) : "—"}</strong></div>
+      <div className="mobile-score-dock">
+        <div className="exam-progress" role="progressbar" aria-label="Progresso da avaliação de kata" aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(progress)}><i style={{ width: `${progress}%` }} /></div>
+        <strong>Nota atual {liveResult.reviewedCount ? liveResult.score.toFixed(1) : "—"}</strong>
+      </div>
       {videoTechnique && <TechniqueVideoDialog technique={videoTechnique} onClose={() => setVideoTechnique(null)} />}
     </section>
   );

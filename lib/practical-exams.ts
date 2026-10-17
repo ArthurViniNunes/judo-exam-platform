@@ -308,11 +308,27 @@ export const SCORE_OPTIONS = [
   { value: 0, label: "Insuficiente", description: "Técnica não aplicada ou trocada." },
 ] as const;
 
-export function beltNeedsDraw(beltId: PracticalBeltId) {
-  const belt = PRACTICAL_BELTS.find((item) => item.id === beltId);
-  return Boolean(
-    belt && Object.values(belt.categories).some((category) => category?.draws?.length),
-  );
+export function getTechniqueEvaluationParts(
+  category: PracticalCategory,
+  technique: string,
+) {
+  if (category !== "Renraku-Henka Waza") return [technique];
+
+  const parts = technique
+    .split("→")
+    .map((part) => part.trim())
+    .filter(Boolean);
+
+  return parts.length > 1 ? parts : [technique];
+}
+
+export function calculateSequenceScore(
+  scores: Record<number, number> | undefined,
+  partCount: number,
+) {
+  const values = Array.from({ length: partCount }, (_, index) => scores?.[index]);
+  if (!values.every((score) => score !== undefined)) return undefined;
+  return values.reduce((sum, score) => sum + score, 0) / values.length;
 }
 
 function shuffled<T>(items: T[], random: () => number) {
@@ -357,6 +373,16 @@ export function createPracticalExam(beltId: PracticalBeltId, random: () => numbe
   });
 }
 
+function youtubeStartInSeconds(value: string | null) {
+  if (!value) return null;
+  if (/^\d+$/.test(value)) return Number(value);
+
+  const match = value.match(/^(?:(\d+)h)?(?:(\d+)m)?(?:(\d+)s)?$/);
+  if (!match) return null;
+
+  return Number(match[1] ?? 0) * 3600 + Number(match[2] ?? 0) * 60 + Number(match[3] ?? 0);
+}
+
 export function toYouTubeEmbedUrl(url: string) {
   if (!url) return null;
   try {
@@ -366,7 +392,19 @@ export function toYouTubeEmbedUrl(url: string) {
     if (parsed.hostname.includes("youtube.com")) {
       id = parsed.searchParams.get("v") ?? parsed.pathname.match(/\/(?:embed|shorts)\/([^/?]+)/)?.[1] ?? "";
     }
-    return id ? `https://www.youtube-nocookie.com/embed/${id}` : null;
+    if (!id) return null;
+
+    const parameters = new URLSearchParams({
+      autoplay: "1",
+      playsinline: "1",
+      rel: "0",
+    });
+    const start = youtubeStartInSeconds(
+      parsed.searchParams.get("t") ?? parsed.searchParams.get("start"),
+    );
+    if (start) parameters.set("start", String(start));
+
+    return `https://www.youtube-nocookie.com/embed/${id}?${parameters.toString()}`;
   } catch {
     return null;
   }

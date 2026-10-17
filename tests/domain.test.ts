@@ -11,7 +11,10 @@ import {
   EMPTY_KATA_MARK,
 } from "../lib/kata-exams";
 import {
+  calculateSequenceScore,
   createPracticalExam,
+  getTechniqueEvaluationParts,
+  toYouTubeEmbedUrl,
   type ExamCategory,
 } from "../lib/practical-exams";
 import { calculatePracticalResult } from "../lib/practical-scoring";
@@ -68,12 +71,36 @@ describe("regras da avaliação prática", () => {
     expect(result.detail).toContain("3 categorias ficaram abaixo de 7,0");
   });
 
-  it("mantém sorteios sem duplicar técnicas dentro da categoria", () => {
+  it("monta seleções aleatórias sem duplicar técnicas dentro da categoria", () => {
     const exam = createPracticalExam("brown", () => 0.25);
     for (const category of exam) {
       const names = category.techniques.map((technique) => technique.name);
       expect(new Set(names).size).toBe(names.length);
     }
+  });
+
+  it("separa cada movimento de Renraku-Henka para calcular a média", () => {
+    expect(
+      getTechniqueEvaluationParts(
+        "Renraku-Henka Waza",
+        "O-uchi-gari → Uchi-mata → Tai-otoshi",
+      ),
+    ).toEqual(["O-uchi-gari", "Uchi-mata", "Tai-otoshi"]);
+    expect(getTechniqueEvaluationParts("Kaeshi Waza", "A × B")).toEqual([
+      "A × B",
+    ]);
+    expect(calculateSequenceScore({ 0: 10, 1: 7, 2: 5 }, 3)).toBeCloseTo(
+      7.33,
+      2,
+    );
+    expect(calculateSequenceScore({ 0: 10, 2: 5 }, 3)).toBeUndefined();
+  });
+
+  it("abre referências do YouTube com reprodução automática e preserva o início", () => {
+    const embed = toYouTubeEmbedUrl("https://youtu.be/example?t=2m9s");
+    expect(embed).toContain("autoplay=1");
+    expect(embed).toContain("playsinline=1");
+    expect(embed).toContain("start=129");
   });
 });
 

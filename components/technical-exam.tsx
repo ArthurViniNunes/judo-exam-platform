@@ -1,13 +1,13 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useState } from "react";
 import {
-  ArrowLeft, Check, CheckCircle2, ChevronDown, ChevronRight,
-  CircleHelp, Dices, RotateCw,
+  ArrowLeft, Check, ChevronDown, ChevronRight, CircleHelp, Dices,
 } from "lucide-react";
 import {
-  PRACTICAL_BELTS, SCORE_OPTIONS, TECHNIQUE_VIDEOS, beltNeedsDraw, createPracticalExam,
-  toYouTubeEmbedUrl, type ExamCategory, type PracticalBeltId,
+  PRACTICAL_BELTS, SCORE_OPTIONS, TECHNIQUE_VIDEOS, calculateSequenceScore,
+  createPracticalExam,
+  getTechniqueEvaluationParts, toYouTubeEmbedUrl, type PracticalBeltId,
 } from "@/lib/practical-exams";
 import { calculatePracticalResult } from "@/lib/practical-scoring";
 import { Brand, TechniqueVideoDialog } from "./exam-public";
@@ -67,41 +67,56 @@ export function TechnicalForm({
   onExit: () => void;
 }) {
   const belt = PRACTICAL_BELTS.find((item) => item.id === beltId) ?? PRACTICAL_BELTS[0];
-  const requiresDraw = beltNeedsDraw(beltId);
-  const [exam, setExam] = useState<ExamCategory[] | null>(() => requiresDraw ? null : createPracticalExam(beltId));
-  const [drawing, setDrawing] = useState(false);
+  const [exam] = useState(() => createPracticalExam(beltId));
   const [groupIndex, setGroupIndex] = useState(0);
-  const [scores, setScores] = useState<Record<string, number>>({});
+  const [standardScores, setStandardScores] = useState<Record<string, number>>({});
+  const [sequenceScores, setSequenceScores] = useState<
+    Record<string, Record<number, number>>
+  >({});
   const [notes, setNotes] = useState("");
   const [openTechnique, setOpenTechnique] = useState<string | null>(null);
   const [videoTechnique, setVideoTechnique] = useState<string | null>(null);
-  const drawTimer = useRef<number | null>(null);
 
-  useEffect(() => () => {
-    if (drawTimer.current) window.clearTimeout(drawTimer.current);
-  }, []);
+  const scores = { ...standardScores };
+  for (const category of exam) {
+    for (const technique of category.techniques) {
+      const partCount = getTechniqueEvaluationParts(
+        category.name,
+        technique.name,
+      ).length;
+      if (partCount < 2) continue;
+      const average = calculateSequenceScore(
+        sequenceScores[technique.id],
+        partCount,
+      );
+      if (average !== undefined) scores[technique.id] = average;
+    }
+  }
 
-  const group = exam?.[groupIndex];
+  const group = exam[groupIndex];
   const complete = Boolean(group?.techniques.every((technique) => scores[technique.id] !== undefined));
-  const allComplete = Boolean(exam?.every((category) => category.techniques.every((technique) => scores[technique.id] !== undefined)));
+  const allComplete = exam.every((category) => category.techniques.every((technique) => scores[technique.id] !== undefined));
   const scoredCount = Object.keys(scores).length;
-  const totalTechniques = exam?.reduce((sum, category) => sum + category.techniques.length, 0) ?? 0;
+  const totalTechniques = exam.reduce((sum, category) => sum + category.techniques.length, 0);
+  const progress = totalTechniques ? (scoredCount / totalTechniques) * 100 : 0;
   const liveAverage = scoredCount ? Object.values(scores).reduce((sum, value) => sum + value, 0) / scoredCount : 0;
 
-  const runDraw = () => {
-    if (drawing) return;
-    setDrawing(true);
-    const generatedExam = createPracticalExam(beltId);
-    drawTimer.current = window.setTimeout(() => {
-      setExam(generatedExam);
-      setDrawing(false);
-      setGroupIndex(0);
-      window.scrollTo({ top: 0, behavior: "smooth" });
-    }, 1800);
+  const updateSequenceScore = (
+    techniqueId: string,
+    partIndex: number,
+    value: number,
+  ) => {
+    setSequenceScores((current) => {
+      const techniqueScores = {
+        ...(current[techniqueId] ?? {}),
+        [partIndex]: value,
+      };
+      return { ...current, [techniqueId]: techniqueScores };
+    });
   };
 
   const next = () => {
-    if (!exam || !group) return;
+    if (!group) return;
     if (groupIndex < exam.length - 1) {
       setGroupIndex(groupIndex + 1);
       setOpenTechnique(null);
@@ -112,39 +127,6 @@ export function TechnicalForm({
     onFinish(calculatePracticalResult(exam, scores));
   };
 
-  if (!exam) {
-    const drawRules = Object.entries(belt.categories).flatMap(([category, definition]) =>
-      definition?.draws?.map((rule) => {
-        const source = PRACTICAL_BELTS.find((item) => item.id === rule.from);
-        return `${rule.count} de ${category} da faixa ${source?.name}`;
-      }) ?? [],
-    );
-
-    return (
-      <section className="technical-screen draw-screen">
-        <header className="quiz-header">
-          <Brand compact />
-          <div><strong>{athlete}</strong><span>Faixa {belt.name} · {belt.kyu}</span></div>
-          <button className="text-button" onClick={onExit}>Sair</button>
-        </header>
-        <div className={`draw-stage ${drawing ? "is-drawing" : ""}`}>
-          <div className="draw-symbol"><Dices size={46} /></div>
-          <span className="eyebrow">SORTEIO DA AVALIAÇÃO</span>
-          <h1>{drawing ? "Sorteando técnicas…" : "Prepare a lista do exame"}</h1>
-          <p>{drawing ? "As técnicas estão sendo selecionadas de forma aleatória." : "O sorteio combina técnicas de faixas anteriores com a lista fixa desta graduação."}</p>
-          <div className="draw-rules">
-            {drawRules.map((rule) => <span key={rule}><Check size={15} /> {rule}</span>)}
-          </div>
-          <button className="primary draw-button" disabled={drawing} onClick={runDraw}>
-            {drawing ? <RotateCw className="spin" size={20} /> : <Dices size={20} />}
-            {drawing ? "SORTEANDO…" : "SORTEAR TÉCNICAS"}
-          </button>
-          <small>O sorteio não poderá ser refeito depois que a avaliação começar.</small>
-        </div>
-      </section>
-    );
-  }
-
   return (
     <section className="technical-screen">
       <header className="quiz-header">
@@ -154,37 +136,55 @@ export function TechnicalForm({
       </header>
       <div className="technical-layout">
         <aside className="steps-panel">
-          <span className="eyebrow">MATRIZ TÉCNICA</span>
+          <span className="eyebrow">CATEGORIAS</span>
           <h2>Avaliação prática</h2>
           {exam.map((item, index) => {
             const itemComplete = item.techniques.every((technique) => scores[technique.id] !== undefined);
             return <button key={item.name} className={index === groupIndex ? "active" : itemComplete ? "done" : ""} onClick={() => { setGroupIndex(index); setOpenTechnique(null); }}>
               <i>{itemComplete ? <Check size={15} /> : index + 1}</i>
-              <span><strong>{item.name}</strong><small>{item.techniques.length} técnicas</small></span>
+              <span><strong>{item.name}</strong><small>{itemComplete ? "Concluída" : index === groupIndex ? "Em avaliação" : "Pendente"}</small></span>
             </button>;
           })}
-          <div className="autosave"><CheckCircle2 size={16} /> {scoredCount} de {totalTechniques} técnicas avaliadas</div>
+          <div className="exam-progress-block">
+            <span>Progresso da avaliação</span>
+            <div className="exam-progress" role="progressbar" aria-label="Progresso da avaliação" aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(progress)}>
+              <i style={{ width: `${progress}%` }} />
+            </div>
+          </div>
         </aside>
         <div className="technical-content">
           <div className="section-title">
-            <div><span>ETAPA {groupIndex + 1} DE {exam.length}</span><h1>{group?.name}</h1></div>
+            <div><span>CATEGORIA ATUAL</span><h1>{group?.name}</h1></div>
             <div className="live-score"><span>NOTA PARCIAL</span><strong>{liveAverage.toFixed(1)}</strong></div>
           </div>
           <div className="criteria-list practical-criteria">
             {group?.techniques.map((technique, itemIndex) => {
-              const selectedScore = SCORE_OPTIONS.find((option) => option.value === scores[technique.id]);
+              const evaluationParts = getTechniqueEvaluationParts(group.name, technique.name);
+              const isSequence = evaluationParts.length > 1;
+              const techniqueScore = scores[technique.id];
+              const selectedScore = isSequence
+                ? undefined
+                : SCORE_OPTIONS.find((option) => option.value === techniqueScore);
+              const techniqueComplete = techniqueScore !== undefined;
               const isOpen = openTechnique === technique.id;
               const hasVideo = Boolean(toYouTubeEmbedUrl(TECHNIQUE_VIDEOS[technique.name] ?? ""));
               return (
-                <article key={technique.id} className={`technique-card ${selectedScore ? "scored" : ""} ${isOpen ? "open" : ""}`}>
+                <article key={technique.id} className={`technique-card ${techniqueComplete ? "scored" : ""} ${isOpen ? "open" : ""}`}>
                   <div className="technique-card-head">
                     <button className="technique-card-trigger" onClick={() => setOpenTechnique(isOpen ? null : technique.id)} aria-expanded={isOpen} aria-controls={`score-menu-${technique.id}`}>
                       <span className="technique-number">{String(itemIndex + 1).padStart(2, "0")}</span>
                       <span className="technique-copy">
                         <strong>{technique.name}</strong>
-                        {technique.drawnFrom && <small><Dices size={12} /> Sorteada da {technique.drawnFrom}</small>}
+                        {technique.drawnFrom && <small className="drawn-origin"><Dices size={12} /> Veio de sorteio da {technique.drawnFrom}</small>}
+                        {isSequence && <small>{evaluationParts.length} movimentos avaliados no mesmo bloco</small>}
                       </span>
-                      {selectedScore ? <span className={`selected-rating score-${selectedScore.value}`}><b>{selectedScore.value}</b> {selectedScore.label}</span> : <span className="rate-prompt">Avaliar</span>}
+                      {isSequence && techniqueComplete ? (
+                        <span className="selected-rating"><b>{techniqueScore.toFixed(1)}</b> média</span>
+                      ) : selectedScore ? (
+                        <span className={`selected-rating score-${selectedScore.value}`}><b>{selectedScore.value}</b> {selectedScore.label}</span>
+                      ) : (
+                        <span className="rate-prompt">Avaliar</span>
+                      )}
                       <ChevronDown className="card-chevron" size={19} />
                     </button>
                     {hasVideo && <button className="video-help" onClick={() => setVideoTechnique(technique.name)} aria-label={`Ver vídeo de ${technique.name}`} title="Ver vídeo da técnica">
@@ -192,23 +192,53 @@ export function TechnicalForm({
                     </button>}
                   </div>
                   {isOpen && (
-                    <div className="rating-menu" id={`score-menu-${technique.id}`} role="group" aria-label={`Nota para ${technique.name}`}>
-                      {SCORE_OPTIONS.map((option) => (
-                        <button
-                          key={option.value}
-                          className={`rating-option score-${option.value} ${scores[technique.id] === option.value ? "selected" : ""}`}
-                          onClick={() => {
-                            setScores((current) => ({ ...current, [technique.id]: option.value }));
-                            setOpenTechnique(null);
-                          }}
-                          aria-pressed={scores[technique.id] === option.value}
-                        >
-                          <span className="rating-points">{option.value}</span>
-                          <span className="rating-copy"><strong>{option.label}</strong><small>{option.description}</small></span>
-                          {scores[technique.id] === option.value && <Check size={18} />}
-                        </button>
-                      ))}
-                    </div>
+                    isSequence ? (
+                      <div className="sequence-rating" id={`score-menu-${technique.id}`} aria-label={`Avaliação dos movimentos de ${technique.name}`}>
+                        <div className="sequence-score-guide">
+                          {SCORE_OPTIONS.map((option) => (
+                            <span key={option.value}><b>{option.value} · {option.label}</b><small>{option.description}</small></span>
+                          ))}
+                        </div>
+                        {evaluationParts.map((part, partIndex) => (
+                          <section className="sequence-part" key={`${technique.id}-${part}`}>
+                            <header><span>Movimento {partIndex + 1}</span><strong>{part}</strong></header>
+                            <div className="sequence-score-buttons" role="group" aria-label={`Nota para ${part}`}>
+                              {SCORE_OPTIONS.map((option) => {
+                                const selected = sequenceScores[technique.id]?.[partIndex] === option.value;
+                                return (
+                                  <button key={option.value} className={`score-${option.value} ${selected ? "selected" : ""}`} onClick={() => updateSequenceScore(technique.id, partIndex, option.value)} aria-pressed={selected}>
+                                    <b>{option.value}</b><span>{option.label}</span>
+                                  </button>
+                                );
+                              })}
+                            </div>
+                          </section>
+                        ))}
+                        {techniqueComplete && (
+                          <button className="sequence-done" onClick={() => setOpenTechnique(null)}>
+                            <Check size={17} /> Concluir técnica · média {techniqueScore.toFixed(1)}
+                          </button>
+                        )}
+                      </div>
+                    ) : (
+                      <div className="rating-menu" id={`score-menu-${technique.id}`} role="group" aria-label={`Nota para ${technique.name}`}>
+                        {SCORE_OPTIONS.map((option) => (
+                          <button
+                            key={option.value}
+                            className={`rating-option score-${option.value} ${scores[technique.id] === option.value ? "selected" : ""}`}
+                            onClick={() => {
+                              setStandardScores((current) => ({ ...current, [technique.id]: option.value }));
+                              setOpenTechnique(null);
+                            }}
+                            aria-pressed={scores[technique.id] === option.value}
+                          >
+                            <span className="rating-points">{option.value}</span>
+                            <span className="rating-copy"><strong>{option.label}</strong><small>{option.description}</small></span>
+                            {scores[technique.id] === option.value && <Check size={18} />}
+                          </button>
+                        ))}
+                      </div>
+                    )
                   )}
                 </article>
               );
@@ -223,7 +253,10 @@ export function TechnicalForm({
           </div>
         </div>
       </div>
-      <div className="mobile-score-dock"><span>{scoredCount}/{totalTechniques} avaliadas</span><strong>Nota parcial {liveAverage.toFixed(1)}</strong></div>
+      <div className="mobile-score-dock">
+        <div className="exam-progress" role="progressbar" aria-label="Progresso da avaliação" aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(progress)}><i style={{ width: `${progress}%` }} /></div>
+        <strong>Nota parcial {liveAverage.toFixed(1)}</strong>
+      </div>
       {videoTechnique && <TechniqueVideoDialog technique={videoTechnique} onClose={() => setVideoTechnique(null)} />}
     </section>
   );
