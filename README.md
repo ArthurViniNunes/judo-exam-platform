@@ -1,33 +1,128 @@
 # Plataforma de Exames de Judô
 
-Aplicação web para os exames da Associação Judô Rogério Cruz. O projeto funciona de forma autônoma, sem ChatGPT, OpenAI Sites, conectores ou autenticação proprietária.
+Aplicação web da Associação Judô Rogério Cruz para aplicar, registrar e acompanhar exames de graduação. O sistema reúne avaliações técnicas, avaliações de kata, histórico dos alunos e administração de avaliadores em uma interface responsiva.
+
+## O que a plataforma faz
+
+- autentica avaliadores e Super Admins com contas individuais;
+- permite que o Super Admin autorize e desative avaliadores;
+- aplica avaliações técnicas por graduação, com sorteio de técnicas quando a matriz exigir;
+- oferece vídeos de apoio do YouTube para as técnicas cadastradas;
+- aplica `Nage-no-Kata` parcial ou completo e `Katame-no-Kata`;
+- registra notas, observações, modalidade, graduação e avaliador;
+- mostra histórico, média e evolução por aluno;
+- oferece um painel com volume de avaliações, médias, aprovação e registros recentes;
+- permite ao Super Admin criar matrizes técnicas com categorias, técnicas, kata e regras de aprovação;
+- mantém um banco de questões administrável para a área teórica;
+- direciona a avaliação teórica do atleta para os Google Forms oficiais configurados na interface.
+
+As avaliações técnica e de kata são processadas na aplicação e persistidas na API. A avaliação teórica usa os formulários externos definidos em `app/page.tsx`; o banco de questões da API é mantido para administração e consulta autenticada.
 
 ## Arquitetura
 
-- **Frontend:** Next.js 16/React 19 exportado como HTML, CSS e JavaScript estáticos.
-- **Backend:** API independente em Cloudflare Workers.
-- **Banco:** Cloudflare D1 (SQLite distribuído) em produção e SQLite local gerenciado pelo Wrangler no desenvolvimento.
-- **Autenticação:** sessões individuais com senha derivada por PBKDF2, convites por e-mail e papéis de `Super Admin` e `Avaliador`.
-- **Modo de contingência:** se a API estiver indisponível, o frontend continua utilizável com os dados já salvos no `localStorage`. O painel mostra `API conectada` ou `Modo local`.
+```text
+Next.js 16 / React 19
+        |
+        | NEXT_PUBLIC_API_URL
+        v
+Cloudflare Worker (API) ---- Cloudflare D1 / SQLite
+```
 
-Na área pública, a avaliação teórica direciona o atleta aos formulários oficiais no Google Forms. As avaliações técnica e de kata permanecem integradas à aplicação. O backend persiste as questões administradas e os resultados dessas avaliações; os dados demonstrativos das outras áreas do painel ainda são estáticos.
+- **Frontend:** Next.js com `output: "export"`, gerando arquivos estáticos em `out/`.
+- **Backend:** Cloudflare Worker independente em `backend/src/index.ts`.
+- **Banco:** D1 em produção e D1 local persistido pelo Wrangler em `.wrangler/state`.
+- **Autenticação:** sessões de sete dias; tokens não são armazenados em texto no banco. As senhas usam PBKDF2 com SHA-256 e 100.000 iterações.
+- **Perfis:** `super_admin` tem visão global, gerencia equipe e cria matrizes; `evaluator` acessa seus próprios alunos e avaliações.
+- **Cliente HTTP:** `lib/api.ts` envia o token Bearer e trata expiração da sessão.
 
-## Avaliação de kata
+## Requisitos
 
-A tela de kata oferece `Nage-no-Kata` e `Katame-no-Kata`. No Nage-no-Kata, o avaliador escolhe entre o exame parcial, que apresenta Te-waza, Koshi-waza e Ashi-waza, e o exame completo. Os dois formatos incluem cerimônia de abertura e de encerramento. Cada item começa com 10 pontos e recebe os seguintes descontos:
+- Node.js `22.13.0` ou mais recente;
+- Corepack, incluído no Node.js;
+- pnpm 11, instalado automaticamente pelo Corepack;
+- para publicação: conta Cloudflare com Workers e D1 e um token da API com as permissões necessárias.
 
-- erro pequeno: -1 ponto, com duas caixas independentes;
-- erro médio: -3 pontos;
-- erro grande: -5 pontos;
-- erro grave ou esquecimento: -10 pontos.
+## Desenvolvimento local
 
-Se existir ao menos um erro grave, a média geral é dividida por 2 uma única vez, mesmo que haja mais de um erro grave. Essa avaliação apenas registra a nota e os erros; ela não classifica o atleta como aprovado ou reprovado.
+Instale as dependências e aplique as migrações no D1 local:
 
-## Cadastrar os vídeos das técnicas
+```powershell
+corepack pnpm install
+corepack pnpm backend:migrate:local
+```
 
-Os botões `?` das avaliações técnica e de kata usam os vídeos do YouTube cadastrados em um único lugar: `lib/practical-exams.ts`, no objeto `TECHNIQUE_VIDEOS`.
+Para iniciar frontend e backend juntos:
 
-Abra o arquivo e adicione uma linha para cada técnica. O texto antes dos dois-pontos deve ser idêntico ao nome usado na matriz:
+```powershell
+corepack pnpm dev:all
+```
+
+Endereços locais:
+
+- aplicação: <http://127.0.0.1:3000>;
+- API: <http://127.0.0.1:8787>;
+- saúde da API: <http://127.0.0.1:8787/health>.
+
+O script `dev:all` inicia o Worker local e o Next.js no mesmo terminal. Encerre os dois com `Ctrl+C`.
+
+### Configuração local
+
+O backend pode usar `backend/.dev.vars` para os valores secretos locais. Esse arquivo não deve ser versionado. Um exemplo mínimo:
+
+```dotenv
+SUPER_ADMIN_INITIAL_PASSWORD=TroqueEstaSenha123!
+```
+
+O e-mail inicial do Super Admin está em `backend/wrangler.jsonc`, na variável `SUPER_ADMIN_EMAIL`. O Worker cria essa conta na primeira autenticação quando os dois valores estão configurados.
+
+Para apontar o frontend para outra API, copie `.env.example` para `.env.local` e ajuste:
+
+```dotenv
+NEXT_PUBLIC_API_URL=http://127.0.0.1:8787
+```
+
+Essa variável é incorporada ao build do frontend. Reinicie o servidor após alterá-la.
+
+### Serviços separados
+
+Backend:
+
+```powershell
+corepack pnpm backend:migrate:local
+corepack pnpm backend:dev
+```
+
+Frontend, em outro terminal:
+
+```powershell
+corepack pnpm dev
+```
+
+Para testar pelo celular na mesma rede Wi-Fi:
+
+```powershell
+corepack pnpm dev:lan
+```
+
+Esse modo é apenas para testes acompanhados: depende do computador ligado, não usa HTTPS e não deve ser exposto à internet.
+
+## Fluxo de acesso
+
+1. O Super Admin entra com a conta inicial.
+2. Em **Equipe**, autoriza o e-mail do avaliador.
+3. O avaliador seleciona **Criar conta**, informa nome, e-mail autorizado e uma senha com pelo menos 10 caracteres, uma letra e um número.
+4. O avaliador passa a poder aplicar exames e consultar os próprios registros.
+5. O nome exibido pode ser alterado em **Ver e editar perfil**.
+
+Não há envio automático de convite, recuperação de senha ou redefinição por e-mail. A autorização precisa ser comunicada manualmente ao avaliador.
+
+## Regras das avaliações
+
+### Avaliação técnica
+
+As matrizes técnicas ficam em `lib/practical-exams.ts`. Elas organizam as técnicas por graduação e por categoria, incluindo `Nage Waza`, `Renraku-Henka Waza`, `Kaeshi Waza`, `Osaekomi Waza`, `Shime Waza` e `Kansetsu Waza`. Algumas faixas sorteiam técnicas de graduações anteriores.
+
+Os links de apoio ficam no objeto `TECHNIQUE_VIDEOS`, no mesmo arquivo. A chave precisa ser exatamente igual ao nome da técnica:
 
 ```ts
 export const TECHNIQUE_VIDEOS: Record<string, string> = {
@@ -36,292 +131,172 @@ export const TECHNIQUE_VIDEOS: Record<string, string> = {
 };
 ```
 
-São aceitos links nos formatos `youtube.com/watch`, `youtu.be`, `youtube.com/shorts` e `youtube.com/embed`. Se uma técnica ainda não tiver link, o sistema mostra uma orientação ao avaliador em vez de abrir um vídeo quebrado. Depois de editar, salve o arquivo; no modo de desenvolvimento a página é atualizada automaticamente.
+Preserve a grafia exata já usada pela matriz, inclusive os caracteres `→` e `×`. São aceitos links `youtube.com/watch`, `youtu.be`, `youtube.com/shorts` e `youtube.com/embed`. Sem um link válido, a aplicação informa que o vídeo ainda não foi cadastrado.
 
-## Requisitos
+### Avaliação de kata
 
-- Node.js 22.13 ou mais recente
-- Corepack, incluído na instalação do Node.js
+Disponíveis:
 
-## Rodar tudo localmente
+- `Nage-no-Kata` parcial: abertura, Te-waza, Koshi-waza, Ashi-waza e encerramento;
+- `Nage-no-Kata` completo: abertura, cinco grupos e encerramento;
+- `Katame-no-Kata`: abertura, Osaekomi-waza, Shime-waza, Kansetsu-waza e encerramento.
 
-No Windows, abra o **PowerShell** e copie os comandos abaixo, um por vez:
+Cada item parte de 10 pontos. Os descontos são:
+
+- erro pequeno: `-1`, com até duas marcações independentes;
+- erro médio: `-3`;
+- erro grande: `-5`;
+- erro grave ou esquecimento: `-10`.
+
+Se houver pelo menos um erro grave, a média geral é dividida por 2 uma única vez. O resultado do kata é informativo e não define aprovação ou reprovação.
+
+## API autenticada
+
+Todas as rotas abaixo, exceto `/`, `/health` e login/registro, exigem `Authorization: Bearer <token>`.
+
+| Método | Rota | Acesso | Finalidade |
+| --- | --- | --- | --- |
+| `GET` | `/` | público | Identificação da API |
+| `GET` | `/health` | público | Verifica Worker, D1 e configuração do Super Admin |
+| `POST` | `/api/auth/login` | público | Inicia uma sessão |
+| `POST` | `/api/auth/register` | público | Ativa um e-mail previamente autorizado |
+| `GET` | `/api/auth/me` | autenticado | Retorna o usuário atual |
+| `PATCH` | `/api/auth/profile` | autenticado | Atualiza o nome do usuário |
+| `POST` | `/api/auth/logout` | autenticado | Encerra a sessão atual |
+| `GET` | `/api/dashboard` | autenticado | Retorna indicadores e registros recentes |
+| `GET` | `/api/students` | autenticado | Lista alunos e seus históricos |
+| `GET` | `/api/evaluations` | autenticado | Lista avaliações permitidas ao usuário |
+| `POST` | `/api/evaluations` | autenticado | Registra uma avaliação |
+| `GET` | `/api/questions` | autenticado | Lista questões, com filtro opcional por faixa |
+| `POST` | `/api/questions` | Super Admin | Cria questão |
+| `DELETE` | `/api/questions/:id` | Super Admin | Exclui questão |
+| `GET` | `/api/matrices` | autenticado | Lista matrizes visíveis ao usuário |
+| `POST` | `/api/matrices` | Super Admin | Cria matriz |
+| `GET` | `/api/users` | Super Admin | Lista usuários e métricas |
+| `POST` | `/api/users/invite` | Super Admin | Autoriza um e-mail |
+| `PATCH` | `/api/users/:id` | Super Admin | Ativa ou desativa um avaliador |
+
+O Super Admin pode filtrar dashboard e alunos por avaliador com `?evaluator=<id>`. Avaliadores comuns recebem apenas seus próprios registros.
+
+## Banco e migrações
+
+As migrações ficam em `backend/migrations/` e são aplicadas pelo Wrangler:
 
 ```powershell
-Set-Location "C:\Users\arthu\Documents\Code\judo-exam-platform"
-corepack pnpm install
 corepack pnpm backend:migrate:local
-node scripts/dev-all.mjs
+corepack pnpm backend:migrate:remote
 ```
 
-O último comando permanece aberto mostrando os logs dos dois serviços. Não feche esse terminal enquanto estiver usando o sistema. Para encerrar frontend e backend, pressione `Ctrl+C` uma vez.
+O schema cobre questões, usuários, sessões, alunos, avaliações, matrizes, categorias e técnicas. O estado local fica em `.wrangler/state` e não deve ser commitado.
 
-Nas próximas vezes, basta:
+## Build e validação
+
+Execute antes de publicar:
 
 ```powershell
-Set-Location "C:\Users\arthu\Documents\Code\judo-exam-platform"
-node scripts/dev-all.mjs
+corepack pnpm lint
+corepack pnpm typecheck
+corepack pnpm build
 ```
 
-Acesse:
-
-- Frontend: <http://127.0.0.1:3000>
-- API: <http://127.0.0.1:8787>
-- Saúde da API: <http://127.0.0.1:8787/health>
-
-Conta inicial para desenvolvimento local:
-
-```text
-E-mail: admin@judorogeriocruz.com.br
-Senha: TroqueEstaSenha123!
-```
-
-Essa senha fica somente em `backend/.dev.vars`, que é ignorado pelo Git. Altere-a antes de compartilhar o ambiente local. O Super Admin autoriza os e-mails na seção **Equipe**; depois disso, cada avaliador escolhe **Criar conta** na tela de entrada e define a própria senha.
-
-O nome mostrado nas avaliações vem da conta autenticada. Cada usuário pode alterá-lo em **Menu → Ver e editar perfil** ou tocando no próprio nome na Administração; a atualização também passa a identificar seus registros anteriores.
-
-O banco local é persistido em `.wrangler/state` e não é enviado ao repositório.
-
-### Rodar frontend e backend separadamente
-
-Terminal 1 — somente o backend:
+O build estático é criado em `out/`. Para servi-lo localmente:
 
 ```powershell
-corepack pnpm backend:migrate:local
-corepack pnpm backend:dev
+corepack pnpm start
 ```
 
-Terminal 2 — somente o frontend:
+Esse comando não inicia o servidor de desenvolvimento do Next.js; ele usa `scripts/serve-static.mjs`. O script também protege contra traversal de caminho e oferece `pnpm start:lan` para a rede local.
+
+## Publicação na Cloudflare
+
+### Publicação manual
+
+Autentique o Wrangler:
 
 ```powershell
-corepack pnpm dev
+corepack pnpm wrangler login
 ```
 
-### Testar pelo celular na mesma rede Wi-Fi
-
-Para liberar temporariamente o ambiente de desenvolvimento na rede local, conecte o computador e o celular ao mesmo Wi-Fi e execute:
+Configure o segredo do Super Admin no Worker:
 
 ```powershell
-corepack pnpm dev:lan
+corepack pnpm wrangler secret put SUPER_ADMIN_INITIAL_PASSWORD --config backend/wrangler.jsonc
 ```
 
-O terminal do Next.js mostra um endereço de rede semelhante a `http://192.168.0.10:3000`. Abra esse endereço no navegador do celular. Se o Windows solicitar permissão de firewall, permita apenas em **Redes privadas**.
-
-Esse modo serve para testes acompanhados. Ele depende do computador ligado, não usa HTTPS e não deve ser exposto diretamente à internet. Para outras pessoas acessarem de qualquer rede, publique frontend, API e banco na Cloudflare conforme as seções abaixo.
-
-### Erros comuns no Windows
-
-- **`pnpm não é reconhecido`**: use sempre `corepack pnpm` como nos exemplos acima.
-- **`EADDRINUSE` ou porta em uso**: outro terminal já está executando o projeto. Localize-o e pressione `Ctrl+C`; depois rode `node scripts/dev-all.mjs` novamente.
-- **A página não abre**: confirme que o terminal mostra `Ready on http://127.0.0.1:8787` e `Local: http://127.0.0.1:3000`.
-- **A primeira abertura demora alguns segundos**: o Next.js compila a página no primeiro acesso. Aguarde o terminal mostrar `Compiled` antes de atualizar o navegador.
-- **Não use `pnpm start` para desenvolver**: esse comando serve um build de produção que precisa ter sido criado antes. Para o uso normal, execute `node scripts/dev-all.mjs`.
-
-Para usar uma API em outro endereço, copie `.env.example` para `.env.local` e altere:
-
-```dotenv
-NEXT_PUBLIC_API_URL=https://sua-api.workers.dev
-```
-
-Essa variável é incorporada ao JavaScript durante o build; depois de alterá-la, reinicie o servidor ou gere o build novamente.
-
-## Validar e executar o build de produção
-
-```bash
-pnpm lint
-pnpm typecheck
-pnpm build
-pnpm start
-```
-
-`pnpm build` cria o site estático em `out/`. `pnpm start` serve esse diretório em <http://127.0.0.1:3000>, sem depender do servidor do Next.js.
-
-## Backend independente e disponível 24/7 sem custo
-
-### Ambiente publicado
-
-- Site: <https://judo-exam-platform.judo-rogerio-cruz.workers.dev>
-- API: <https://judo-exam-api.judo-rogerio-cruz.workers.dev>
-- Saúde da API: <https://judo-exam-api.judo-rogerio-cruz.workers.dev/health>
-
-O banco D1 `judo-exam-db`, a API e o frontend já estão publicados na conta Cloudflare configurada. Os passos abaixo servem para manutenção ou para recriar a infraestrutura em outra conta.
-
-A alternativa indicada para este volume é **Cloudflare Workers + D1 no plano Free**. É serverless: não existe uma máquina ligada continuamente, mas a URL fica disponível o tempo todo e a infraestrutura escala a zero quando ninguém usa. Isso evita suspensão por inatividade típica de alguns hosts gratuitos.
-
-Em 14 de outubro de 2026, o plano gratuito documentava até 100 mil chamadas de Worker por dia, 5 milhões de linhas lidas/dia, 100 mil linhas gravadas/dia e 5 GB totais no D1. Para uma associação com pouco tráfego, há bastante margem. Ao exceder uma cota diária, novas operações falham até a renovação à meia-noite UTC; portanto, “sem gastos” significa permanecer dentro dessas cotas, e não uma garantia contratual de serviço ilimitado.
-
-Referências oficiais:
-
-- [Preços e cotas do Workers](https://developers.cloudflare.com/workers/platform/pricing/)
-- [Preços e cotas do D1](https://developers.cloudflare.com/d1/platform/pricing/)
-- [Comandos e migrações do D1](https://developers.cloudflare.com/d1/wrangler-commands/)
-
-### 1. Criar a conta e autenticar
-
-Crie uma conta gratuita na Cloudflare e rode:
-
-```bash
-pnpm wrangler login
-```
-
-### 2. Criar o banco D1 remoto
-
-```bash
-pnpm wrangler d1 create judo-exam-db
-```
-
-O comando retorna um `database_id`. Ao recriar a infraestrutura em outra conta, substitua no `backend/wrangler.jsonc` o UUID do banco atualmente configurado.
-
-### 3. Criar as tabelas e dados iniciais
-
-Defina a senha inicial do Super Admin como segredo do Worker:
-
-```bash
-pnpm wrangler secret put SUPER_ADMIN_INITIAL_PASSWORD --config backend/wrangler.jsonc
-```
-
-O e-mail inicial fica em `SUPER_ADMIN_EMAIL`, dentro de `backend/wrangler.jsonc`. Para usar outro endereço, altere essa variável antes da primeira autenticação.
-
-Depois aplique as migrações:
-
-```bash
-pnpm backend:migrate:remote
-```
-
-### 4. Publicar a API
-
-```bash
-pnpm backend:deploy
-```
-
-O terminal mostrará uma URL semelhante a `https://judo-exam-api.<conta>.workers.dev`. Teste:
-
-```bash
-curl https://judo-exam-api.<conta>.workers.dev/health
-```
-
-Resposta esperada:
-
-```json
-{"status":"ok","database":"ok"}
-```
-
-### 5. Restringir o CORS
-
-Depois que o frontend tiver uma URL pública, mantenha `FRONTEND_ORIGIN` em `backend/wrangler.jsonc` restrito a esse endereço:
-
-```jsonc
-"vars": {
-  "FRONTEND_ORIGIN": "https://judo-exam-platform.sua-conta.workers.dev"
-}
-```
-
-Mais de uma origem pode ser informada separando-as por vírgula. Publique novamente com `pnpm backend:deploy`.
-
-## Hospedar o frontend gratuitamente
-
-O frontend é totalmente estático. Para projetos novos, a Cloudflare recomenda **Workers Static Assets**, que entrega os arquivos pelo mesmo ambiente global dos Workers e não exige um servidor ligado.
-
-Depois de publicar a API, gere o frontend apontando para a URL dela e publique os arquivos de `out/`:
+Depois, aplique as migrações e publique a API:
 
 ```powershell
-$env:NEXT_PUBLIC_API_URL="https://sua-api.workers.dev"
+corepack pnpm backend:migrate:remote
+corepack pnpm backend:deploy
+```
+
+Gere o frontend com a URL pública da API e publique os arquivos estáticos:
+
+```powershell
+$env:NEXT_PUBLIC_API_URL="https://judo-exam-api.judo-rogerio-cruz.workers.dev"
 corepack pnpm build
 corepack pnpm frontend:deploy
 Remove-Item Env:NEXT_PUBLIC_API_URL
 ```
 
-A configuração está em `wrangler.frontend.jsonc`. O comando retorna uma URL como `https://judo-exam-platform.sua-conta.workers.dev`. Depois do primeiro deploy, restrinja `FRONTEND_ORIGIN` do backend a essa URL e publique a API novamente.
+As configurações de deploy ficam em `backend/wrangler.jsonc` e `wrangler.frontend.jsonc`. Depois de publicar o frontend, mantenha `FRONTEND_ORIGIN` do backend restrito à origem real do site.
 
-Referência oficial: [Workers Static Assets](https://developers.cloudflare.com/workers/static-assets/).
+Ambiente atualmente configurado:
 
-## Publicação automática pelo GitHub
+- site: <https://judo-exam-platform.judo-rogerio-cruz.workers.dev>;
+- API: <https://judo-exam-api.judo-rogerio-cruz.workers.dev>;
+- saúde: <https://judo-exam-api.judo-rogerio-cruz.workers.dev/health>.
 
-O workflow `.github/workflows/ci.yml` valida e publica a plataforma quando um commit chega à branch `main`. A publicação só começa depois que lint, tipos e build passam. Em seguida, o workflow:
+### GitHub Actions
 
-1. aplica somente as migrações D1 ainda pendentes;
+O workflow `.github/workflows/ci.yml` roda em pull requests e em pushes para `main`. Ele instala dependências, executa lint, typecheck e build. Em pushes para `main`, depois da validação, também:
+
+1. aplica migrações remotas pendentes;
 2. publica a API;
-3. gera o frontend com a URL pública da API;
-4. publica os arquivos estáticos;
-5. testa as URLs de produção.
+3. gera o frontend com `NEXT_PUBLIC_API_URL` de produção;
+4. publica o frontend;
+5. verifica `/health` e a página pública.
 
-Para habilitar esse fluxo, crie um token da Cloudflare limitado à conta do projeto com as permissões `Workers Scripts: Edit` e `D1: Edit`. No GitHub, abra **Settings → Secrets and variables → Actions** e cadastre dois *repository secrets*:
+Cadastre estes repository secrets em **Settings → Secrets and variables → Actions**:
 
 ```text
-CLOUDFLARE_ACCOUNT_ID = 6d1be23e462ef3a4e2f7fdeb2702ec0c
-CLOUDFLARE_API_TOKEN = token criado na Cloudflare
+CLOUDFLARE_ACCOUNT_ID
+CLOUDFLARE_API_TOKEN
 ```
 
-Nunca grave o token em arquivos do projeto. Depois de cadastrar os secrets, use **Actions → Qualidade do projeto → Run workflow** para testar manualmente. Os próximos `push` para `main` publicarão automaticamente. Pull requests executam apenas as validações e não alteram a produção.
-
-Referência oficial: [GitHub Actions para Cloudflare Workers](https://developers.cloudflare.com/workers/ci-cd/external-cicd/github-actions/).
-
-## Scripts
-
-| Comando | Função |
-| --- | --- |
-| `pnpm dev` | Frontend local na porta 3000 |
-| `pnpm backend:dev` | API e D1 local na porta 8787 |
-| `pnpm dev:all` | Frontend e backend juntos |
-| `pnpm dev:lan` | Frontend e backend acessíveis por celulares na mesma rede |
-| `pnpm backend:migrate:local` | Aplica migrações no banco local |
-| `pnpm backend:migrate:remote` | Aplica migrações no D1 de produção |
-| `pnpm backend:deploy` | Publica apenas o backend |
-| `pnpm frontend:deploy` | Publica o frontend estático no Cloudflare Workers |
-| `pnpm build` | Gera o frontend estático em `out/` |
-| `pnpm start` | Serve localmente o build estático |
-| `pnpm start:lan` | Serve o build estático para dispositivos na mesma rede |
-| `pnpm lint` | Verifica regras de código |
-| `pnpm typecheck` | Verifica os tipos TypeScript |
-
-## API
-
-| Método | Rota | Uso |
-| --- | --- | --- |
-| `GET` | `/health` | Saúde do serviço e banco |
-| `GET` | `/api/questions` | Lista questões |
-| `GET` | `/api/questions?belt=Verde` | Filtra questões por graduação |
-| `POST` | `/api/questions` | Cria questão |
-| `DELETE` | `/api/questions/:id` | Exclui questão |
-| `GET` | `/api/evaluations` | Lista os 100 resultados mais recentes |
-| `POST` | `/api/evaluations` | Registra um resultado |
-| `POST` | `/api/auth/login` | Inicia uma sessão |
-| `POST` | `/api/auth/register` | Ativa um e-mail previamente autorizado |
-| `GET` | `/api/auth/me` | Valida a sessão atual |
-| `PATCH` | `/api/auth/profile` | Atualiza o nome do usuário autenticado |
-| `GET` | `/api/dashboard` | Retorna estatísticas permitidas ao usuário |
-| `GET` | `/api/students` | Lista alunos e evolução por avaliador |
-| `GET/POST` | `/api/matrices` | Consulta ou cria matrizes de exame |
-| `GET` | `/api/users` | Lista usuários para o Super Admin |
-| `POST` | `/api/users/invite` | Autoriza um novo e-mail |
+O token deve ser restrito à conta do projeto e ter permissões para editar Workers e D1. Nunca grave credenciais em arquivos versionados.
 
 ## Estrutura principal
 
 ```text
-app/                         interface Next.js
-backend/src/index.ts         API do Worker
-backend/migrations/          schema e dados iniciais do D1
-backend/wrangler.jsonc       configuração local e de deploy
-wrangler.frontend.jsonc      publica o frontend como Workers Static Assets
-lib/api.ts                   cliente HTTP do frontend
-lib/practical-exams.ts       técnicas, sorteios e vídeos da avaliação técnica
-lib/kata-exams.ts            katas, técnicas e cálculo da avaliação de kata
-public/                      arquivos estáticos locais
-scripts/dev-all.mjs          inicia os dois serviços
-scripts/serve-static.mjs     servidor local do build estático
+app/page.tsx                  Fluxos públicos e telas de avaliação
+app/globals.css               Estilos globais e temas
+components/auth-screen.tsx    Login e criação de conta
+components/admin-portal.tsx   Painel de gestão conectado à API
+components/profile-dialog.tsx Edição do perfil autenticado
+lib/api.ts                    Cliente HTTP e token de sessão
+lib/kata-exams.ts             Definições e cálculo de kata
+lib/practical-exams.ts        Matrizes técnicas e vídeos
+lib/platform.ts               Tipos compartilhados do domínio
+backend/src/index.ts          Rotas e regras do Worker
+backend/migrations/           Migrações do D1
+scripts/dev-all.mjs           Inicialização local dos dois serviços
+scripts/serve-static.mjs      Servidor local do build estático
 ```
 
-## Segurança antes de uso real
+## Segurança e limitações conhecidas
 
-Toda a aplicação exige uma conta. Avaliadores enxergam somente avaliações e alunos vinculados a eles; o Super Admin possui visão global, autoriza e desativa acessos e cria matrizes. As senhas são derivadas com PBKDF2 e as sessões são armazenadas no D1 apenas como hashes.
+Antes do uso real:
 
-Antes do primeiro uso real:
+1. altere a senha inicial do Super Admin;
+2. restrinja `FRONTEND_ORIGIN` à origem exata do frontend;
+3. configure rate limiting para login no ambiente de produção;
+4. defina política de privacidade, retenção e exportação dos dados dos alunos;
+5. faça backups periódicos do D1 e teste a restauração;
+6. revise os links e o conteúdo das matrizes antes de cada ciclo de exames.
 
-1. Troque a senha inicial do Super Admin.
-2. Restrinja `FRONTEND_ORIGIN` à URL exata do frontend.
-3. Cadastre apenas e-mails conhecidos na seção **Equipe**.
-4. Configure rate limiting no endpoint de login.
-5. Defina política de privacidade, retenção e exportação dos dados dos alunos.
-6. Faça exportações periódicas do D1 e teste a restauração.
+O frontend contém alguns dados demonstrativos e telas administrativas legadas no código. O painel conectado ao backend é o fluxo de gestão usado para dados reais; indicadores ou componentes que não fazem chamadas à API não devem ser tratados como fonte de dados de produção.
 
-O sistema ainda não envia convites ou recuperação de senha por e-mail. A coleta e a correção dos exames teóricos seguem as configurações de segurança dos Google Forms vinculados.
+## Licença e operação
+
+Este repositório é privado (`private: true` no `package.json`). A aplicação foi preparada para a operação da Associação Judô Rogério Cruz; qualquer publicação em outra conta Cloudflare exige revisar nomes de Workers, identificador do D1, origem permitida, secrets e URLs de produção.
