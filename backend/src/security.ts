@@ -1,0 +1,128 @@
+import type { AuthUser } from "./contracts";
+import { normalizeEmail } from "./domain";
+
+const encoder = new TextEncoder();
+const sessionDurationMs = 7 * 24 * 60 * 60 * 1000;
+
+function bytesToHex(bytes: Uint8Array) {
+  return Array.from(bytes, (byte) => byte.toString(16).padStart(2, "0")).join("");
+}
+
+function hexToBytes(hex: string) {
+  return new Uint8Array(
+    (hex.match(/.{1,2}/g) ?? []).map((pair) => Number.parseInt(pair, 16)),
+  );
+}
+
+function randomHex(size = 32) {
+  return bytesToHex(crypto.getRandomValues(new Uint8Array(size)));
+}
+
+async function sha256(value: string) {
+  const digest = await crypto.subtle.digest("SHA-256", encoder.encode(value));
+  return bytesToHex(new Uint8Array(digest));
+}
+
+export async function derivePassword(password: string, saltHex?: string) {
+  const salt = saltHex
+    ? hexToBytes(saltHex)
+    : crypto.getRandomValues(new Uint8Array(16));
+  const key = await crypto.subtle.importKey(
+    "raw",
+    encoder.encode(password),
+    "PBKDF2",
+    false,
+    ["deriveBits"],
+  );
+  const bits = await crypto.subtle.deriveBits(
+    { name: "PBKDF2", hash: "SHA-256", salt, iterations: 100_000 },
+    key,
+    256,
+  );
+  return { hash: bytesToHex(new Uint8Array(bits)), salt: bytesToHex(salt) };
+}
+
+export function secureEqual(leftHex: string, rightHex: string) {
+  const left = hexToBytes(leftHex);
+  const right = hexToBytes(rightHex);
+  const subtle = crypto.subtle as SubtleCrypto & {
+    timingSafeEqual(left: BufferSource, right: BufferSource): boolean;
+  };
+  return left.byteLength === right.byteLength && subtle.timingSafeEqual(left, right);
+}
+
+export function validPassword(password: string) {
+  return password.length >= 10 && /[A-Za-zÀ-ÿ]/.test(password) && /\d/.test(password);
+}
+
+export async function ensureSuperAdmin(env: Env) {
+  const email = normalizeEmail(env.SUPER_ADMIN_EMAIL || "");
+  const password = env.SUPER_ADMIN_INITIAL_PASSWORD;
+  if (!email || !password) return;
+
+  const existing = await env.DB.prepare(
+    "SELECT id, password_hash FROM users WHERE email = ?",
+  )
+    .bind(email)
+    .first<{ id: string; password_hash: string | null }>();
+  if (existing?.password_hash) return;
+
+  const credentials = await derivePassword(password);
+  if (existing) {
+    await env.DB.prepare(
+      "UPDATE users SET password_hash = ?, password_salt = ?, role = 'super_admin', status = 'active' WHERE id = ?",
+    )
+      .bind(credentials.hash, credentials.salt, existing.id)
+      .run();
+    return;
+  }
+
+  await env.DB.prepare(
+    "INSERT INTO users (id, email, name, password_hash, password_salt, role, status) VALUES (?, ?, ?, ?, ?, 'super_admin', 'active')",
+  )
+    .bind(
+      crypto.randomUUID(),
+      email,
+      "Super Admin",
+      credentials.hash,
+      credentials.salt,
+    )
+    .run();
+}
+
+export async function createSession(env: Env, userId: string) {
+  const token = randomHex();
+  const tokenHash = await sha256(token);
+  const expiresAt = new Date(Date.now() + sessionDurationMs).toISOString();
+  await env.DB.prepare(
+    "INSERT INTO sessions (token_hash, user_id, expires_at) VALUES (?, ?, ?)",
+  )
+    .bind(tokenHash, userId, expiresAt)
+    .run();
+  return { token, expiresAt };
+}
+
+export async function authenticate(
+  request: Request,
+  env: Env,
+): Promise<AuthUser | null> {
+  const authorization = request.headers.get("Authorization") || "";
+  const token = authorization.startsWith("Bearer ")
+    ? authorization.slice(7).trim()
+    : "";
+  if (!token) return null;
+
+  return env.DB.prepare(
+    "SELECT users.id, users.email, users.name, users.role, users.status FROM sessions JOIN users ON users.id = sessions.user_id WHERE sessions.token_hash = ? AND sessions.expires_at > ? AND users.status = 'active'",
+  )
+    .bind(await sha256(token), new Date().toISOString())
+    .first<AuthUser>();
+}
+
+export async function revokeSession(request: Request, env: Env) {
+  const token = request.headers.get("Authorization")?.slice(7).trim();
+  if (!token) return;
+  await env.DB.prepare("DELETE FROM sessions WHERE token_hash = ?")
+    .bind(await sha256(token))
+    .run();
+}

@@ -2,7 +2,7 @@
   "$schema": "../node_modules/wrangler/config-schema.json",
   "name": "judo-exam-api",
   "main": "src/index.ts",
-  "compatibility_date": "2026-05-22",
+  "compatibility_date": "2026-10-17",
   "workers_dev": true,
   "preview_urls": false,
   "vars": {
@@ -10,9 +10,15 @@
     "SUPER_ADMIN_EMAIL": "admin@judorogeriocruz.com.br"
   },
   "observability": {
+    "enabled": true,
     "logs": {
       "enabled": true,
-      "invocation_logs": true
+      "invocation_logs": true,
+      "head_sampling_rate": 1
+    },
+    "traces": {
+      "enabled": true,
+      "head_sampling_rate": 0.1
     }
   },
   "d1_databases": [
