@@ -1,0 +1,136 @@
+import { describe, expect, it } from "vitest";
+import type { EvaluationRow } from "../backend/src/contracts";
+import {
+  dashboardFromRows,
+  normalizeName,
+  studentsFromRows,
+} from "../backend/src/domain";
+import {
+  calculateKataResult,
+  createKataExam,
+  EMPTY_KATA_MARK,
+} from "../lib/kata-exams";
+import {
+  createPracticalExam,
+  type ExamCategory,
+} from "../lib/practical-exams";
+import { calculatePracticalResult } from "../lib/practical-scoring";
+
+function evaluation(overrides: Partial<EvaluationRow> = {}): EvaluationRow {
+  return {
+    id: crypto.randomUUID(),
+    athlete: "Ana Silva",
+    student_id: "student-1",
+    evaluator_id: "evaluator-1",
+    professor: "Arthur Nunes",
+    belt: "Amarela",
+    type: "técnica",
+    score: 80,
+    result: "Aprovado",
+    matrix_id: null,
+    detail: null,
+    created_at: "2026-10-10 12:00:00",
+    ...overrides,
+  };
+}
+
+describe("regras da avaliação prática", () => {
+  it("aprova média 7 sem três grupos abaixo de 7 ou dois abaixo de 5", () => {
+    const exam: ExamCategory[] = [
+      { name: "Nage Waza", techniques: [{ id: "a", name: "A" }] },
+      { name: "Renraku-Henka Waza", techniques: [{ id: "b", name: "B" }] },
+      { name: "Kaeshi Waza", techniques: [{ id: "c", name: "C" }] },
+    ];
+    const result = calculatePracticalResult(exam, { a: 7, b: 7, c: 10 });
+    expect(result.approved).toBe(true);
+    expect(result.score).toBe(8);
+  });
+
+  it("reprova quando três grupos ficam abaixo de 7 mesmo com média geral suficiente", () => {
+    const exam: ExamCategory[] = [
+      { name: "Nage Waza", techniques: [{ id: "a", name: "A" }] },
+      { name: "Renraku-Henka Waza", techniques: [{ id: "b", name: "B" }] },
+      { name: "Kaeshi Waza", techniques: [{ id: "c", name: "C" }] },
+      { name: "Osaekomi Waza", techniques: [{ id: "d", name: "D" }] },
+      { name: "Shime Waza", techniques: [{ id: "e", name: "E" }] },
+      { name: "Kansetsu Waza", techniques: [{ id: "f", name: "F" }] },
+    ];
+    const result = calculatePracticalResult(exam, {
+      a: 5,
+      b: 5,
+      c: 5,
+      d: 10,
+      e: 10,
+      f: 10,
+    });
+    expect(result.score).toBe(7.5);
+    expect(result.approved).toBe(false);
+    expect(result.detail).toContain("3 categorias ficaram abaixo de 7,0");
+  });
+
+  it("mantém sorteios sem duplicar técnicas dentro da categoria", () => {
+    const exam = createPracticalExam("brown", () => 0.25);
+    for (const category of exam) {
+      const names = category.techniques.map((technique) => technique.name);
+      expect(new Set(names).size).toBe(names.length);
+    }
+  });
+});
+
+describe("regras da avaliação de kata", () => {
+  it("aplica o fator de erro grave uma única vez sobre a nota geral", () => {
+    const groups = createKataExam("nage-no-kata", "partial");
+    const techniques = groups.flatMap((group) => group.techniques);
+    const marks = Object.fromEntries(
+      techniques.map((technique) => [
+        technique.id,
+        { ...EMPTY_KATA_MARK, reviewed: true },
+      ]),
+    );
+    marks[techniques[0].id] = {
+      ...EMPTY_KATA_MARK,
+      reviewed: true,
+      severe: true,
+    };
+    marks[techniques[1].id] = {
+      ...EMPTY_KATA_MARK,
+      reviewed: true,
+      severe: true,
+    };
+
+    const result = calculateKataResult(groups, marks);
+    expect(result.severeApplied).toBe(true);
+    expect(result.score).toBeCloseTo(result.rawScore / 2, 1);
+  });
+});
+
+describe("domínio administrativo", () => {
+  it("normaliza nomes para associar avaliações do mesmo aluno", () => {
+    expect(normalizeName("  Ána   SILVA ")).toBe("ana silva");
+  });
+
+  it("calcula evolução cronológica e indicadores sem contar kata na aprovação", () => {
+    const rows = [
+      evaluation({ score: 60, created_at: "2026-09-01 10:00:00" }),
+      evaluation({ score: 80, created_at: "2026-10-01 10:00:00" }),
+      evaluation({
+        id: "kata-1",
+        type: "kata",
+        score: 40,
+        result: "Registro técnico",
+        created_at: "2026-10-02 10:00:00",
+      }),
+    ];
+    const dashboard = dashboardFromRows(rows, new Date("2026-10-17T00:00:00Z"));
+    const [student] = studentsFromRows(rows);
+
+    expect(dashboard.summary.approvalRate).toBe(100);
+    expect(dashboard.summary.students).toBe(1);
+    expect(student.evolution).toBe(-20);
+    expect(student.evaluations.map((item) => item.id)).toEqual([
+      rows[0].id,
+      rows[1].id,
+      "kata-1",
+    ]);
+  });
+});

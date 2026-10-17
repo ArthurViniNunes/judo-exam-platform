@@ -1,8 +1,4 @@
 @import url("https://fonts.googleapis.com/css2?family=Oswald:wght@500;600;700&family=Roboto+Mono:wght@400;600&display=swap");
-@import "tailwindcss";
-@import "tw-animate-css";
-@import "../vendor/shadcn-tailwind-4.13.0.css";
-
 :root {
   --ink: #243020;
   --ink-soft: #52604c;
