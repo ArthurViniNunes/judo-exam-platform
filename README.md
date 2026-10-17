@@ -235,6 +235,27 @@ A configuração está em `wrangler.frontend.jsonc`. O comando retorna uma URL c
 
 Referência oficial: [Workers Static Assets](https://developers.cloudflare.com/workers/static-assets/).
 
+## Publicação automática pelo GitHub
+
+O workflow `.github/workflows/ci.yml` valida e publica a plataforma quando um commit chega à branch `main`. A publicação só começa depois que lint, tipos e build passam. Em seguida, o workflow:
+
+1. aplica somente as migrações D1 ainda pendentes;
+2. publica a API;
+3. gera o frontend com a URL pública da API;
+4. publica os arquivos estáticos;
+5. testa as URLs de produção.
+
+Para habilitar esse fluxo, crie um token da Cloudflare limitado à conta do projeto com as permissões `Workers Scripts: Edit` e `D1: Edit`. No GitHub, abra **Settings → Secrets and variables → Actions** e cadastre dois *repository secrets*:
+
+```text
+CLOUDFLARE_ACCOUNT_ID = 6d1be23e462ef3a4e2f7fdeb2702ec0c
+CLOUDFLARE_API_TOKEN = token criado na Cloudflare
+```
+
+Nunca grave o token em arquivos do projeto. Depois de cadastrar os secrets, use **Actions → Qualidade do projeto → Run workflow** para testar manualmente. Os próximos `push` para `main` publicarão automaticamente. Pull requests executam apenas as validações e não alteram a produção.
+
+Referência oficial: [GitHub Actions para Cloudflare Workers](https://developers.cloudflare.com/workers/ci-cd/external-cicd/github-actions/).
+
 ## Scripts
 
 | Comando | Função |
