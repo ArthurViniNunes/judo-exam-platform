@@ -38,7 +38,11 @@ import {
   X,
 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
-import { apiRequest } from "@/lib/api";
+import { apiRequest, getAuthToken, setAuthToken } from "@/lib/api";
+import { AdminPortal } from "@/components/admin-portal";
+import { AuthScreen } from "@/components/auth-screen";
+import { ProfileDialog } from "@/components/profile-dialog";
+import type { AuthUser } from "@/lib/platform";
 import Image from "next/image";
 import {
   EMPTY_KATA_MARK,
@@ -300,9 +304,9 @@ const athletes = [
 ];
 
 const auditRows = [
-  { user: "Fábio Nunes", action: "Alterou nota mínima para aprovação", target: "Configurações", at: "14 out 2026, 15:12" },
+  { user: "Super Admin", action: "Alterou nota mínima para aprovação", target: "Configurações", at: "14 out 2026, 15:12" },
   { user: "Paulo Victor", action: "Concluiu avaliação técnica", target: "Lucas Fernandes", at: "14 out 2026, 14:32" },
-  { user: "Fábio Nunes", action: "Publicou questão 184", target: "Banco de questões", at: "14 out 2026, 10:04" },
+  { user: "Super Admin", action: "Publicou questão 184", target: "Banco de questões", at: "14 out 2026, 10:04" },
   { user: "Sistema", action: "Resultado teórico calculado", target: "Marina Oliveira", at: "14 out 2026, 09:41" },
   { user: "Ana Costa", action: "Atualizou matriz de faixa verde", target: "Matrizes técnicas", at: "13 out 2026, 18:26" },
 ];
@@ -349,12 +353,18 @@ function PublicMenu({
   dark,
   setDark,
   navigate,
+  user,
+  onLogout,
+  onOpenProfile,
 }: {
   open: boolean;
   onClose: () => void;
   dark: boolean;
   setDark: (value: boolean) => void;
   navigate: (view: View) => void;
+  user?: AuthUser;
+  onLogout?: () => void;
+  onOpenProfile?: () => void;
 }) {
   if (!open) return null;
   return (
@@ -365,7 +375,7 @@ function PublicMenu({
         </button>
         <div className="menu-heading">
           <h2>MENU</h2>
-          <p>Você está no ambiente de demonstração</p>
+          <p>{user ? `Acesso de ${user.role === "super_admin" ? "Super Admin" : "avaliador"}` : "Ambiente de avaliação"}</p>
         </div>
         <nav>
           <button onClick={() => navigate("home")}><Home size={19} /> Início do simulado</button>
@@ -376,9 +386,9 @@ function PublicMenu({
           <button onClick={() => setDark(!dark)}>{dark ? <Sun size={19} /> : <Moon size={19} />} {dark ? "Tema claro" : "Tema escuro"}</button>
         </nav>
         <div className="menu-account">
-          <span className="avatar">FN</span>
-          <div><strong>Fábio Nunes</strong><small>Administrador</small></div>
-          <LogOut size={18} />
+          <span className="avatar">{user?.name.split(/\s+/).slice(0, 2).map((part) => part[0]).join("").toUpperCase() || "AJ"}</span>
+          <button className="menu-profile-button" onClick={() => { onClose(); onOpenProfile?.(); }}><strong>{user?.name || "Associação"}</strong><small>Ver e editar perfil</small></button>
+          {onLogout ? <button onClick={onLogout} aria-label="Sair da conta"><LogOut size={18} /></button> : <LogOut size={18} />}
         </div>
         <ProjectCredits compact />
       </aside>
@@ -393,6 +403,9 @@ function PublicShell({
   dark,
   setDark,
   navigate,
+  user,
+  onLogout,
+  onOpenProfile,
 }: {
   children: React.ReactNode;
   menuOpen: boolean;
@@ -400,6 +413,9 @@ function PublicShell({
   dark: boolean;
   setDark: (value: boolean) => void;
   navigate: (view: View) => void;
+  user?: AuthUser;
+  onLogout?: () => void;
+  onOpenProfile?: () => void;
 }) {
   return (
     <main className={`public-shell ${dark ? "dark" : ""}`}>
@@ -407,7 +423,7 @@ function PublicShell({
         <Menu size={19} />
       </button>
       {children}
-      <PublicMenu open={menuOpen} onClose={() => setMenuOpen(false)} dark={dark} setDark={setDark} navigate={navigate} />
+      <PublicMenu open={menuOpen} onClose={() => setMenuOpen(false)} dark={dark} setDark={setDark} navigate={navigate} user={user} onLogout={onLogout} onOpenProfile={onOpenProfile} />
     </main>
   );
 }
@@ -533,9 +549,11 @@ function TechnicalResultView({
 function TechnicalSetup({
   onBack,
   onStart,
+  evaluatorName = "Avaliador",
 }: {
   onBack: () => void;
   onStart: (athlete: string, belt: PracticalBeltId) => void;
+  evaluatorName?: string;
 }) {
   const [athlete, setAthlete] = useState("");
   const [belt, setBelt] = useState<PracticalBeltId | "">("");
@@ -547,7 +565,7 @@ function TechnicalSetup({
         <h2>DADOS DA AVALIAÇÃO</h2>
         <p className="muted">Preencha os dados para iniciar a avaliação técnica.</p>
         <label>NOME DO AVALIADOR
-          <input value="Fábio Nunes" disabled />
+          <input value={evaluatorName} disabled />
           <small>Definido automaticamente pelo perfil do avaliador.</small>
         </label>
         <label>NOME DO ATLETA
@@ -708,6 +726,7 @@ function TechnicalForm({
             {group?.techniques.map((technique, itemIndex) => {
               const selectedScore = SCORE_OPTIONS.find((option) => option.value === scores[technique.id]);
               const isOpen = openTechnique === technique.id;
+              const hasVideo = Boolean(toYouTubeEmbedUrl(TECHNIQUE_VIDEOS[technique.name] ?? ""));
               return (
                 <article key={technique.id} className={`technique-card ${selectedScore ? "scored" : ""} ${isOpen ? "open" : ""}`}>
                   <div className="technique-card-head">
@@ -720,9 +739,9 @@ function TechnicalForm({
                       {selectedScore ? <span className={`selected-rating score-${selectedScore.value}`}><b>{selectedScore.value}</b> {selectedScore.label}</span> : <span className="rate-prompt">Avaliar</span>}
                       <ChevronDown className="card-chevron" size={19} />
                     </button>
-                    <button className="video-help" onClick={() => setVideoTechnique(technique.name)} aria-label={`Ver vídeo de ${technique.name}`} title="Ver vídeo da técnica">
+                    {hasVideo && <button className="video-help" onClick={() => setVideoTechnique(technique.name)} aria-label={`Ver vídeo de ${technique.name}`} title="Ver vídeo da técnica">
                       <CircleHelp size={20} />
-                    </button>
+                    </button>}
                   </div>
                   {isOpen && (
                     <div className="rating-menu" id={`score-menu-${technique.id}`} role="group" aria-label={`Nota para ${technique.name}`}>
@@ -765,9 +784,11 @@ function TechnicalForm({
 function KataSetup({
   onBack,
   onStart,
+  evaluatorName = "Avaliador",
 }: {
   onBack: () => void;
   onStart: (athlete: string, kataId: KataId, mode: KataMode) => void;
+  evaluatorName?: string;
 }) {
   const [athleteName, setAthleteName] = useState("");
   const [kataId, setKataId] = useState<KataId | "">("");
@@ -786,7 +807,7 @@ function KataSetup({
         <h2>DADOS DA AVALIAÇÃO</h2>
         <p className="muted">Escolha o kata e, para o Nage-no-Kata, defina a extensão da apresentação.</p>
         <label>NOME DO AVALIADOR
-          <input value="Fábio Nunes" disabled />
+          <input value={evaluatorName} disabled />
           <small>Definido automaticamente pelo perfil do avaliador.</small>
         </label>
         <label>NOME DO ATLETA
@@ -918,9 +939,10 @@ function KataForm({
               const mark = marks[technique.id] ?? EMPTY_KATA_MARK;
               const deduction = kataMarkDeductions(mark);
               const isOpen = openTechnique === technique.id;
+              const hasVideo = Boolean(technique.videoTechnique && toYouTubeEmbedUrl(TECHNIQUE_VIDEOS[technique.videoTechnique] ?? ""));
               return (
                 <article key={technique.id} className={`technique-card ${mark.reviewed ? "scored" : ""} ${isOpen ? "open" : ""}`}>
-                  <div className={`technique-card-head ${technique.videoTechnique ? "" : "without-video"}`}>
+                  <div className={`technique-card-head ${hasVideo ? "" : "without-video"}`}>
                     <button className="technique-card-trigger" onClick={() => setOpenTechnique(isOpen ? null : technique.id)} aria-expanded={isOpen} aria-controls={`kata-errors-${technique.id}`}>
                       <span className="technique-number">{String(itemIndex + 1).padStart(2, "0")}</span>
                       <span className="technique-copy"><strong>{technique.name}</strong><small>{mark.reviewed ? "Avaliação registrada" : "Toque para registrar erros"}</small></span>
@@ -931,7 +953,7 @@ function KataForm({
                       ) : <span className="rate-prompt">Avaliar</span>}
                       <ChevronDown className="card-chevron" size={19} />
                     </button>
-                    {technique.videoTechnique && (
+                    {hasVideo && technique.videoTechnique && (
                       <button className="video-help" onClick={() => setVideoTechnique(technique.videoTechnique ?? null)} aria-label={`Ver vídeo de ${technique.name}`} title="Ver vídeo da técnica">
                         <CircleHelp size={20} />
                       </button>
@@ -1031,7 +1053,7 @@ function AdminSidebar({ section, setSection, exit }: { section: Section; setSect
         <button className={section === "audit" ? "active" : ""} onClick={() => setSection("audit")}><ShieldCheck size={19} />Trilha de auditoria</button>
       </nav>
       <button className="back-public" onClick={exit}><Home size={18} />Voltar ao site</button>
-      <div className="sidebar-account"><span className="avatar">FN</span><div><strong>Fábio Nunes</strong><small>Administrador</small></div><MoreHorizontal size={18} /></div>
+      <div className="sidebar-account"><span className="avatar">SA</span><div><strong>Super Admin</strong><small>Administrador</small></div><MoreHorizontal size={18} /></div>
     </aside>
   );
 }
@@ -1141,7 +1163,7 @@ function MatricesSection() {
 
 function UsersSection() {
   const users = [
-    ["Fábio Nunes", "diretoria@nucleo.com", "Administrador", "Ativo"],
+    ["Super Admin", "diretoria@nucleo.com", "Administrador", "Ativo"],
     ["Paulo Victor", "paulo@ajrc.org", "Avaliador chefe", "Ativo"],
     ["Ana Costa", "ana@ajrc.org", "Avaliadora", "Ativo"],
     ["Carlos Mendes", "carlos@ajrc.org", "Avaliador", "Convite pendente"],
@@ -1164,7 +1186,7 @@ function SettingsSection() {
 
 function AuditSection() {
   return <><PageToolbar title="Trilha de auditoria" subtitle="Histórico íntegro de ações e alterações no sistema." action={<button className="filter-button"><Filter size={17} /> EXPORTAR REGISTROS</button>} />
-    <div className="filter-bar"><div className="search-box"><Search size={18} /><input placeholder="Buscar usuário, ação ou objeto" /></div><select><option>Todos os usuários</option><option>Fábio Nunes</option><option>Paulo Victor</option></select><select><option>Últimos 30 dias</option><option>Últimos 90 dias</option></select></div>
+    <div className="filter-bar"><div className="search-box"><Search size={18} /><input placeholder="Buscar usuário, ação ou objeto" /></div><select><option>Todos os usuários</option><option>Super Admin</option><option>Paulo Victor</option></select><select><option>Últimos 30 dias</option><option>Últimos 90 dias</option></select></div>
     <article className="panel audit-list">{auditRows.map((row,index) => <div key={row.at}><span className="audit-icon">{index % 2 ? <ClipboardCheck size={18} /> : <Activity size={18} />}</span><div><strong>{row.action}</strong><p><b>{row.user}</b> | {row.target}</p></div><time>{row.at}</time></div>)}</article></>;
 }
 
@@ -1172,12 +1194,12 @@ function AdminApp({ exit, questions, onAddQuestion, onDeleteQuestion, backendOnl
   const [section, setSection] = useState<Section>("dashboard");
   const titles: Record<Section, string> = { dashboard:"Visão geral", evaluations:"Avaliações", athletes:"Atletas", questions:"Banco de questões", matrices:"Matrizes técnicas", users:"Usuários e perfis", settings:"Configurações", audit:"Trilha de auditoria" };
   return <main className="admin-app"><AdminSidebar section={section} setSection={setSection} exit={exit} /><section className="admin-main"><header className="admin-topbar"><div><span>PAINEL ADMINISTRATIVO</span><strong>{titles[section]}</strong></div><div className="topbar-actions"><span className={`backend-status ${backendOnline ? "online" : "offline"}`} title={backendOnline ? "Dados sincronizados com a API" : "A API não está acessível; alterações permanecem neste navegador"}>{backendOnline === null ? "Conectando…" : backendOnline ? "API conectada" : "Modo local"}</span><button aria-label="Pesquisar"><Search size={19} /></button><button aria-label="Notificações" className="notification"><Clock3 size={19} /><i /></button><span className="avatar">FN</span></div></header><div className="admin-content">
-    {section === "dashboard" && <><PageToolbar title="Boa tarde, Fábio" subtitle="Aqui está o panorama do programa de avaliação hoje." action={<button className="primary"><Plus size={17} /> NOVA AVALIAÇÃO</button>} /><Dashboard /></>}
+    {section === "dashboard" && <><PageToolbar title="Visão geral" subtitle="Aqui está o panorama do programa de avaliação hoje." action={<button className="primary"><Plus size={17} /> NOVA AVALIAÇÃO</button>} /><Dashboard /></>}
     {section === "evaluations" && <EvaluationsSection />}{section === "athletes" && <AthletesSection />}{section === "questions" && <QuestionsSection questions={questions} onAdd={onAddQuestion} onDelete={onDeleteQuestion} />}{section === "matrices" && <MatricesSection />}{section === "users" && <UsersSection />}{section === "settings" && <SettingsSection />}{section === "audit" && <AuditSection />}
   </div></section></main>;
 }
 
-export default function App() {
+function LegacyApp() {
   const [view, setView] = useState<View>("home");
   const [menuOpen, setMenuOpen] = useState(false);
   const [dark, setDark] = useState(false);
@@ -1270,4 +1292,123 @@ export default function App() {
     {view === "kata-form" && <KataForm athlete={athlete} kataId={kataId} mode={kataMode} onExit={() => navigate("home")} onFinish={(evaluationResult) => { setKataResult(evaluationResult); saveKataEvaluation(evaluationResult); navigate("kata-result"); }} />}
     {view === "kata-result" && <KataResultView result={kataResult} athlete={athlete} kataId={kataId} mode={kataMode} navigate={navigate} />}
   </PublicShell>;
+}
+
+export default function App() {
+  const [view, setView] = useState<View>("home");
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [dark, setDark] = useState(false);
+  const [themeReady, setThemeReady] = useState(false);
+  const [authReady, setAuthReady] = useState(false);
+  const [user, setUser] = useState<AuthUser | null>(null);
+  const [profileOpen, setProfileOpen] = useState(false);
+  const [belt, setBelt] = useState<PracticalBeltId>("gray");
+  const [athlete, setAthlete] = useState("");
+  const [result, setResult] = useState<PracticalResult>({ score: 0, approved: false, detail: "", categories: [] });
+  const [kataId, setKataId] = useState<KataId>("nage-no-kata");
+  const [kataMode, setKataMode] = useState<KataMode>("partial");
+  const [kataResult, setKataResult] = useState<KataResult>({
+    score: 10,
+    rawScore: 10,
+    severeApplied: false,
+    totalDeductions: 0,
+    reviewedCount: 0,
+    groups: [],
+    errorCounts: { small: 0, medium: 0, large: 0, severe: 0 },
+  });
+
+  useEffect(() => {
+    const savedTheme = window.localStorage.getItem("ajrc-theme");
+    const timer = window.setTimeout(() => {
+      setDark(savedTheme ? savedTheme === "dark" : window.matchMedia("(prefers-color-scheme: dark)").matches);
+      setThemeReady(true);
+    }, 0);
+    return () => window.clearTimeout(timer);
+  }, []);
+
+  useEffect(() => {
+    const token = getAuthToken();
+    if (!token) {
+      const timer = window.setTimeout(() => setAuthReady(true), 0);
+      return () => window.clearTimeout(timer);
+    }
+    apiRequest<{ user: AuthUser }>("/api/auth/me")
+      .then((response) => setUser(response.user))
+      .catch(() => setUser(null))
+      .finally(() => setAuthReady(true));
+  }, []);
+
+  useEffect(() => {
+    if (themeReady) window.localStorage.setItem("ajrc-theme", dark ? "dark" : "light");
+  }, [dark, themeReady]);
+
+  useEffect(() => {
+    const expire = () => { setUser(null); setView("home"); };
+    window.addEventListener("ajrc:session-expired", expire);
+    return () => window.removeEventListener("ajrc:session-expired", expire);
+  }, []);
+
+  const navigate = (next: View) => {
+    setMenuOpen(false);
+    setView(next);
+    window.scrollTo({ top: 0, behavior: "auto" });
+  };
+
+  const logout = () => {
+    void apiRequest<void>("/api/auth/logout", { method: "POST" }).catch(() => undefined);
+    setAuthToken(null);
+    setUser(null);
+    setView("home");
+    setMenuOpen(false);
+    setProfileOpen(false);
+  };
+
+  const saveTechnicalEvaluation = (practicalResult: PracticalResult) => {
+    const beltName = PRACTICAL_BELTS.find((item) => item.id === belt)?.name ?? belt;
+    void apiRequest("/api/evaluations", {
+      method: "POST",
+      body: JSON.stringify({
+        id: crypto.randomUUID(),
+        athlete,
+        belt: beltName,
+        type: "técnica",
+        score: practicalResult.score * 10,
+        result: practicalResult.approved ? "Aprovado" : "Reexame necessário",
+        detail: practicalResult.detail,
+      }),
+    }).catch(() => undefined);
+  };
+
+  const saveKataEvaluation = (evaluationResult: KataResult) => {
+    const kataName = KATAS.find((item) => item.id === kataId)?.name ?? kataId;
+    const detail = `Descontos: ${evaluationResult.totalDeductions}. ${evaluationResult.severeApplied ? "Fator de erro grave aplicado." : "Sem fator de erro grave."}${evaluationResult.notes ? ` Observações: ${evaluationResult.notes}` : ""}`;
+    void apiRequest("/api/evaluations", {
+      method: "POST",
+      body: JSON.stringify({ id: crypto.randomUUID(), athlete, belt: kataName, type: "kata", score: evaluationResult.score * 10, result: "Registro técnico", detail }),
+    }).catch(() => undefined);
+  };
+
+  const legacyDisabled = false;
+  if (legacyDisabled) return <LegacyApp />;
+
+  if (!authReady) return <main className={`auth-screen auth-loading-screen${dark ? " dark" : ""}`}><Brand /><div className="auth-boot-spinner" /><p>Preparando seu acesso…</p></main>;
+  if (!user) return <AuthScreen dark={dark} setDark={setDark} onAuthenticated={setUser} />;
+  if (view === "admin") return <>
+    <AdminPortal user={user} dark={dark} setDark={setDark} onExit={() => navigate("home")} onLogout={logout} onOpenProfile={() => setProfileOpen(true)} />
+    {profileOpen && <ProfileDialog user={user} dark={dark} onClose={() => setProfileOpen(false)} onSaved={setUser} />}
+  </>;
+
+  return <>
+    <PublicShell menuOpen={menuOpen} setMenuOpen={setMenuOpen} dark={dark} setDark={setDark} navigate={navigate} user={user} onLogout={logout} onOpenProfile={() => setProfileOpen(true)}>
+      {view === "home" && <HomeView navigate={navigate} />}
+      {view === "theory-links" && <TheoryLinksView onBack={() => navigate("home")} />}
+      {view === "technical-setup" && <TechnicalSetup evaluatorName={user.name} onBack={() => navigate("home")} onStart={(name, selectedBelt) => { setAthlete(name); setBelt(selectedBelt); navigate("technical-form"); }} />}
+      {view === "technical-form" && <TechnicalForm athlete={athlete} beltId={belt} onExit={() => navigate("home")} onFinish={(practicalResult) => { setResult(practicalResult); saveTechnicalEvaluation(practicalResult); navigate("technical-result"); }} />}
+      {view === "technical-result" && <TechnicalResultView result={result} athlete={athlete} navigate={navigate} />}
+      {view === "kata-setup" && <KataSetup evaluatorName={user.name} onBack={() => navigate("home")} onStart={(name, selectedKata, selectedMode) => { setAthlete(name); setKataId(selectedKata); setKataMode(selectedMode); navigate("kata-form"); }} />}
+      {view === "kata-form" && <KataForm athlete={athlete} kataId={kataId} mode={kataMode} onExit={() => navigate("home")} onFinish={(evaluationResult) => { setKataResult(evaluationResult); saveKataEvaluation(evaluationResult); navigate("kata-result"); }} />}
+      {view === "kata-result" && <KataResultView result={kataResult} athlete={athlete} kataId={kataId} mode={kataMode} navigate={navigate} />}
+    </PublicShell>
+    {profileOpen && <ProfileDialog user={user} dark={dark} onClose={() => setProfileOpen(false)} onSaved={setUser} />}
+  </>;
 }
