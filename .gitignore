@@ -41,3 +41,7 @@ next-env.d.ts
 
 /.wrangler/
 /backend/.wrangler/
+
+# local Cloudflare secrets
+.dev.vars
+**/.dev.vars
