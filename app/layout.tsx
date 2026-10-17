@@ -6,8 +6,8 @@ export const metadata: Metadata = {
   description:
     "Programa de avaliação teórica e técnica da Associação Judô Rogério Cruz.",
   icons: {
-    icon: "/favicon.svg",
-    shortcut: "/favicon.svg",
+    icon: "/favicon.ico",
+    shortcut: "/favicon.ico",
   },
 };
 
