@@ -22,6 +22,22 @@ type DrawRule = {
   from: PracticalBeltId;
 };
 
+const DRAWN_TECHNIQUE_BELT_ORDER = [
+  "yellow",
+  "orange",
+  "green",
+  "purple",
+  "brown",
+  "black",
+] as const;
+
+function drawnTechniqueBeltPosition(beltId: string) {
+  const position = DRAWN_TECHNIQUE_BELT_ORDER.indexOf(
+    beltId as (typeof DRAWN_TECHNIQUE_BELT_ORDER)[number],
+  );
+  return position === -1 ? Number.MAX_SAFE_INTEGER : position;
+}
+
 type CategoryDefinition = {
   fixed: string[];
   draws?: DrawRule[];
@@ -348,7 +364,13 @@ export function createPracticalExam(beltId: PracticalBeltId, random: () => numbe
     const used = new Set<string>(definition.fixed);
     const drawn: ExamTechnique[] = [];
 
-    definition.draws?.forEach((rule) => {
+    const orderedDraws = [...(definition.draws ?? [])].sort(
+      (left, right) =>
+        drawnTechniqueBeltPosition(left.from) -
+        drawnTechniqueBeltPosition(right.from),
+    );
+
+    orderedDraws.forEach((rule) => {
       const source = PRACTICAL_BELTS.find((item) => item.id === rule.from);
       const pool =
         source?.categories[categoryName]?.fixed.filter((name) => !used.has(name)) ?? [];

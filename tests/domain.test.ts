@@ -87,6 +87,28 @@ describe("regras da avaliação prática", () => {
     }
   });
 
+  it("dispõe técnicas sorteadas na ordem das faixas de origem", () => {
+    const beltOrder = [
+      "Faixa Amarela",
+      "Faixa Laranja",
+      "Faixa Verde",
+      "Faixa Roxa",
+      "Faixa Marrom",
+      "Faixa Preta",
+    ];
+    const exam = createPracticalExam("brown", () => 0.25);
+
+    for (const category of exam) {
+      const origins = category.techniques.flatMap((technique) =>
+        technique.drawnFrom ? [technique.drawnFrom] : [],
+      );
+      const positions = origins.map((origin) => beltOrder.indexOf(origin));
+
+      expect(positions.every((position) => position >= 0)).toBe(true);
+      expect(positions).toEqual([...positions].sort((left, right) => left - right));
+    }
+  });
+
   it("trata Renraku-Henka como uma única avaliação", () => {
     const renraku = "O-uchi-gari → Uchi-mata → Tai-otoshi";
     expect(getTechniqueEvaluationParts(renraku)).toEqual([renraku]);
