@@ -21,6 +21,7 @@ import {
   calculateSequenceScore,
   createPracticalExam,
   getTechniqueEvaluationParts,
+  PRACTICAL_BELTS,
   toYouTubeEmbedUrl,
   type ExamCategory,
 } from "../lib/practical-exams";
@@ -86,16 +87,29 @@ describe("regras da avaliação prática", () => {
     }
   });
 
-  it("separa cada movimento de Renraku-Henka para calcular a média", () => {
-    expect(
-      getTechniqueEvaluationParts(
-        "Renraku-Henka Waza",
-        "O-uchi-gari → Uchi-mata → Tai-otoshi",
-      ),
-    ).toEqual(["O-uchi-gari", "Uchi-mata", "Tai-otoshi"]);
-    expect(getTechniqueEvaluationParts("Kaeshi Waza", "A × B")).toEqual([
-      "A × B",
+  it("trata Renraku-Henka como uma única avaliação", () => {
+    const renraku = "O-uchi-gari → Uchi-mata → Tai-otoshi";
+    expect(getTechniqueEvaluationParts(renraku)).toEqual([renraku]);
+    expect(getTechniqueEvaluationParts("A × B")).toEqual(["A × B"]);
+  });
+
+  it("cria uma avaliação para cada execução explicitamente numerada", () => {
+    expect(getTechniqueEvaluationParts("2 Fugas de Yoko-shiho-gatame")).toEqual([
+      "Avaliação 1 de 2",
+      "Avaliação 2 de 2",
     ]);
+    expect(getTechniqueEvaluationParts("3 execuções de exemplo")).toHaveLength(3);
+    expect(getTechniqueEvaluationParts("1 transição de Tachi-waza → Ne-waza")).toHaveLength(1);
+
+    for (const belt of PRACTICAL_BELTS) {
+      for (const definition of Object.values(belt.categories)) {
+        for (const technique of definition?.fixed ?? []) {
+          const explicitCount = Number.parseInt(technique.match(/^(\d+)\s+/)?.[1] ?? "1", 10);
+          expect(getTechniqueEvaluationParts(technique)).toHaveLength(explicitCount);
+        }
+      }
+    }
+
     expect(calculateSequenceScore({ 0: 10, 1: 7, 2: 5 }, 3)).toBeCloseTo(
       7.33,
       2,

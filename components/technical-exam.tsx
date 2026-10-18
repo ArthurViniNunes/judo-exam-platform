@@ -80,10 +80,7 @@ export function TechnicalForm({
   const scores = { ...standardScores };
   for (const category of exam) {
     for (const technique of category.techniques) {
-      const partCount = getTechniqueEvaluationParts(
-        category.name,
-        technique.name,
-      ).length;
+      const partCount = getTechniqueEvaluationParts(technique.name).length;
       if (partCount < 2) continue;
       const average = calculateSequenceScore(
         sequenceScores[technique.id],
@@ -159,10 +156,10 @@ export function TechnicalForm({
           </div>
           <div className="criteria-list practical-criteria">
             {group?.techniques.map((technique, itemIndex) => {
-              const evaluationParts = getTechniqueEvaluationParts(group.name, technique.name);
-              const isSequence = evaluationParts.length > 1;
+              const evaluationParts = getTechniqueEvaluationParts(technique.name);
+              const hasMultipleEvaluations = evaluationParts.length > 1;
               const techniqueScore = scores[technique.id];
-              const selectedScore = isSequence
+              const selectedScore = hasMultipleEvaluations
                 ? undefined
                 : SCORE_OPTIONS.find((option) => option.value === techniqueScore);
               const techniqueComplete = techniqueScore !== undefined;
@@ -176,9 +173,9 @@ export function TechnicalForm({
                       <span className="technique-copy">
                         <strong>{technique.name}</strong>
                         {technique.drawnFrom && <small className="drawn-origin"><Dices size={12} /> Veio de sorteio da {technique.drawnFrom}</small>}
-                        {isSequence && <small>{evaluationParts.length} movimentos avaliados no mesmo bloco</small>}
+                        {hasMultipleEvaluations && <small>{evaluationParts.length} avaliações no mesmo bloco</small>}
                       </span>
-                      {isSequence && techniqueComplete ? (
+                      {hasMultipleEvaluations && techniqueComplete ? (
                         <span className="selected-rating"><b>{techniqueScore.toFixed(1)}</b> média</span>
                       ) : selectedScore ? (
                         <span className={`selected-rating score-${selectedScore.value}`}><b>{selectedScore.value}</b> {selectedScore.label}</span>
@@ -192,8 +189,8 @@ export function TechnicalForm({
                     </button>}
                   </div>
                   {isOpen && (
-                    isSequence ? (
-                      <div className="sequence-rating" id={`score-menu-${technique.id}`} aria-label={`Avaliação dos movimentos de ${technique.name}`}>
+                    hasMultipleEvaluations ? (
+                      <div className="sequence-rating" id={`score-menu-${technique.id}`} aria-label={`Avaliações de ${technique.name}`}>
                         <div className="sequence-score-guide">
                           {SCORE_OPTIONS.map((option) => (
                             <span key={option.value}><b>{option.value} · {option.label}</b><small>{option.description}</small></span>
@@ -201,8 +198,8 @@ export function TechnicalForm({
                         </div>
                         {evaluationParts.map((part, partIndex) => (
                           <section className="sequence-part" key={`${technique.id}-${part}`}>
-                            <header><span>Movimento {partIndex + 1}</span><strong>{part}</strong></header>
-                            <div className="sequence-score-buttons" role="group" aria-label={`Nota para ${part}`}>
+                            <header><span>Execução {partIndex + 1}</span><strong>{part}</strong></header>
+                            <div className="sequence-score-buttons" role="group" aria-label={`Nota da ${part.toLocaleLowerCase("pt-BR")} em ${technique.name}`}>
                               {SCORE_OPTIONS.map((option) => {
                                 const selected = sequenceScores[technique.id]?.[partIndex] === option.value;
                                 return (

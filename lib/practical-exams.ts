@@ -308,18 +308,15 @@ export const SCORE_OPTIONS = [
   { value: 0, label: "Insuficiente", description: "Técnica não aplicada ou trocada." },
 ] as const;
 
-export function getTechniqueEvaluationParts(
-  category: PracticalCategory,
-  technique: string,
-) {
-  if (category !== "Renraku-Henka Waza") return [technique];
+export function getTechniqueEvaluationParts(technique: string) {
+  const explicitCount = Number.parseInt(technique.match(/^(\d+)\s+/)?.[1] ?? "1", 10);
 
-  const parts = technique
-    .split("→")
-    .map((part) => part.trim())
-    .filter(Boolean);
+  if (explicitCount <= 1) return [technique];
 
-  return parts.length > 1 ? parts : [technique];
+  return Array.from(
+    { length: explicitCount },
+    (_, index) => `Avaliação ${index + 1} de ${explicitCount}`,
+  );
 }
 
 export function calculateSequenceScore(
