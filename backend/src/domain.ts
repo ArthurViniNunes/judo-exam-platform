@@ -9,6 +9,10 @@ export function normalizeEmail(value: string) {
   return value.trim().toLocaleLowerCase("pt-BR");
 }
 
+export function isValidEmail(value: string) {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizeEmail(value));
+}
+
 export function normalizeName(value: string) {
   return value
     .trim()

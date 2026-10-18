@@ -1,22 +1,45 @@
 import { FormEvent, useState } from "react";
-import { UserPlus } from "lucide-react";
+import { Check, Copy, Link2, Trash2, UserPlus } from "lucide-react";
 import type { AuthUser, ManagedUser } from "@/lib/platform";
 import { apiRequest } from "@/lib/api";
+import { buildInvitationPath } from "@/lib/invitations";
 import { initials, LoadingBlock } from "./admin-portal-shared";
 
 type TeamViewProps = {
   users: ManagedUser[];
   loading: boolean;
   currentUser: AuthUser;
-  reload: () => void;
+  reload: () => Promise<void>;
 };
+
+type Invitation = Pick<ManagedUser, "id" | "email" | "name">;
 
 export function TeamView({ users, loading, currentUser, reload }: TeamViewProps) {
   const [email, setEmail] = useState("");
   const [name, setName] = useState("");
   const [busy, setBusy] = useState(false);
+  const [actionId, setActionId] = useState("");
+  const [copiedId, setCopiedId] = useState("");
+  const [invitation, setInvitation] = useState<Invitation | null>(null);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
+
+  const invitationUrl = (person: Invitation) =>
+    `${window.location.origin}${buildInvitationPath(person)}`;
+
+  const copyInvitation = async (person: Invitation) => {
+    setError("");
+    setActionId(person.id);
+    try {
+      await navigator.clipboard.writeText(invitationUrl(person));
+      setCopiedId(person.id);
+      setMessage(`Link de ativação de ${person.name} copiado.`);
+    } catch {
+      setError("Não foi possível copiar o link. Tente novamente neste dispositivo.");
+    } finally {
+      setActionId("");
+    }
+  };
 
   const invite = async (event: FormEvent) => {
     event.preventDefault();
@@ -25,14 +48,16 @@ export function TeamView({ users, loading, currentUser, reload }: TeamViewProps)
     setMessage("");
 
     try {
-      await apiRequest("/api/users/invite", {
+      const invited = await apiRequest<Invitation>("/api/users/invite", {
         method: "POST",
         body: JSON.stringify({ email, name }),
       });
+      setInvitation(invited);
+      setCopiedId("");
       setName("");
       setEmail("");
-      setMessage("E-mail autorizado. O avaliador já pode criar a conta.");
-      reload();
+      setMessage("Acesso autorizado. Agora compartilhe o link de ativação.");
+      await reload();
     } catch (caught) {
       setError(
         caught instanceof Error
@@ -46,6 +71,7 @@ export function TeamView({ users, loading, currentUser, reload }: TeamViewProps)
 
   const toggleStatus = async (person: ManagedUser) => {
     setError("");
+    setActionId(person.id);
 
     try {
       await apiRequest(`/api/users/${person.id}`, {
@@ -54,13 +80,38 @@ export function TeamView({ users, loading, currentUser, reload }: TeamViewProps)
           status: person.status === "disabled" ? "active" : "disabled",
         }),
       });
-      reload();
+      await reload();
     } catch (caught) {
       setError(
         caught instanceof Error
           ? caught.message
           : "Não foi possível alterar o acesso.",
       );
+    } finally {
+      setActionId("");
+    }
+  };
+
+  const cancelInvitation = async (person: ManagedUser) => {
+    if (!window.confirm(`Cancelar o convite de ${person.name}?`)) return;
+
+    setError("");
+    setActionId(person.id);
+    try {
+      await apiRequest(`/api/users/${person.id}/invitation`, {
+        method: "DELETE",
+      });
+      if (invitation?.id === person.id) setInvitation(null);
+      setMessage(`Convite de ${person.name} cancelado.`);
+      await reload();
+    } catch (caught) {
+      setError(
+        caught instanceof Error
+          ? caught.message
+          : "Não foi possível cancelar o convite.",
+      );
+    } finally {
+      setActionId("");
     }
   };
 
@@ -82,8 +133,8 @@ export function TeamView({ users, loading, currentUser, reload }: TeamViewProps)
           </span>
           <h2>Autorizar avaliador</h2>
           <p>
-            Não enviamos e-mail automaticamente. Avise o avaliador que o acesso
-            está liberado.
+            Autorize o e-mail e envie o link gerado ao avaliador. Ele abrirá o
+            cadastro já preparado para ativar a conta.
           </p>
           <label>
             Nome
@@ -114,8 +165,27 @@ export function TeamView({ users, loading, currentUser, reload }: TeamViewProps)
               {message}
             </div>
           )}
+          {invitation && (
+            <div className="invitation-receipt">
+              <span>
+                <Link2 size={18} />
+              </span>
+              <div>
+                <strong>Link pronto para compartilhar</strong>
+                <small>{invitation.email}</small>
+              </div>
+              <button
+                type="button"
+                onClick={() => void copyInvitation(invitation)}
+                disabled={actionId === invitation.id}
+              >
+                {copiedId === invitation.id ? <Check size={17} /> : <Copy size={17} />}
+                {copiedId === invitation.id ? "Copiado" : "Copiar link"}
+              </button>
+            </div>
+          )}
           <button className="management-primary" disabled={busy}>
-            <UserPlus size={18} /> {busy ? "Autorizando…" : "Autorizar e-mail"}
+            <UserPlus size={18} /> {busy ? "Gerando convite…" : "Gerar convite"}
           </button>
         </form>
 
@@ -127,7 +197,7 @@ export function TeamView({ users, loading, currentUser, reload }: TeamViewProps)
           {users.map((person) => (
             <article key={person.id}>
               <span className="student-avatar">{initials(person.name)}</span>
-              <div>
+              <div className="team-member-info">
                 <strong>{person.name}</strong>
                 <small>{person.email}</small>
                 <p>
@@ -147,13 +217,35 @@ export function TeamView({ users, loading, currentUser, reload }: TeamViewProps)
                     ? "Pendente"
                     : "Desativado"}
               </span>
-              {person.id !== currentUser.id &&
-                person.role !== "super_admin" &&
-                person.status !== "invited" && (
-                  <button onClick={() => toggleStatus(person)}>
-                    {person.status === "disabled" ? "Reativar" : "Desativar"}
-                  </button>
-                )}
+              {person.id !== currentUser.id && person.role !== "super_admin" && (
+                <div className="team-member-actions">
+                  {person.status === "invited" ? (
+                    <>
+                      <button
+                        onClick={() => void copyInvitation(person)}
+                        disabled={actionId === person.id}
+                      >
+                        {copiedId === person.id ? <Check size={16} /> : <Copy size={16} />}
+                        {copiedId === person.id ? "Copiado" : "Copiar link"}
+                      </button>
+                      <button
+                        className="danger"
+                        onClick={() => void cancelInvitation(person)}
+                        disabled={actionId === person.id}
+                      >
+                        <Trash2 size={16} /> Cancelar
+                      </button>
+                    </>
+                  ) : (
+                    <button
+                      onClick={() => void toggleStatus(person)}
+                      disabled={actionId === person.id}
+                    >
+                      {person.status === "disabled" ? "Reativar" : "Desativar"}
+                    </button>
+                  )}
+                </div>
+              )}
             </article>
           ))}
         </section>

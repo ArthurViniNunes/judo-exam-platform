@@ -8,7 +8,12 @@ import {
 } from "./evaluations";
 import { corsHeaders, json, requireSuperAdmin } from "./http";
 import { authenticate } from "./security";
-import { inviteUser, listUsers, updateUserStatus } from "./users";
+import {
+  cancelInvitation,
+  inviteUser,
+  listUsers,
+  updateUserStatus,
+} from "./users";
 
 async function handlePublicRoute(
   request: Request,
@@ -90,6 +95,14 @@ async function handleAuthenticatedRoute(
   if (url.pathname === "/api/users/invite" && request.method === "POST") {
     const denied = requireSuperAdmin(request, env, user);
     return denied || inviteUser(request, env);
+  }
+
+  const invitationMatch = url.pathname.match(
+    /^\/api\/users\/([^/]+)\/invitation$/,
+  );
+  if (invitationMatch && request.method === "DELETE") {
+    const denied = requireSuperAdmin(request, env, user);
+    return denied || cancelInvitation(request, env, invitationMatch[1]);
   }
 
   const userMatch = url.pathname.match(/^\/api\/users\/([^/]+)$/);

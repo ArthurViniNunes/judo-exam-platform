@@ -12,8 +12,9 @@ import {
   UserRoundPlus,
 } from "lucide-react";
 import Image from "next/image";
-import { FormEvent, useState } from "react";
+import { FormEvent, useEffect, useState } from "react";
 import { apiRequest, setAuthToken } from "@/lib/api";
+import { readInvitationPrefill } from "@/lib/invitations";
 import type { AuthUser } from "@/lib/platform";
 
 const LOGO = "https://media.base44.com/images/public/6a9b8ceb32f349c5600d2fdc/ecc432c62_41508.png/v1/fit/w_176,h_176,q_90,usm_0.66_1.00_0.01,enc_webp,quality_auto/ecc432c62_41508.webp";
@@ -33,14 +34,34 @@ export function AuthScreen({ dark, setDark, onAuthenticated }: AuthScreenProps) 
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
+  const [invitedEmail, setInvitedEmail] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+
+  useEffect(() => {
+    const invitation = readInvitationPrefill(window.location.search);
+    if (!invitation) return;
+    const timer = window.setTimeout(() => {
+      setMode("register");
+      setEmail(invitation.email);
+      setInvitedEmail(invitation.email);
+      setName(invitation.name);
+    }, 0);
+    return () => window.clearTimeout(timer);
+  }, []);
 
   const submit = async (event: FormEvent) => {
     event.preventDefault();
     setError("");
     if (mode === "register" && password !== confirmPassword) {
       setError("As duas senhas precisam ser iguais.");
+      return;
+    }
+    if (
+      mode === "register" &&
+      (password.length < 10 || !/[A-Za-zÀ-ÿ]/.test(password) || !/\d/.test(password))
+    ) {
+      setError("Crie uma senha com pelo menos 10 caracteres, uma letra e um número.");
       return;
     }
     setBusy(true);
@@ -54,6 +75,9 @@ export function AuthScreen({ dark, setDark, onAuthenticated }: AuthScreenProps) 
         body: JSON.stringify(body),
       });
       setAuthToken(response.token);
+      if (mode === "register" && window.location.search) {
+        window.history.replaceState({}, "", window.location.pathname);
+      }
       onAuthenticated(response.user);
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "Não foi possível acessar sua conta.");
@@ -101,14 +125,21 @@ export function AuthScreen({ dark, setDark, onAuthenticated }: AuthScreenProps) 
           </div>
         </div>
         <form onSubmit={submit}>
+          {mode === "register" && invitedEmail && (
+            <div className="auth-invitation" role="status">
+              <CheckCircle2 size={18} />
+              <span><strong>Convite encontrado</strong>Complete os dados abaixo para ativar seu acesso.</span>
+            </div>
+          )}
           {mode === "register" && <label>Nome completo<input autoComplete="name" required minLength={3} value={name} onChange={(event) => setName(event.target.value)} placeholder="Como você será identificado" /></label>}
-          <label>E-mail<input type="email" autoComplete="email" required value={email} onChange={(event) => setEmail(event.target.value)} placeholder="voce@exemplo.com" /></label>
+          <label>E-mail<input type="email" autoComplete="email" required readOnly={mode === "register" && Boolean(invitedEmail)} value={email} onChange={(event) => setEmail(event.target.value)} placeholder="voce@exemplo.com" />{mode === "register" && invitedEmail && <small>Este é o e-mail autorizado pelo Super Admin.</small>}</label>
           <label>Senha
             <span className="password-field">
               <input type={showPassword ? "text" : "password"} autoComplete={mode === "login" ? "current-password" : "new-password"} required minLength={10} value={password} onChange={(event) => setPassword(event.target.value)} placeholder="Mínimo de 10 caracteres" />
               <button type="button" onClick={() => setShowPassword(!showPassword)} aria-label={showPassword ? "Ocultar senha" : "Mostrar senha"}>{showPassword ? <EyeOff size={18} /> : <Eye size={18} />}</button>
             </span>
           </label>
+          {mode === "register" && <p className="password-requirements">Use pelo menos 10 caracteres, incluindo uma letra e um número.</p>}
           {mode === "register" && <label>Confirme a senha<input type={showPassword ? "text" : "password"} autoComplete="new-password" required minLength={10} value={confirmPassword} onChange={(event) => setConfirmPassword(event.target.value)} /></label>}
           {error && <div className="auth-error" role="alert">{error}</div>}
           <button className="auth-submit" disabled={busy}>{busy ? "Aguarde…" : mode === "login" ? "Entrar na plataforma" : "Criar minha conta"}<ArrowRight size={19} /></button>

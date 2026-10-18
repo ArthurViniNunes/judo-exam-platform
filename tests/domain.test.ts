@@ -2,9 +2,16 @@ import { describe, expect, it } from "vitest";
 import type { EvaluationRow } from "../backend/src/contracts";
 import {
   dashboardFromRows,
+  isValidEmail,
+  normalizeEmail,
   normalizeName,
   studentsFromRows,
 } from "../backend/src/domain";
+import { validPassword } from "../backend/src/security";
+import {
+  buildInvitationPath,
+  readInvitationPrefill,
+} from "../lib/invitations";
 import {
   calculateKataResult,
   createKataExam,
@@ -134,6 +141,32 @@ describe("regras da avaliação de kata", () => {
 describe("domínio administrativo", () => {
   it("normaliza nomes para associar avaliações do mesmo aluno", () => {
     expect(normalizeName("  Ána   SILVA ")).toBe("ana silva");
+  });
+
+  it("gera um link de convite que recupera nome e e-mail sem perder acentos", () => {
+    const path = buildInvitationPath({
+      email: "avaliador@example.com",
+      name: "Fábio Nunes",
+    });
+
+    expect(readInvitationPrefill(new URL(path, "https://example.com").search)).toEqual({
+      email: "avaliador@example.com",
+      name: "Fábio Nunes",
+    });
+  });
+
+  it("normaliza e valida e-mails antes de criar o convite", () => {
+    expect(normalizeEmail(" Avaliador@EXAMPLE.com ")).toBe(
+      "avaliador@example.com",
+    );
+    expect(isValidEmail("avaliador@example.com")).toBe(true);
+    expect(isValidEmail("avaliador@localhost")).toBe(false);
+  });
+
+  it("aplica no cadastro a mesma regra de senha usada pela API", () => {
+    expect(validPassword("Avaliador123")).toBe(true);
+    expect(validPassword("semnumerosuficiente")).toBe(false);
+    expect(validPassword("1234567890")).toBe(false);
   });
 
   it("calcula evolução cronológica e indicadores sem contar kata na aprovação", () => {

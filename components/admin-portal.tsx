@@ -141,7 +141,7 @@ export function AdminPortal({
               users={users}
               loading={loading}
               currentUser={user}
-              reload={() => void loadData()}
+              reload={loadData}
             />
           )}
         </>

@@ -3052,6 +3052,25 @@ td:first-child {
   border-color: var(--mg-accent);
   box-shadow: 0 0 0 3px color-mix(in srgb, var(--mg-accent) 18%, transparent);
 }
+.auth-panel input:read-only { background: var(--mg-bg); color: var(--mg-muted); }
+.auth-panel label > small { font-size: 10px; font-weight: 550; line-height: 1.45; }
+.auth-invitation {
+  min-height: 52px;
+  padding: 10px 12px;
+  border: 1px solid color-mix(in srgb, var(--mg-accent) 45%, var(--mg-line));
+  border-radius: 10px;
+  background: var(--mg-bg);
+  color: var(--mg-accent-strong);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 11px;
+  line-height: 1.45;
+}
+.auth-invitation svg { flex: 0 0 auto; }
+.auth-invitation span { display: grid; gap: 1px; }
+.auth-invitation strong { color: var(--mg-ink); font-size: 12px; }
+.password-requirements { margin: -6px 0 0; color: var(--mg-muted); font-size: 10px; line-height: 1.45; }
 .password-field { position: relative; display: block; }
 .password-field input { padding-right: 52px; }
 .password-field button { position: absolute; top: 2px; right: 2px; width: 44px; height: 44px; border: 0; background: transparent; color: var(--mg-muted); display: grid; place-items: center; }
@@ -3263,12 +3282,27 @@ td:first-child {
 .team-list h2 { margin: 14px 0 5px; font-family: Oswald, "Arial Narrow", sans-serif; font-size: 21px; font-weight: 550; }
 .invite-panel > p { margin: 0 0 17px; color: var(--mg-muted); font-size: 11px; line-height: 1.55; }
 .invite-panel { display: grid; gap: 13px; align-content: start; }
+.invitation-receipt {
+  padding: 12px;
+  border: 1px solid color-mix(in srgb, var(--mg-accent) 45%, var(--mg-line));
+  border-radius: 11px;
+  background: var(--mg-bg);
+  display: grid;
+  grid-template-columns: 38px minmax(0, 1fr);
+  align-items: center;
+  gap: 9px;
+}
+.invitation-receipt > span { width: 38px; height: 38px; border-radius: 50%; background: var(--mg-surface); color: var(--mg-accent); display: grid; place-items: center; }
+.invitation-receipt > div { min-width: 0; display: grid; gap: 3px; }
+.invitation-receipt strong { font-size: 11px; }
+.invitation-receipt small { overflow: hidden; color: var(--mg-muted); font-size: 9px; text-overflow: ellipsis; white-space: nowrap; }
+.invitation-receipt button { grid-column: 1 / -1; min-height: 44px; border: 1px solid var(--mg-line); border-radius: 9px; background: var(--mg-surface); color: var(--mg-ink); display: flex; align-items: center; justify-content: center; gap: 7px; font-weight: 800; }
 .team-list-heading { min-height: 43px; border-bottom: 1px solid var(--mg-line); display: flex; align-items: flex-start; justify-content: space-between; }
 .team-list-heading h2 { margin-top: 0; }
 .team-list-heading span { min-width: 28px; height: 28px; padding-inline: 7px; border-radius: 999px; background: var(--mg-bg); color: var(--mg-accent); display: grid; place-items: center; font-size: 10px; font-weight: 850; }
 .team-list article { padding: 13px 0; border-bottom: 1px solid var(--mg-line); display: grid; grid-template-columns: 40px minmax(0, 1fr) auto; align-items: center; gap: 9px; }
 .team-list article:last-child { border-bottom: 0; }
-.team-list article > div { min-width: 0; display: grid; gap: 3px; }
+.team-member-info { min-width: 0; display: grid; gap: 3px; }
 .team-list article strong,
 .team-list article small { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .team-list article strong { font-size: 12px; }
@@ -3279,7 +3313,12 @@ td:first-child {
 .access-status.disabled { background: #fff0ec; color: #a14430; }
 .dark .access-status.active { background: #2a4128; color: #bfe3b6; }
 .dark .access-status.disabled { background: #492c27; color: #ffc9bd; }
-.team-list article > button { grid-column: 2 / -1; min-height: 44px; border: 1px solid var(--mg-line); border-radius: 9px; background: var(--mg-surface); color: var(--mg-muted); }
+.team-member-actions { grid-column: 1 / -1; display: grid; grid-template-columns: repeat(auto-fit, minmax(116px, 1fr)); gap: 7px; }
+.team-member-actions button { min-height: 44px; padding: 8px 11px; border: 1px solid var(--mg-line); border-radius: 9px; background: var(--mg-surface); color: var(--mg-muted); display: flex; align-items: center; justify-content: center; gap: 6px; font-weight: 750; }
+.team-member-actions button.danger { border-color: color-mix(in srgb, #a14430 38%, var(--mg-line)); color: #a14430; }
+.dark .team-member-actions button.danger { color: #ffc9bd; }
+.team-member-actions button:disabled,
+.invitation-receipt button:disabled { opacity: 0.55; }
 .management-error-page { min-height: 70vh; display: grid; place-items: center; align-content: center; text-align: center; }
 .management-error-page svg { color: var(--mg-accent); }
 .management-error-page h2 { margin: 15px 0 5px; font-family: Oswald, "Arial Narrow", sans-serif; font-size: 24px; }
@@ -3378,8 +3417,9 @@ td:first-child {
   .students-layout { grid-template-columns: minmax(300px, 0.85fr) minmax(340px, 1.15fr); align-items: start; }
   .student-detail-close { display: none; }
   .team-grid { grid-template-columns: minmax(280px, 0.7fr) minmax(380px, 1.3fr); align-items: start; }
-  .team-list article { grid-template-columns: 40px minmax(0, 1fr) auto auto; }
-  .team-list article > button { grid-column: auto; min-width: 84px; padding-inline: 10px; }
+  .team-list article { grid-template-columns: 40px minmax(0, 1fr) auto; }
+  .team-member-actions { grid-column: 2 / -1; justify-self: end; display: flex; }
+  .team-member-actions button { min-width: 104px; }
   .management-user-button div { min-width: 0; display: grid; gap: 2px; text-align: left; }
   .management-user-button div strong { max-width: 130px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 11px; }
   .management-user-button div small { color: var(--mg-muted); font-size: 9px; }

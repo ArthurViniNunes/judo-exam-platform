@@ -1,5 +1,5 @@
 import type { AuthUser } from "./contracts";
-import { normalizeEmail } from "./domain";
+import { isValidEmail, normalizeEmail } from "./domain";
 import { json } from "./http";
 
 export async function listUsers(request: Request, env: Env) {
@@ -12,18 +12,46 @@ export async function listUsers(request: Request, env: Env) {
 export async function inviteUser(request: Request, env: Env) {
   const body = await request.json<{ email?: string; name?: string }>();
   const email = normalizeEmail(body.email || "");
-  if (!email.includes("@")) {
+  const name = body.name?.trim().replace(/\s+/g, " ") || "";
+  if (!isValidEmail(email)) {
     return json(request, env, { error: "Informe um e-mail válido." }, 400);
   }
-
-  const existing = await env.DB.prepare("SELECT id FROM users WHERE email = ?")
-    .bind(email)
-    .first();
-  if (existing) {
+  if (name.length < 3 || name.length > 80) {
     return json(
       request,
       env,
-      { error: "Este e-mail já está cadastrado ou convidado." },
+      { error: "Informe um nome entre 3 e 80 caracteres." },
+      400,
+    );
+  }
+
+  const existing = await env.DB.prepare(
+    "SELECT id, email, name, role, status FROM users WHERE email = ?",
+  )
+    .bind(email)
+    .first<{
+      id: string;
+      email: string;
+      name: string;
+      role: "super_admin" | "evaluator";
+      status: "invited" | "active" | "disabled";
+    }>();
+  if (existing) {
+    if (existing.status === "invited" && existing.role === "evaluator") {
+      await env.DB.prepare("UPDATE users SET name = ? WHERE id = ?")
+        .bind(name, existing.id)
+        .run();
+      return json(request, env, { ...existing, name });
+    }
+
+    const error =
+      existing.status === "disabled"
+        ? "Este e-mail pertence a um acesso desativado. Reative-o na lista da equipe."
+        : "Este e-mail já possui uma conta ativa.";
+    return json(
+      request,
+      env,
+      { error },
       409,
     );
   }
@@ -31,7 +59,7 @@ export async function inviteUser(request: Request, env: Env) {
   const invited = {
     id: crypto.randomUUID(),
     email,
-    name: body.name?.trim() || "Avaliador convidado",
+    name,
   };
   await env.DB.prepare(
     "INSERT INTO users (id, email, name, role, status) VALUES (?, ?, ?, 'evaluator', 'invited')",
@@ -44,6 +72,35 @@ export async function inviteUser(request: Request, env: Env) {
     { ...invited, role: "evaluator", status: "invited" },
     201,
   );
+}
+
+export async function cancelInvitation(
+  request: Request,
+  env: Env,
+  userId: string,
+) {
+  const invited = await env.DB.prepare(
+    "SELECT role, status FROM users WHERE id = ?",
+  )
+    .bind(userId)
+    .first<{ role: "super_admin" | "evaluator"; status: string }>();
+
+  if (!invited) {
+    return json(request, env, { error: "Convite não encontrado." }, 404);
+  }
+  if (invited.role !== "evaluator" || invited.status !== "invited") {
+    return json(
+      request,
+      env,
+      { error: "Somente convites pendentes podem ser cancelados." },
+      409,
+    );
+  }
+
+  await env.DB.prepare("DELETE FROM users WHERE id = ? AND status = 'invited'")
+    .bind(userId)
+    .run();
+  return json(request, env, { ok: true });
 }
 
 export async function updateUserStatus(
