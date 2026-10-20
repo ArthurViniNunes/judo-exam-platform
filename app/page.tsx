@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { apiRequest, getAuthToken, setAuthToken } from "@/lib/api";
 import { AdminPortal } from "@/components/admin-portal";
+import type { AdminSection } from "@/components/admin-portal-shared";
 import { AuthScreen } from "@/components/auth-screen";
 import {
   Brand,
@@ -19,7 +20,7 @@ import {
   type View,
 } from "@/components/exam-flow";
 import { ProfileDialog } from "@/components/profile-dialog";
-import type { AuthUser } from "@/lib/platform";
+import type { AuthUser, ExamStudent, StudentRecord } from "@/lib/platform";
 import { KATAS, type KataId, type KataMode, type KataResult } from "@/lib/kata-exams";
 import { PRACTICAL_BELTS, type PracticalBeltId } from "@/lib/practical-exams";
 
@@ -50,8 +51,13 @@ export default function App() {
   const [authReady, setAuthReady] = useState(false);
   const [user, setUser] = useState<AuthUser | null>(null);
   const [profileOpen, setProfileOpen] = useState(false);
+  const [adminSection, setAdminSection] = useState<AdminSection>("overview");
   const [belt, setBelt] = useState<PracticalBeltId>("gray");
+  const [studentId, setStudentId] = useState("");
   const [athlete, setAthlete] = useState("");
+  const [examStudents, setExamStudents] = useState<ExamStudent[]>([]);
+  const [examStudentsLoading, setExamStudentsLoading] = useState(false);
+  const [examStudentsError, setExamStudentsError] = useState("");
   const [result, setResult] = useState<PracticalResult>(initialPracticalResult);
   const [kataId, setKataId] = useState<KataId>("nage-no-kata");
   const [kataMode, setKataMode] = useState<KataMode>("partial");
@@ -66,6 +72,31 @@ export default function App() {
     }, 0);
     return () => window.clearTimeout(timer);
   }, []);
+
+  const loadExamStudents = useCallback(async () => {
+    if (!user) return;
+    setExamStudentsLoading(true);
+    setExamStudentsError("");
+    try {
+      const students = await apiRequest<StudentRecord[]>("/api/students");
+      setExamStudents(students.map(({ id, name }) => ({ id, name })));
+    } catch (caught) {
+      setExamStudents([]);
+      setExamStudentsError(
+        caught instanceof Error
+          ? caught.message
+          : "Não foi possível carregar os judocas.",
+      );
+    } finally {
+      setExamStudentsLoading(false);
+    }
+  }, [user]);
+
+  useEffect(() => {
+    if (view !== "technical-setup" && view !== "kata-setup") return;
+    const timer = window.setTimeout(() => void loadExamStudents(), 0);
+    return () => window.clearTimeout(timer);
+  }, [loadExamStudents, view]);
 
   useEffect(() => {
     const token = getAuthToken();
@@ -114,7 +145,7 @@ export default function App() {
     const beltName = PRACTICAL_BELTS.find((item) => item.id === belt)?.name ?? belt;
     const evaluation = {
       id: crypto.randomUUID(),
-      athlete,
+      studentId,
       belt: beltName,
       type: "técnica" as const,
       score: practicalResult.score * 10,
@@ -143,7 +174,7 @@ export default function App() {
     const detail = `Descontos: ${evaluationResult.totalDeductions}. ${severeNote}${observations}`;
     const evaluation = {
       id: crypto.randomUUID(),
-      athlete,
+      studentId,
       belt: kataName,
       type: "kata" as const,
       score: evaluationResult.score * 10,
@@ -180,9 +211,13 @@ export default function App() {
       <>
         <AdminPortal
           user={user}
+          initialSection={adminSection}
           dark={dark}
           setDark={setDark}
-          onExit={() => navigate("home")}
+          onExit={() => {
+            setAdminSection("overview");
+            navigate("home");
+          }}
           onLogout={logout}
           onOpenProfile={() => setProfileOpen(true)}
         />
@@ -214,10 +249,18 @@ export default function App() {
         {view === "theory-links" && <TheoryLinksView onBack={() => navigate("home")} />}
         {view === "technical-setup" && (
           <TechnicalSetup
-            evaluatorName={user.name}
             onBack={() => navigate("home")}
-            onStart={(name, selectedBelt) => {
-              setAthlete(name);
+            students={examStudents}
+            studentsLoading={examStudentsLoading}
+            studentsError={examStudentsError}
+            onRetryStudents={() => void loadExamStudents()}
+            onManageStudents={() => {
+              setAdminSection("students");
+              navigate("admin");
+            }}
+            onStart={(student, selectedBelt) => {
+              setStudentId(student.id);
+              setAthlete(student.name);
               setBelt(selectedBelt);
               navigate("technical-form");
             }}
@@ -240,10 +283,18 @@ export default function App() {
         )}
         {view === "kata-setup" && (
           <KataSetup
-            evaluatorName={user.name}
             onBack={() => navigate("home")}
-            onStart={(name, selectedKata, selectedMode) => {
-              setAthlete(name);
+            students={examStudents}
+            studentsLoading={examStudentsLoading}
+            studentsError={examStudentsError}
+            onRetryStudents={() => void loadExamStudents()}
+            onManageStudents={() => {
+              setAdminSection("students");
+              navigate("admin");
+            }}
+            onStart={(student, selectedKata, selectedMode) => {
+              setStudentId(student.id);
+              setAthlete(student.name);
               setKataId(selectedKata);
               setKataMode(selectedMode);
               navigate("kata-form");

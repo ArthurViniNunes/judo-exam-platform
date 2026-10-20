@@ -11,7 +11,7 @@ export type AuthUser = {
 
 export type EvaluationInput = {
   id?: string;
-  athlete: string;
+  studentId: string;
   belt: string;
   type: EvaluationType;
   score: number;

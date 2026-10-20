@@ -21,6 +21,7 @@ import type {
 
 type AdminPortalProps = {
   user: AuthUser;
+  initialSection?: AdminSection;
   dark: boolean;
   setDark: (value: boolean) => void;
   onExit: () => void;
@@ -30,13 +31,14 @@ type AdminPortalProps = {
 
 export function AdminPortal({
   user,
+  initialSection = "overview",
   dark,
   setDark,
   onExit,
   onLogout,
   onOpenProfile,
 }: AdminPortalProps) {
-  const [section, setSection] = useState<AdminSection>("overview");
+  const [section, setSection] = useState<AdminSection>(initialSection);
   const [mobileMenu, setMobileMenu] = useState(false);
   const [dashboard, setDashboard] = useState<DashboardData>(emptyDashboard);
   const [students, setStudents] = useState<StudentRecord[]>([]);

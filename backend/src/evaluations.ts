@@ -204,33 +204,34 @@ export async function createEvaluation(
     return json(request, env, formatEvaluation({ ...duplicate, items }));
   }
 
-  const normalized = normalizeName(body.athlete);
-  let student = await env.DB.prepare(
-    "SELECT id FROM students WHERE normalized_name = ?",
-  )
-    .bind(normalized)
-    .first<{ id: string }>();
-  if (!student) {
-    student = { id: crypto.randomUUID() };
-    await env.DB.prepare(
-      "INSERT INTO students (id, name, normalized_name) VALUES (?, ?, ?)",
-    )
-      .bind(student.id, body.athlete.trim(), normalized)
-      .run();
-  }
+  const student = user.role === "super_admin"
+    ? await env.DB.prepare("SELECT * FROM students WHERE id = ?")
+        .bind(body.studentId.trim())
+        .first<StudentRow>()
+    : await env.DB.prepare(
+        `SELECT students.* FROM students
+         INNER JOIN student_evaluators
+           ON student_evaluators.student_id = students.id
+         WHERE students.id = ? AND student_evaluators.evaluator_id = ?`,
+      )
+        .bind(body.studentId.trim(), user.id)
+        .first<StudentRow>();
 
-  await env.DB.prepare(
-    "INSERT OR IGNORE INTO student_evaluators (student_id, evaluator_id) VALUES (?, ?)",
-  )
-    .bind(student.id, user.id)
-    .run();
+  if (!student) {
+    return json(
+      request,
+      env,
+      { error: "Selecione um judoca previamente cadastrado para sua conta." },
+      400,
+    );
+  }
 
   const statements = [
     env.DB.prepare(
       "INSERT INTO evaluations (id, athlete, student_id, evaluator_id, professor, belt, type, score, result, matrix_id, detail) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
     ).bind(
       id,
-      body.athlete.trim(),
+      student.name,
       student.id,
       user.id,
       user.name,

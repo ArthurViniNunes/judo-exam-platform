@@ -238,7 +238,7 @@ describe("domínio administrativo", () => {
 
   it("valida e formata as notas individuais de uma avaliação", () => {
     const input = {
-      athlete: "Ana Silva",
+      studentId: "student-1",
       belt: "Amarela",
       type: "técnica" as const,
       score: 80,
@@ -247,6 +247,7 @@ describe("domínio administrativo", () => {
       ],
     };
     expect(isEvaluation(input)).toBe(true);
+    expect(isEvaluation({ ...input, studentId: "" })).toBe(false);
     expect(isEvaluation({ ...input, items: [{ ...input.items[0], score: 120 }] })).toBe(false);
 
     const formatted = formatEvaluation(

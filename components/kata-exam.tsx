@@ -15,21 +15,32 @@ import {
   type KataResult,
 } from "@/lib/kata-exams";
 import { TECHNIQUE_VIDEOS, toYouTubeEmbedUrl } from "@/lib/practical-exams";
+import type { ExamStudent } from "@/lib/platform";
 import { Brand, TechniqueVideoDialog } from "./exam-public";
+import { ExamStudentSelect } from "./exam-student-select";
 import type { View } from "./exam-public";
 
 export function KataSetup({
   onBack,
   onStart,
-  evaluatorName = "Avaliador",
+  students,
+  studentsLoading,
+  studentsError,
+  onRetryStudents,
+  onManageStudents,
 }: {
   onBack: () => void;
-  onStart: (athlete: string, kataId: KataId, mode: KataMode) => void;
-  evaluatorName?: string;
+  onStart: (student: ExamStudent, kataId: KataId, mode: KataMode) => void;
+  students: ExamStudent[];
+  studentsLoading: boolean;
+  studentsError: string;
+  onRetryStudents: () => void;
+  onManageStudents: () => void;
 }) {
-  const [athleteName, setAthleteName] = useState("");
+  const [studentId, setStudentId] = useState("");
   const [kataId, setKataId] = useState<KataId | "">("");
   const [mode, setMode] = useState<KataMode | "">("");
+  const selectedStudent = students.find((student) => student.id === studentId);
 
   const chooseKata = (nextKata: KataId) => {
     setKataId(nextKata);
@@ -42,14 +53,16 @@ export function KataSetup({
         <Brand />
         <span className="eyebrow">AVALIAÇÃO DE KATA</span>
         <h2>DADOS DA AVALIAÇÃO</h2>
-        <p className="muted">Escolha o kata e, para o Nage-no-Kata, defina a extensão da apresentação.</p>
-        <label>NOME DO AVALIADOR
-          <input value={evaluatorName} disabled />
-          <small>Definido automaticamente pelo perfil do avaliador.</small>
-        </label>
-        <label>NOME DO ATLETA
-          <input value={athleteName} onChange={(event) => setAthleteName(event.target.value)} placeholder="Nome completo" />
-        </label>
+        <p className="muted">Selecione um judoca do seu cadastro, o kata e a extensão da apresentação.</p>
+        <ExamStudentSelect
+          students={students}
+          value={studentId}
+          loading={studentsLoading}
+          error={studentsError}
+          onChange={setStudentId}
+          onRetry={onRetryStudents}
+          onManageStudents={onManageStudents}
+        />
         <fieldset className="kata-choice-field">
           <legend>KATA</legend>
           <div className="kata-choice-list">
@@ -78,7 +91,7 @@ export function KataSetup({
         )}
         <div className="button-row">
           <button className="outline" onClick={onBack}>VOLTAR</button>
-          <button className="primary" disabled={!athleteName.trim() || !kataId || !mode} onClick={() => kataId && mode && onStart(athleteName, kataId, mode)}>
+          <button className="primary" disabled={!selectedStudent || !kataId || !mode} onClick={() => selectedStudent && kataId && mode && onStart(selectedStudent, kataId, mode)}>
             INICIAR AVALIAÇÃO <ChevronRight size={17} />
           </button>
         </div>

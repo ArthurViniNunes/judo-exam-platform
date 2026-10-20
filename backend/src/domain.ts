@@ -56,7 +56,8 @@ export function isEvaluation(value: unknown): value is EvaluationInput {
       ));
 
   return Boolean(
-    item.athlete?.trim() &&
+    item.studentId?.trim() &&
+      item.studentId.trim().length <= 100 &&
       item.belt?.trim() &&
       (item.type === "teórica" ||
         item.type === "técnica" ||

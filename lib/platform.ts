@@ -48,6 +48,8 @@ export type StudentRecord = {
   evaluations: EvaluationRecord[];
 };
 
+export type ExamStudent = Pick<StudentRecord, "id" | "name">;
+
 export type ManagedUser = {
   id: string;
   email: string;

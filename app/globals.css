@@ -559,6 +559,92 @@ label small {
   width: 73px;
   height: 73px;
 }
+.exam-student-picker {
+  min-width: 0;
+  margin: 14px 0;
+  padding: 0;
+  border: 0;
+}
+.exam-student-picker legend {
+  margin-bottom: 7px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+}
+.exam-student-picker > small {
+  display: block;
+  margin-top: 7px;
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.45;
+}
+.exam-student-select-wrap {
+  position: relative;
+}
+.exam-student-select-wrap > svg {
+  position: absolute;
+  z-index: 1;
+  top: 50%;
+  left: 14px;
+  color: var(--green-600);
+  pointer-events: none;
+  transform: translateY(-50%);
+}
+.exam-student-select-wrap select {
+  width: 100%;
+  min-height: 50px;
+  padding-left: 45px;
+}
+.exam-student-status {
+  min-height: 76px;
+  padding: 13px;
+  border: 1px solid var(--green-300);
+  border-radius: 12px;
+  background: var(--green-50);
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 11px;
+}
+.exam-student-status > svg {
+  color: var(--green-600);
+}
+.exam-student-status > div {
+  display: grid;
+  gap: 3px;
+}
+.exam-student-status strong {
+  font-size: 13px;
+}
+.exam-student-status small {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 500;
+  line-height: 1.4;
+  letter-spacing: 0;
+}
+.exam-student-status .outline {
+  min-height: 44px;
+}
+.exam-student-status.error {
+  border-color: #dca8a5;
+  background: #fff5f4;
+  color: #8a302d;
+}
+.exam-student-spinner {
+  width: 21px;
+  height: 21px;
+  border: 2px solid var(--green-300);
+  border-top-color: var(--green-800);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+.dark .exam-student-status.error {
+  border-color: #8c4e51;
+  background: #3a2028;
+  color: #f0aaa6;
+}
 .kata-choice-field {
   min-width: 0;
   margin: 19px 0 0;
@@ -2825,6 +2911,13 @@ td:first-child {
   }
   .button-row button,
   .quiz-actions button {
+    width: 100%;
+  }
+  .exam-student-status {
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+  .exam-student-status > button {
+    grid-column: 1 / -1;
     width: 100%;
   }
   .metrics-grid {

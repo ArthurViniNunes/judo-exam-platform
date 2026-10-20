@@ -10,34 +10,47 @@ import {
   getTechniqueEvaluationParts, toYouTubeEmbedUrl, type PracticalBeltId,
 } from "@/lib/practical-exams";
 import { calculatePracticalResult } from "@/lib/practical-scoring";
+import type { ExamStudent } from "@/lib/platform";
 import { Brand, TechniqueVideoDialog } from "./exam-public";
+import { ExamStudentSelect } from "./exam-student-select";
 import type { PracticalResult } from "./exam-public";
 
 export function TechnicalSetup({
   onBack,
   onStart,
-  evaluatorName = "Avaliador",
+  students,
+  studentsLoading,
+  studentsError,
+  onRetryStudents,
+  onManageStudents,
 }: {
   onBack: () => void;
-  onStart: (athlete: string, belt: PracticalBeltId) => void;
-  evaluatorName?: string;
+  onStart: (student: ExamStudent, belt: PracticalBeltId) => void;
+  students: ExamStudent[];
+  studentsLoading: boolean;
+  studentsError: string;
+  onRetryStudents: () => void;
+  onManageStudents: () => void;
 }) {
-  const [athlete, setAthlete] = useState("");
+  const [studentId, setStudentId] = useState("");
   const [belt, setBelt] = useState<PracticalBeltId | "">("");
+  const selectedStudent = students.find((student) => student.id === studentId);
   return (
     <section className="modal-screen">
       <div className="public-card form-card technical-start">
         <Brand />
         <span className="eyebrow">AVALIAÇÃO DE EXAME DE FAIXA</span>
         <h2>DADOS DA AVALIAÇÃO</h2>
-        <p className="muted">Preencha os dados para iniciar a avaliação técnica.</p>
-        <label>NOME DO AVALIADOR
-          <input value={evaluatorName} disabled />
-          <small>Definido automaticamente pelo perfil do avaliador.</small>
-        </label>
-        <label>NOME DO ATLETA
-          <input value={athlete} onChange={(e) => setAthlete(e.target.value)} placeholder="Nome completo" />
-        </label>
+        <p className="muted">Selecione um judoca do seu cadastro e a graduação pretendida.</p>
+        <ExamStudentSelect
+          students={students}
+          value={studentId}
+          loading={studentsLoading}
+          error={studentsError}
+          onChange={setStudentId}
+          onRetry={onRetryStudents}
+          onManageStudents={onManageStudents}
+        />
         <label>FAIXA PRETENDIDA
           <select value={belt} onChange={(e) => setBelt(e.target.value as PracticalBeltId | "")}>
             <option value="">Selecione a graduação</option>
@@ -46,7 +59,7 @@ export function TechnicalSetup({
         </label>
         <div className="button-row">
           <button className="outline" onClick={onBack}>VOLTAR</button>
-          <button className="primary" disabled={!athlete.trim() || !belt} onClick={() => belt && onStart(athlete, belt)}>
+          <button className="primary" disabled={!selectedStudent || !belt} onClick={() => selectedStudent && belt && onStart(selectedStudent, belt)}>
             INICIAR AVALIAÇÃO <ChevronRight size={17} />
           </button>
         </div>

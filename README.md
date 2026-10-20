@@ -263,8 +263,10 @@ No celular, conectado à mesma rede Wi-Fi, abra `http://192.168.0.50:3000`, subs
 1. O Super Admin entra com a conta inicial.
 2. Em **Equipe**, autoriza o e-mail do avaliador.
 3. O avaliador seleciona **Criar conta**, informa nome, e-mail autorizado e uma senha com pelo menos 10 caracteres, uma letra e um número.
-4. O avaliador passa a poder aplicar exames e consultar os próprios registros.
-5. O nome exibido pode ser alterado em **Ver e editar perfil**.
+4. Em **Administração → Alunos**, o avaliador cadastra previamente os judocas que poderá avaliar.
+5. Ao iniciar uma avaliação técnica ou de kata, o avaliador seleciona um desses judocas; não existe entrada manual de nome no exame.
+6. O avaliador passa a consultar apenas seus alunos e registros, enquanto o Super Admin mantém a visão completa.
+7. O nome exibido pode ser alterado em **Ver e editar perfil**.
 
 Não há envio automático de convite, recuperação de senha ou redefinição por e-mail. A autorização precisa ser comunicada manualmente ao avaliador.
 
@@ -273,6 +275,8 @@ Não há envio automático de convite, recuperação de senha ou redefinição p
 ### Avaliação técnica
 
 O catálogo técnico oficial fica em `lib/practical-exams.ts`. Ele organiza as técnicas por graduação e categoria, incluindo `Nage Waza`, `Renraku-Henka Waza`, `Kaeshi Waza`, `Osaekomi Waza`, `Shime Waza` e `Kansetsu Waza`. Quando uma faixa exige técnicas anteriores, a seleção é feita automaticamente ao iniciar o exame e a origem sorteada aparece no próprio card.
+
+O início do exame exige a seleção de um judoca previamente cadastrado. A API recebe o identificador desse cadastro, recupera o nome oficial no banco e, para avaliadores comuns, confirma o vínculo entre avaliador e judoca antes de salvar qualquer nota.
 
 Cada item de `Renraku-Henka Waza` recebe uma única avaliação, mesmo quando o nome contém `→`. Avaliações múltiplas no mesmo card são criadas somente quando o texto pede explicitamente mais de uma execução, como `2 Fugas de Yoko-shiho-gatame`; nesse caso, a média das execuções compõe a nota do item.
 
