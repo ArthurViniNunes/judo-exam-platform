@@ -7,7 +7,7 @@ Aplicação web da Associação Judô Rogério Cruz para aplicar, registrar e ac
 - autentica avaliadores e Super Admins com contas individuais;
 - permite que o Super Admin autorize e desative avaliadores;
 - aplica avaliações técnicas por graduação, selecionando automaticamente técnicas de faixas anteriores quando necessário;
-- avalia separadamente cada movimento de uma sequência de `Renraku-Henka Waza` e usa a média no resultado;
+- trata cada sequência de `Renraku-Henka Waza` como um único movimento e cria avaliações adicionais somente quando o item pede explicitamente duas ou mais execuções;
 - oferece vídeos de apoio do YouTube com reprodução iniciada ao abrir a referência;
 - aplica `Nage-no-Kata` parcial ou completo e `Katame-no-Kata`;
 - registra notas, observações, modalidade, graduação e avaliador;
@@ -37,73 +37,226 @@ Cloudflare Worker (API) ---- Cloudflare D1 / SQLite
 ## Requisitos
 
 - Node.js `22.13.0` ou mais recente;
-- Corepack, incluído no Node.js;
-- pnpm 11, instalado automaticamente pelo Corepack;
-- para publicação: conta Cloudflare com Workers e D1 e um token da API com as permissões necessárias.
+- Corepack, normalmente incluído no Node.js;
+- pnpm `12.14.0`, definido pelo campo `packageManager` do projeto e executado pelo Corepack;
+- PowerShell no Windows, para seguir os exemplos abaixo;
+- somente para publicação: conta Cloudflare com Workers e D1. Uma conta Cloudflare não é necessária para rodar localmente.
 
 ## Desenvolvimento local
 
-Instale as dependências e aplique as migrações no D1 local:
+### Início rápido no Windows
+
+O projeto precisa de dois processos: o frontend Next.js na porta `3000` e a API com o banco local do Cloudflare Wrangler na porta `8787`. O comando `dev:all` inicia os dois no mesmo terminal.
+
+1. Abra o PowerShell e entre na pasta do projeto:
+
+```powershell
+Set-Location "C:\caminho\para\judo-exam-platform"
+```
+
+Neste computador, se o repositório continuar no local atual, o comando é:
+
+```powershell
+Set-Location "C:\Users\arthu\Documents\Code\judo-exam-platform"
+```
+
+2. Confirme as ferramentas. Node `22.13.0` ou superior é aceito:
+
+```powershell
+node --version
+corepack --version
+```
+
+3. Instale as dependências:
 
 ```powershell
 corepack pnpm install
-corepack pnpm backend:migrate:local
 ```
 
-Para iniciar frontend e backend juntos:
+4. Crie os dois arquivos de configuração local. Os comandos preservam os arquivos caso eles já existam:
 
 ```powershell
-corepack pnpm dev:all
+if (!(Test-Path ".env.local")) {
+  Copy-Item -LiteralPath ".env.example" -Destination ".env.local"
+}
+
+if (!(Test-Path "backend\.dev.vars")) {
+  Copy-Item -LiteralPath "backend\.dev.vars.example" -Destination "backend\.dev.vars"
+}
 ```
 
-Endereços locais:
-
-- aplicação: <http://127.0.0.1:3000>;
-- API: <http://127.0.0.1:8787>;
-- saúde da API: <http://127.0.0.1:8787/health>.
-
-O script `dev:all` inicia o Worker local e o Next.js no mesmo terminal. Encerre os dois com `Ctrl+C`.
-
-### Configuração local
-
-O backend pode usar `backend/.dev.vars` para os valores secretos locais. Esse arquivo não deve ser versionado. Um exemplo mínimo:
-
-```dotenv
-SUPER_ADMIN_INITIAL_PASSWORD=TroqueEstaSenha123!
-```
-
-O e-mail inicial do Super Admin está em `backend/wrangler.jsonc`, na variável `SUPER_ADMIN_EMAIL`. O Worker cria essa conta na primeira autenticação quando os dois valores estão configurados.
-
-Para apontar o frontend para outra API, copie `.env.example` para `.env.local` e ajuste:
+Confira `.env.local`:
 
 ```dotenv
 NEXT_PUBLIC_API_URL=http://127.0.0.1:8787
 ```
 
-Essa variável é incorporada ao build do frontend. Reinicie o servidor após alterá-la.
+Abra `backend/.dev.vars`:
+
+```powershell
+notepad "backend\.dev.vars"
+```
+
+O arquivo precisa conter:
+
+```dotenv
+SUPER_ADMIN_INITIAL_PASSWORD=TroqueEstaSenhaLocal123!
+FRONTEND_ORIGIN=http://127.0.0.1:3000,http://localhost:3000
+```
+
+Escolha uma senha local com pelo menos 10 caracteres, uma letra e um número. Não coloque a senha entre aspas. `FRONTEND_ORIGIN` é obrigatório para o navegador permitir que o frontend local acesse a API local.
+
+5. Crie ou atualize o banco local:
+
+```powershell
+corepack pnpm backend:migrate:local
+```
+
+6. Inicie todo o sistema:
+
+```powershell
+corepack pnpm dev:all
+```
+
+Espere o terminal mostrar as duas mensagens:
+
+```text
+Next.js ... Ready
+Wrangler ... Ready on http://127.0.0.1:8787
+```
+
+O terminal precisa permanecer aberto enquanto o sistema estiver em uso. Para encerrar frontend e backend, pressione `Ctrl+C` uma vez e confirme o encerramento se o PowerShell perguntar.
+
+7. Abra estes endereços:
+
+- aplicação: <http://127.0.0.1:3000>;
+- API: <http://127.0.0.1:8787>;
+- saúde da API: <http://127.0.0.1:8787/health>.
+
+Use preferencialmente `127.0.0.1`, como nos endereços acima. Na tela de login, use:
+
+- e-mail: `admin@judorogeriocruz.com.br`;
+- senha: o valor definido em `SUPER_ADMIN_INITIAL_PASSWORD`.
+
+O Super Admin local é criado automaticamente na primeira tentativa de login. O banco local fica em `.wrangler/state` e é independente do banco de produção.
+
+### Verificação rápida
+
+Com `dev:all` rodando, abra outro PowerShell na pasta do projeto e execute:
+
+```powershell
+Invoke-RestMethod -Uri "http://127.0.0.1:8787/health"
+```
+
+O resultado esperado é:
+
+```text
+status         : ok
+database       : ok
+authentication : configured
+```
+
+### Problemas comuns
+
+#### `EADDRINUSE` ou `address already in use`
+
+Uma execução antiga ainda está usando a porta `3000` ou `8787`. Primeiro, volte aos terminais antigos e pressione `Ctrl+C`. Para descobrir o processo que ainda está usando uma porta:
+
+```powershell
+Get-NetTCPConnection -LocalPort 3000,8787 -State Listen |
+  Select-Object LocalPort, OwningProcess
+```
+
+Confira o processo antes de encerrá-lo:
+
+```powershell
+Get-Process -Id NUMERO_DO_PROCESSO
+```
+
+Se for uma instância antiga de `node` ou `workerd` deste projeto:
+
+```powershell
+Stop-Process -Id NUMERO_DO_PROCESSO
+```
+
+Depois execute novamente `corepack pnpm dev:all`.
+
+#### A tela abre, mas aparece erro de rede ou login
+
+Confirme os dois pontos abaixo e reinicie `dev:all` depois de qualquer alteração:
+
+- `.env.local` contém `NEXT_PUBLIC_API_URL=http://127.0.0.1:8787`;
+- `backend/.dev.vars` contém `FRONTEND_ORIGIN=http://127.0.0.1:3000,http://localhost:3000`.
+
+Também verifique <http://127.0.0.1:8787/health>. Se esse endereço não responder, a API não iniciou.
+
+#### `no such table`, banco ausente ou migração pendente
+
+Pare o sistema com `Ctrl+C` e execute:
+
+```powershell
+corepack pnpm backend:migrate:local
+corepack pnpm dev:all
+```
+
+#### A senha local foi alterada, mas o login continua recusado
+
+Alterar `SUPER_ADMIN_INITIAL_PASSWORD` não troca a senha de uma conta que já foi criada no banco local. Se os dados locais puderem ser descartados, pare o sistema e recrie somente o banco de desenvolvimento:
+
+```powershell
+Remove-Item -LiteralPath ".wrangler\state" -Recurse -Force
+corepack pnpm backend:migrate:local
+corepack pnpm dev:all
+```
+
+> Atenção: esse comando apaga todos os usuários, alunos e avaliações do banco local. Ele não altera o D1 de produção.
+
+#### `corepack` ou `node` não foi encontrado
+
+Instale uma versão atual do Node.js 22 LTS ou superior, feche o PowerShell, abra um novo terminal e repita a verificação de versões.
 
 ### Serviços separados
 
-Backend:
+Se quiser acompanhar os logs separadamente, use dois terminais abertos na raiz do projeto.
+
+Terminal 1 — backend:
 
 ```powershell
 corepack pnpm backend:migrate:local
 corepack pnpm backend:dev
 ```
 
-Frontend, em outro terminal:
+Terminal 2 — frontend:
 
 ```powershell
 corepack pnpm dev
 ```
 
-Para testar pelo celular na mesma rede Wi-Fi:
+As mesmas configurações de `.env.local` e `backend/.dev.vars` continuam obrigatórias.
+
+### Testar pelo celular na mesma rede
+
+Descubra o IPv4 do computador com `ipconfig`. Supondo que seja `192.168.0.50`, altere temporariamente:
+
+`.env.local`:
+
+```dotenv
+NEXT_PUBLIC_API_URL=http://192.168.0.50:8787
+```
+
+`backend/.dev.vars`:
+
+```dotenv
+FRONTEND_ORIGIN=http://192.168.0.50:3000
+```
+
+Reinicie usando:
 
 ```powershell
 corepack pnpm dev:lan
 ```
 
-Esse modo é apenas para testes acompanhados: depende do computador ligado, não usa HTTPS e não deve ser exposto à internet.
+No celular, conectado à mesma rede Wi-Fi, abra `http://192.168.0.50:3000`, substituindo pelo IPv4 real do computador. O Firewall do Windows pode pedir permissão para o Node.js; permita somente em redes privadas. Esse modo é apenas para testes acompanhados: depende do computador ligado, não usa HTTPS e não deve ser exposto à internet.
 
 ## Fluxo de acesso
 
@@ -121,7 +274,7 @@ Não há envio automático de convite, recuperação de senha ou redefinição p
 
 O catálogo técnico oficial fica em `lib/practical-exams.ts`. Ele organiza as técnicas por graduação e categoria, incluindo `Nage Waza`, `Renraku-Henka Waza`, `Kaeshi Waza`, `Osaekomi Waza`, `Shime Waza` e `Kansetsu Waza`. Quando uma faixa exige técnicas anteriores, a seleção é feita automaticamente ao iniciar o exame e a origem sorteada aparece no próprio card.
 
-Em `Renraku-Henka Waza`, cada movimento separado por `→` recebe sua própria avaliação no mesmo card. A média desses movimentos compõe a nota da sequência.
+Cada item de `Renraku-Henka Waza` recebe uma única avaliação, mesmo quando o nome contém `→`. Avaliações múltiplas no mesmo card são criadas somente quando o texto pede explicitamente mais de uma execução, como `2 Fugas de Yoko-shiho-gatame`; nesse caso, a média das execuções compõe a nota do item.
 
 Os links de apoio ficam no objeto `TECHNIQUE_VIDEOS`, no mesmo arquivo. A chave precisa ser exatamente igual ao nome da técnica:
 
@@ -166,8 +319,10 @@ Todas as rotas abaixo, exceto `/`, `/health` e login/registro, exigem `Authoriza
 | `POST` | `/api/auth/logout` | autenticado | Encerra a sessão atual |
 | `GET` | `/api/dashboard` | autenticado | Retorna indicadores e registros recentes |
 | `GET` | `/api/students` | autenticado | Lista alunos e seus históricos |
+| `POST` | `/api/students` | autenticado | Cadastra previamente um judoca |
 | `GET` | `/api/evaluations` | autenticado | Lista avaliações permitidas ao usuário |
 | `POST` | `/api/evaluations` | autenticado | Registra uma avaliação |
+| `DELETE` | `/api/evaluations/:id` | autenticado | Exclui uma avaliação permitida ao usuário |
 | `GET` | `/api/users` | Super Admin | Lista usuários e métricas |
 | `POST` | `/api/users/invite` | Super Admin | Autoriza um e-mail |
 | `PATCH` | `/api/users/:id` | Super Admin | Ativa ou desativa um avaliador |

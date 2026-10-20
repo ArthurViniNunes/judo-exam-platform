@@ -1,2 +1,6 @@
-# Copie para backend/.dev.vars. Nunca versione o arquivo real.
-SUPER_ADMIN_INITIAL_PASSWORD="TroqueEstaSenha123!"
+# Copie este arquivo para backend/.dev.vars antes da primeira execução local.
+# Use uma senha apenas para desenvolvimento. O arquivo .dev.vars não é versionado.
+SUPER_ADMIN_INITIAL_PASSWORD=TroqueEstaSenhaLocal123!
+
+# Origens aceitas pelo backend durante o desenvolvimento local.
+FRONTEND_ORIGIN=http://127.0.0.1:3000,http://localhost:3000
