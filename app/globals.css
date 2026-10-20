@@ -3236,6 +3236,24 @@ td:first-child {
 .management-loading p { color: var(--mg-muted); font-size: 12px; }
 @keyframes spin { to { transform: rotate(360deg); } }
 
+.evaluation-search { margin-bottom: 14px; }
+.evaluation-ledger { border: 1px solid var(--mg-line); border-radius: 15px; background: var(--mg-surface); overflow: hidden; }
+.evaluation-ledger > header { display: none; }
+.evaluation-ledger article { padding: 16px; border-bottom: 1px solid var(--mg-line); display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 14px 12px; }
+.evaluation-ledger article:last-child { border-bottom: 0; }
+.evaluation-ledger article > div { min-width: 0; display: grid; align-content: start; gap: 3px; }
+.evaluation-ledger article small { color: var(--mg-muted); font-size: 9px; font-weight: 750; }
+.evaluation-ledger article strong { overflow-wrap: anywhere; font-size: 13px; }
+.evaluation-ledger article span,
+.evaluation-ledger article time { color: var(--mg-muted); font-size: 10px; font-style: normal; }
+.evaluation-athlete,
+.evaluation-context { grid-column: 1 / -1; }
+.evaluation-athlete > span { text-transform: capitalize; }
+.evaluation-score { text-align: right; }
+.evaluation-score strong { color: var(--mg-accent-strong); font-family: Oswald, "Arial Narrow", sans-serif; font-size: 26px !important; line-height: 1; }
+.evaluation-result { grid-column: 1 / -1; }
+.evaluation-result .status { width: fit-content; min-height: 28px; padding: 6px 9px; display: inline-flex; align-items: center; }
+
 .student-tools { margin-bottom: 14px; display: grid; gap: 10px; }
 .management-search { min-height: 48px; padding: 0 13px; border: 1px solid var(--mg-line); border-radius: 11px; background: var(--mg-surface); display: flex; align-items: center; gap: 9px; }
 .management-search svg { color: var(--mg-muted); flex: 0 0 auto; }
@@ -3413,6 +3431,16 @@ td:first-child {
   .management-page-heading > .management-primary { flex: 0 0 auto; }
   .management-metrics { grid-template-columns: 1fr 1fr; }
   .management-overview-grid { grid-template-columns: minmax(0, 1.55fr) minmax(250px, 0.7fr); }
+  .evaluation-search { max-width: 520px; }
+  .evaluation-ledger > header,
+  .evaluation-ledger article { display: grid; grid-template-columns: minmax(160px, 1.15fr) minmax(180px, 1.25fr) minmax(120px, 0.85fr) 70px minmax(130px, 0.9fr); align-items: center; gap: 14px; }
+  .evaluation-ledger > header { min-height: 42px; padding: 0 16px; border-bottom: 1px solid var(--mg-line); background: var(--mg-surface-soft); color: var(--mg-muted); font-size: 9px; font-weight: 800; }
+  .evaluation-ledger article { min-height: 82px; padding: 12px 16px; }
+  .evaluation-ledger article small { display: none; }
+  .evaluation-athlete,
+  .evaluation-context,
+  .evaluation-result { grid-column: auto; }
+  .evaluation-score { text-align: left; }
   .student-tools { grid-template-columns: minmax(0, 1fr) 230px; }
   .student-detail { position: relative; inset: auto; min-height: 500px; padding: 19px; border: 1px solid var(--mg-line); border-radius: 14px; transform: none; }
   .student-detail:not(.open) { display: grid; place-items: center; }

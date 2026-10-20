@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 import type { DashboardData } from "@/lib/platform";
 
-export type AdminSection = "overview" | "students" | "team";
+export type AdminSection = "overview" | "evaluations" | "students" | "team";
 
 type EmptyStateProps = {
   icon: ReactNode;

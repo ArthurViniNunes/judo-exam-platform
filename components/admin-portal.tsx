@@ -1,8 +1,9 @@
 "use client";
 
-import { LayoutDashboard, ShieldCheck, Users } from "lucide-react";
+import { ClipboardList, LayoutDashboard, ShieldCheck, Users } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Overview, StudentsView } from "@/components/admin-overview";
+import { EvaluationsView } from "@/components/admin-evaluations";
 import {
   type AdminSection,
   emptyDashboard,
@@ -13,6 +14,7 @@ import { apiRequest } from "@/lib/api";
 import type {
   AuthUser,
   DashboardData,
+  EvaluationRecord,
   ManagedUser,
   StudentRecord,
 } from "@/lib/platform";
@@ -38,6 +40,7 @@ export function AdminPortal({
   const [mobileMenu, setMobileMenu] = useState(false);
   const [dashboard, setDashboard] = useState<DashboardData>(emptyDashboard);
   const [students, setStudents] = useState<StudentRecord[]>([]);
+  const [evaluations, setEvaluations] = useState<EvaluationRecord[]>([]);
   const [users, setUsers] = useState<ManagedUser[]>([]);
   const [evaluatorId, setEvaluatorId] = useState("");
   const [loading, setLoading] = useState(true);
@@ -55,15 +58,17 @@ export function AdminPortal({
         user.role === "super_admin"
           ? apiRequest<ManagedUser[]>("/api/users")
           : Promise.resolve([]);
-      const [nextDashboard, nextStudents, nextUsers] =
+      const [nextDashboard, nextStudents, nextEvaluations, nextUsers] =
         await Promise.all([
           apiRequest<DashboardData>(`/api/dashboard${suffix}`),
           apiRequest<StudentRecord[]>(`/api/students${suffix}`),
+          apiRequest<EvaluationRecord[]>(`/api/evaluations${suffix}`),
           userRequest,
         ]);
 
       setDashboard(nextDashboard);
       setStudents(nextStudents);
+      setEvaluations(nextEvaluations);
       setUsers(nextUsers);
     } catch (caught) {
       setLoadError(
@@ -84,6 +89,7 @@ export function AdminPortal({
   const navigation = useMemo(
     () => [
       { id: "overview" as const, label: "Resumo", icon: <LayoutDashboard size={19} /> },
+      { id: "evaluations" as const, label: "Notas", icon: <ClipboardList size={19} /> },
       { id: "students" as const, label: "Alunos", icon: <Users size={19} /> },
       ...(user.role === "super_admin"
         ? [{ id: "team" as const, label: "Equipe", icon: <ShieldCheck size={19} /> }]
@@ -135,6 +141,9 @@ export function AdminPortal({
               evaluatorId={evaluatorId}
               setEvaluatorId={setEvaluatorId}
             />
+          )}
+          {section === "evaluations" && (
+            <EvaluationsView evaluations={evaluations} loading={loading} />
           )}
           {section === "team" && user.role === "super_admin" && (
             <TeamView
