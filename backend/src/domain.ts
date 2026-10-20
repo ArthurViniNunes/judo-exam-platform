@@ -3,6 +3,7 @@ import type {
   EvaluationInput,
   EvaluationRow,
   EvaluationType,
+  StudentRow,
 } from "./contracts";
 
 export function normalizeEmail(value: string) {
@@ -130,6 +131,27 @@ export function dashboardFromRows(rows: EvaluationRow[], now = new Date()) {
 }
 
 export function studentsFromRows(rows: EvaluationRow[]) {
+  const catalog = Array.from(
+    new Map(
+      rows.map((row) => [
+        row.student_id || normalizeName(row.athlete),
+        {
+          id: row.student_id || normalizeName(row.athlete),
+          name: row.athlete,
+          normalized_name: normalizeName(row.athlete),
+          created_at: row.created_at,
+        },
+      ]),
+    ).values(),
+  );
+
+  return studentsFromCatalog(catalog, rows);
+}
+
+export function studentsFromCatalog(
+  catalog: StudentRow[],
+  rows: EvaluationRow[],
+) {
   const grouped = new Map<
     string,
     {
@@ -138,6 +160,14 @@ export function studentsFromRows(rows: EvaluationRow[]) {
       evaluations: ReturnType<typeof formatEvaluation>[];
     }
   >();
+
+  for (const student of catalog) {
+    grouped.set(student.id, {
+      id: student.id,
+      name: student.name,
+      evaluations: [],
+    });
+  }
 
   for (const row of rows) {
     const id = row.student_id || normalizeName(row.athlete);
@@ -160,18 +190,22 @@ export function studentsFromRows(rows: EvaluationRow[]) {
       const last = ordered.at(-1)?.score ?? 0;
       return {
         ...student,
-        average: Math.round(
-          ordered.reduce((sum, item) => sum + item.score, 0) / ordered.length,
-        ),
+        average: ordered.length
+          ? Math.round(
+              ordered.reduce((sum, item) => sum + item.score, 0) /
+                ordered.length,
+            )
+          : 0,
         latestScore: last,
-        evolution: last - first,
-        lastEvaluationAt: ordered.at(-1)?.createdAt,
+        evolution: ordered.length ? last - first : 0,
+        lastEvaluationAt: ordered.at(-1)?.createdAt ?? null,
         evaluations: ordered,
       };
     })
     .sort(
       (a, b) =>
         new Date(b.lastEvaluationAt || 0).getTime() -
-        new Date(a.lastEvaluationAt || 0).getTime(),
+          new Date(a.lastEvaluationAt || 0).getTime() ||
+        a.name.localeCompare(b.name, "pt-BR"),
     );
 }

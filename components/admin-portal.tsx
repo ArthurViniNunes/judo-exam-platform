@@ -140,6 +140,7 @@ export function AdminPortal({
               users={users}
               evaluatorId={evaluatorId}
               setEvaluatorId={setEvaluatorId}
+              reload={loadData}
             />
           )}
           {section === "evaluations" && (

@@ -3255,6 +3255,14 @@ td:first-child {
 .evaluation-result .status { width: fit-content; min-height: 28px; padding: 6px 9px; display: inline-flex; align-items: center; }
 
 .student-tools { margin-bottom: 14px; display: grid; gap: 10px; }
+.student-registration { margin-bottom: 14px; padding: 16px; border: 1px solid var(--mg-line); border-radius: 15px; background: var(--mg-surface); display: grid; gap: 13px; }
+.student-registration h2 { margin: 0; font-family: Oswald, "Arial Narrow", sans-serif; font-size: 21px; font-weight: 550; }
+.student-registration > div > p { margin: 4px 0 0; color: var(--mg-muted); font-size: 11px; }
+.student-registration label { color: var(--mg-muted); font-size: 10px; font-weight: 800; display: grid; gap: 6px; }
+.student-registration input,
+.student-registration select { width: 100%; min-height: 48px; padding: 0 12px; border: 1px solid var(--mg-line); border-radius: 10px; background: var(--mg-surface-soft); color: var(--mg-ink); }
+.student-registration > .management-primary { width: 100%; }
+.student-unscored { padding: 5px 7px; border-radius: 999px; background: var(--mg-bg); color: var(--mg-muted); font-size: 8px; font-weight: 800; white-space: nowrap; }
 .management-search { min-height: 48px; padding: 0 13px; border: 1px solid var(--mg-line); border-radius: 11px; background: var(--mg-surface); display: flex; align-items: center; gap: 9px; }
 .management-search svg { color: var(--mg-muted); flex: 0 0 auto; }
 .management-search input { width: 100%; min-width: 0; height: 44px; border: 0; outline: 0; background: transparent; color: var(--mg-ink); }
@@ -3442,6 +3450,10 @@ td:first-child {
   .evaluation-result { grid-column: auto; }
   .evaluation-score { text-align: left; }
   .student-tools { grid-template-columns: minmax(0, 1fr) 230px; }
+  .student-registration { grid-template-columns: minmax(180px, 0.8fr) minmax(220px, 1fr) minmax(190px, 0.8fr) auto; align-items: end; }
+  .student-registration > .management-primary { width: auto; min-width: 150px; }
+  .student-registration > .management-error,
+  .student-registration > .management-success { grid-column: 1 / -1; margin: 0; }
   .student-detail { position: relative; inset: auto; min-height: 500px; padding: 19px; border: 1px solid var(--mg-line); border-radius: 14px; transform: none; }
   .student-detail:not(.open) { display: grid; place-items: center; }
   .students-layout { grid-template-columns: minmax(300px, 0.85fr) minmax(340px, 1.15fr); align-items: start; }

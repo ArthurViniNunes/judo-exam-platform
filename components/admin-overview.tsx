@@ -11,11 +11,13 @@ import {
   ChevronRight,
   CircleUserRound,
   ClipboardCheck,
+  Plus,
   Search,
   Users,
   X,
 } from "lucide-react";
 import { useState } from "react";
+import { apiRequest } from "@/lib/api";
 import {
   EmptyState,
   formatDate,
@@ -218,6 +220,7 @@ type StudentsViewProps = {
   users: ManagedUser[];
   evaluatorId: string;
   setEvaluatorId: (value: string) => void;
+  reload: () => Promise<void>;
 };
 
 export function StudentsView({
@@ -227,15 +230,48 @@ export function StudentsView({
   users,
   evaluatorId,
   setEvaluatorId,
+  reload,
 }: StudentsViewProps) {
   const [search, setSearch] = useState("");
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [registering, setRegistering] = useState(false);
+  const [studentName, setStudentName] = useState("");
+  const [studentEvaluatorId, setStudentEvaluatorId] = useState(evaluatorId);
+  const [registerError, setRegisterError] = useState("");
+  const [registerSuccess, setRegisterSuccess] = useState("");
+  const [savingStudent, setSavingStudent] = useState(false);
   const filtered = students.filter((student) =>
     student.name
       .toLocaleLowerCase("pt-BR")
       .includes(search.toLocaleLowerCase("pt-BR")),
   );
   const selected = students.find((student) => student.id === selectedId);
+
+  const registerStudent = async () => {
+    setSavingStudent(true);
+    setRegisterError("");
+    setRegisterSuccess("");
+    try {
+      await apiRequest("/api/students", {
+        method: "POST",
+        body: JSON.stringify({
+          name: studentName,
+          ...(user.role === "super_admin"
+            ? { evaluatorId: studentEvaluatorId }
+            : {}),
+        }),
+      });
+      setRegisterSuccess(`${studentName.trim()} foi cadastrado.`);
+      setStudentName("");
+      await reload();
+    } catch (caught) {
+      setRegisterError(
+        caught instanceof Error ? caught.message : "Não foi possível cadastrar o judoca.",
+      );
+    } finally {
+      setSavingStudent(false);
+    }
+  };
   if (loading) return <LoadingBlock label="Reunindo históricos…" />;
   return (
     <div className="management-page">
@@ -246,7 +282,67 @@ export function StudentsView({
             Cada aluno aparece com o histórico das avaliações que você pode acessar.
           </p>
         </div>
+        <button
+          className="management-primary"
+          onClick={() => {
+            setRegistering((current) => !current);
+            setRegisterError("");
+            setRegisterSuccess("");
+            setStudentEvaluatorId(evaluatorId);
+          }}
+          aria-expanded={registering}
+        >
+          <Plus size={17} /> {registering ? "Fechar cadastro" : "Cadastrar judoca"}
+        </button>
       </header>
+      {registering && (
+        <section className="student-registration" aria-label="Cadastrar judoca">
+          <div>
+            <h2>Cadastro prévio</h2>
+            <p>O judoca ficará disponível antes da primeira avaliação.</p>
+          </div>
+          <label>
+            Nome completo
+            <input
+              value={studentName}
+              onChange={(event) => setStudentName(event.target.value)}
+              placeholder="Nome do judoca"
+              autoComplete="off"
+            />
+          </label>
+          {user.role === "super_admin" && (
+            <label>
+              Avaliador responsável
+              <select
+                value={studentEvaluatorId}
+                onChange={(event) => setStudentEvaluatorId(event.target.value)}
+              >
+                <option value="">Selecione um avaliador</option>
+                {users
+                  .filter(
+                    (item) => item.role === "evaluator" && item.status === "active",
+                  )
+                  .map((item) => (
+                    <option key={item.id} value={item.id}>{item.name}</option>
+                  ))}
+              </select>
+            </label>
+          )}
+          {registerError && <p className="management-error">{registerError}</p>}
+          {registerSuccess && <p className="management-success">{registerSuccess}</p>}
+          <button
+            className="management-primary"
+            disabled={
+              savingStudent ||
+              studentName.trim().length < 3 ||
+              (user.role === "super_admin" && !studentEvaluatorId)
+            }
+            onClick={() => void registerStudent()}
+          >
+            {savingStudent ? "Cadastrando…" : "Cadastrar judoca"}
+          </button>
+        </section>
+      )}
       <div className="student-tools">
         <label className="management-search">
           <Search size={18} />
@@ -303,20 +399,24 @@ export function StudentsView({
                 <div>
                   <strong>{student.name}</strong>
                   <small>
-                    {student.evaluations.length} {student.evaluations.length === 1 ? "avaliação" : "avaliações"} · última em {formatDate(student.lastEvaluationAt)}
+                    {student.evaluations.length
+                      ? `${student.evaluations.length} ${student.evaluations.length === 1 ? "avaliação" : "avaliações"} · última em ${formatDate(student.lastEvaluationAt || "")}`
+                      : "Cadastrado · aguardando primeira avaliação"}
                   </small>
                 </div>
-                <span
-                  className={`evolution-chip ${student.evolution > 0 ? "up" : student.evolution < 0 ? "down" : "stable"}`}
-                >
-                  {student.evolution > 0 ? (
-                    <ArrowUpRight size={15} />
-                  ) : student.evolution < 0 ? (
-                    <ArrowDownRight size={15} />
-                  ) : null}
-                  {student.evolution > 0 ? "+" : ""}
-                  {scoreLabel(Math.abs(student.evolution))}
-                </span>
+                {student.evaluations.length ? (
+                  <span
+                    className={`evolution-chip ${student.evolution > 0 ? "up" : student.evolution < 0 ? "down" : "stable"}`}
+                  >
+                    {student.evolution > 0 ? (
+                      <ArrowUpRight size={15} />
+                    ) : student.evolution < 0 ? (
+                      <ArrowDownRight size={15} />
+                    ) : null}
+                    {student.evolution > 0 ? "+" : ""}
+                    {scoreLabel(Math.abs(student.evolution))}
+                  </span>
+                ) : <span className="student-unscored">Sem nota</span>}
                 <ChevronRight size={18} />
               </button>
             ))}
@@ -341,25 +441,25 @@ export function StudentsView({
                   <div>
                     <h2>{selected.name}</h2>
                     <p>
-                      Média {scoreLabel(selected.average)} · última nota {scoreLabel(selected.latestScore)}
+                      {selected.evaluations.length
+                        ? `Média ${scoreLabel(selected.average)} · última nota ${scoreLabel(selected.latestScore)}`
+                        : "Cadastro pronto para a primeira avaliação"}
                     </p>
                   </div>
                 </div>
-                <div
+                {selected.evaluations.length ? <div
                   className="student-progress"
                   aria-label="Evolução das notas"
                 >
                   {selected.evaluations.map((evaluation, index) => (
                     <div key={evaluation.id}>
-                      <span
-                        style={{ height: `${Math.max(8, evaluation.score)}%` }}
-                      />
+                      <span style={{ height: `${Math.max(8, evaluation.score)}%` }} />
                       <b>{scoreLabel(evaluation.score)}</b>
                       <small>{index + 1}º</small>
                     </div>
                   ))}
-                </div>
-                <div className="student-history">
+                </div> : <EmptyState icon={<ClipboardCheck size={27} />} title="Ainda sem avaliações" detail="O histórico será iniciado quando este judoca concluir um exame." />}
+                {selected.evaluations.length > 0 && <div className="student-history">
                   {[...selected.evaluations].reverse().map((evaluation) => (
                     <article key={evaluation.id}>
                       <i />
@@ -373,7 +473,7 @@ export function StudentsView({
                       <b>{scoreLabel(evaluation.score)}</b>
                     </article>
                   ))}
-                </div>
+                </div>}
               </>
             ) : (
               <EmptyState

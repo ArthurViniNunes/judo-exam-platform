@@ -1,11 +1,12 @@
 import { describe, expect, it } from "vitest";
-import type { EvaluationRow } from "../backend/src/contracts";
+import type { EvaluationRow, StudentRow } from "../backend/src/contracts";
 import {
   dashboardFromRows,
   isValidEmail,
   normalizeEmail,
   normalizeName,
   studentsFromRows,
+  studentsFromCatalog,
 } from "../backend/src/domain";
 import { validPassword } from "../backend/src/security";
 import {
@@ -177,6 +178,29 @@ describe("regras da avaliação de kata", () => {
 describe("domínio administrativo", () => {
   it("normaliza nomes para associar avaliações do mesmo aluno", () => {
     expect(normalizeName("  Ána   SILVA ")).toBe("ana silva");
+  });
+
+  it("mantém judocas pré-cadastrados mesmo antes da primeira avaliação", () => {
+    const catalog: StudentRow[] = [
+      {
+        id: "student-new",
+        name: "Judoca sem avaliação",
+        normalized_name: "judoca sem avaliacao",
+        created_at: "2026-10-20 10:00:00",
+      },
+    ];
+
+    expect(studentsFromCatalog(catalog, [])).toEqual([
+      expect.objectContaining({
+        id: "student-new",
+        name: "Judoca sem avaliação",
+        average: 0,
+        latestScore: 0,
+        evolution: 0,
+        lastEvaluationAt: null,
+        evaluations: [],
+      }),
+    ]);
   });
 
   it("gera um link de convite que recupera nome e e-mail sem perder acentos", () => {

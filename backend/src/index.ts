@@ -2,6 +2,7 @@ import { login, logout, register, updateProfile } from "./auth";
 import { publicUser } from "./domain";
 import {
   createEvaluation,
+  createStudent,
   getDashboard,
   listEvaluations,
   listStudents,
@@ -81,6 +82,9 @@ async function handleAuthenticatedRoute(
   }
   if (url.pathname === "/api/students" && request.method === "GET") {
     return listStudents(request, env, user, url);
+  }
+  if (url.pathname === "/api/students" && request.method === "POST") {
+    return createStudent(request, env, user);
   }
   if (url.pathname === "/api/evaluations" && request.method === "GET") {
     return listEvaluations(request, env, user, url);

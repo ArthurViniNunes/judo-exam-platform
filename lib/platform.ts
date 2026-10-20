@@ -35,7 +35,7 @@ export type StudentRecord = {
   average: number;
   latestScore: number;
   evolution: number;
-  lastEvaluationAt: string;
+  lastEvaluationAt: string | null;
   evaluations: EvaluationRecord[];
 };
 

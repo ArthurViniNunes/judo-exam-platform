@@ -35,3 +35,10 @@ export type EvaluationRow = {
   detail: string | null;
   created_at: string;
 };
+
+export type StudentRow = {
+  id: string;
+  name: string;
+  normalized_name: string;
+  created_at: string;
+};
