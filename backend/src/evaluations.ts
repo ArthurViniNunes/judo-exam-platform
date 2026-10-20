@@ -1,12 +1,13 @@
 import type { AuthUser, EvaluationRow, StudentRow } from "./contracts";
 import {
+  canDeleteEvaluation,
   dashboardFromRows,
   formatEvaluation,
   isEvaluation,
   normalizeName,
   studentsFromCatalog,
 } from "./domain";
-import { json } from "./http";
+import { empty, json } from "./http";
 
 async function evaluationRows(
   env: Env,
@@ -208,4 +209,34 @@ export async function createEvaluation(
     formatEvaluation({ ...row!, evaluator_name: user.name }),
     201,
   );
+}
+
+export async function deleteEvaluation(
+  request: Request,
+  env: Env,
+  user: AuthUser,
+  evaluationId: string,
+) {
+  const evaluation = await env.DB.prepare(
+    "SELECT * FROM evaluations WHERE id = ?",
+  )
+    .bind(evaluationId)
+    .first<EvaluationRow>();
+
+  if (!evaluation) {
+    return json(request, env, { error: "Avaliação não encontrada." }, 404);
+  }
+  if (!canDeleteEvaluation(user, evaluation)) {
+    return json(
+      request,
+      env,
+      { error: "Você só pode excluir avaliações realizadas por você." },
+      403,
+    );
+  }
+
+  await env.DB.prepare("DELETE FROM evaluations WHERE id = ?")
+    .bind(evaluationId)
+    .run();
+  return empty(request, env);
 }

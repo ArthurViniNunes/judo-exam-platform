@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import type { EvaluationRow, StudentRow } from "../backend/src/contracts";
 import {
   dashboardFromRows,
+  canDeleteEvaluation,
   isValidEmail,
   normalizeEmail,
   normalizeName,
@@ -201,6 +202,23 @@ describe("domínio administrativo", () => {
         evaluations: [],
       }),
     ]);
+  });
+
+  it("restringe exclusão de avaliação ao autor ou Super Admin", () => {
+    const row = evaluation({ evaluator_id: "evaluator-owner" });
+    const evaluator = {
+      id: "evaluator-owner",
+      email: "owner@example.com",
+      name: "Avaliador",
+      role: "evaluator" as const,
+      status: "active" as const,
+    };
+
+    expect(canDeleteEvaluation(evaluator, row)).toBe(true);
+    expect(canDeleteEvaluation({ ...evaluator, id: "another" }, row)).toBe(false);
+    expect(
+      canDeleteEvaluation({ ...evaluator, id: "admin", role: "super_admin" }, row),
+    ).toBe(true);
   });
 
   it("gera um link de convite que recupera nome e e-mail sem perder acentos", () => {

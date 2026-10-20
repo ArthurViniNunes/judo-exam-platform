@@ -3,6 +3,7 @@ import { publicUser } from "./domain";
 import {
   createEvaluation,
   createStudent,
+  deleteEvaluation,
   getDashboard,
   listEvaluations,
   listStudents,
@@ -91,6 +92,10 @@ async function handleAuthenticatedRoute(
   }
   if (url.pathname === "/api/evaluations" && request.method === "POST") {
     return createEvaluation(request, env, user);
+  }
+  const evaluationMatch = url.pathname.match(/^\/api\/evaluations\/([^/]+)$/);
+  if (evaluationMatch && request.method === "DELETE") {
+    return deleteEvaluation(request, env, user, evaluationMatch[1]);
   }
   if (url.pathname === "/api/users" && request.method === "GET") {
     const denied = requireSuperAdmin(request, env, user);

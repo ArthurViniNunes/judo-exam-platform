@@ -144,7 +144,11 @@ export function AdminPortal({
             />
           )}
           {section === "evaluations" && (
-            <EvaluationsView evaluations={evaluations} loading={loading} />
+            <EvaluationsView
+              evaluations={evaluations}
+              loading={loading}
+              reload={loadData}
+            />
           )}
           {section === "team" && user.role === "super_admin" && (
             <TeamView

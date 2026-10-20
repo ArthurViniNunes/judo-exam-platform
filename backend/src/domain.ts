@@ -27,6 +27,10 @@ export function publicUser(user: AuthUser) {
   return { id: user.id, email: user.email, name: user.name, role: user.role };
 }
 
+export function canDeleteEvaluation(user: AuthUser, row: EvaluationRow) {
+  return user.role === "super_admin" || row.evaluator_id === user.id;
+}
+
 export function isEvaluation(value: unknown): value is EvaluationInput {
   if (!value || typeof value !== "object") return false;
   const item = value as Partial<EvaluationInput>;
