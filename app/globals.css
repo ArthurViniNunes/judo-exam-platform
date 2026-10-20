@@ -3297,14 +3297,37 @@ td:first-child {
 .student-progress b { font-size: 10px; }
 .student-progress small { color: var(--mg-muted); font-size: 9px; }
 .student-history { display: grid; }
-.student-history article { position: relative; min-height: 72px; padding: 10px 0 10px 25px; display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 10px; }
+.student-history article { position: relative; min-height: 72px; padding: 10px 0 10px 25px; }
 .student-history article > i { position: absolute; left: 4px; top: 30px; width: 9px; height: 9px; border: 2px solid var(--mg-surface); border-radius: 50%; background: var(--mg-gold); box-shadow: 0 0 0 1px var(--mg-gold); }
 .student-history article:not(:last-child)::after { content: ""; position: absolute; left: 8px; top: 39px; bottom: -30px; width: 1px; background: var(--mg-line); }
-.student-history article div { display: grid; gap: 3px; }
-.student-history article strong { font-size: 12px; }
-.student-history article span,
-.student-history article small { color: var(--mg-muted); font-size: 9px; }
-.student-history article > b { font-family: Oswald, "Arial Narrow", sans-serif; font-size: 21px; }
+.student-history-summary { width: 100%; min-height: 52px; padding: 4px 0; border: 0; background: transparent; color: var(--mg-ink); display: grid; grid-template-columns: minmax(0, 1fr) auto 20px; align-items: center; gap: 9px; text-align: left; }
+.student-history-summary > span { min-width: 0; display: grid; gap: 3px; }
+.student-history-summary strong { font-size: 12px; }
+.student-history-summary span span,
+.student-history-summary small { color: var(--mg-muted); font-size: 9px; }
+.student-history-summary > b { font-family: Oswald, "Arial Narrow", sans-serif; font-size: 21px; }
+.student-history-summary > svg { color: var(--mg-muted); transition: transform 0.18s ease; }
+.student-history article.report-open > .student-history-summary > svg { transform: rotate(180deg); }
+.individual-report { margin: 8px 0 5px; padding: 14px; border: 1px solid var(--mg-line); border-radius: 12px; background: var(--mg-surface-soft); }
+.individual-report > header { padding-bottom: 12px; border-bottom: 1px solid var(--mg-line); display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.individual-report > header > div { display: grid; gap: 3px; }
+.individual-report > header span { color: var(--mg-muted); font-size: 9px; }
+.individual-report > header strong { font-size: 12px; }
+.individual-report > header > b { color: var(--mg-accent-strong); font-family: Oswald, "Arial Narrow", sans-serif; font-size: 27px; }
+.individual-report > p { margin: 11px 0 0; color: var(--mg-muted); font-size: 10px; line-height: 1.55; }
+.report-groups { margin-top: 14px; display: grid; gap: 14px; }
+.report-groups > section { display: grid; }
+.report-groups h3 { margin: 0 0 5px; color: var(--mg-accent); font-size: 10px; }
+.report-groups section > div { min-height: 44px; padding: 7px 0; border-bottom: 1px solid var(--mg-line); display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 10px; }
+.report-groups section > div:last-child { border-bottom: 0; }
+.report-groups section > div > span { display: grid; gap: 3px; }
+.report-groups section > div strong { overflow-wrap: anywhere; font-size: 10px; }
+.report-groups section > div small { color: var(--mg-muted); font-size: 8px; line-height: 1.4; }
+.report-groups section > div > b { font-family: Oswald, "Arial Narrow", sans-serif; font-size: 18px; }
+.legacy-report { min-height: 72px; margin-top: 12px; color: var(--mg-muted); display: flex; align-items: center; gap: 10px; }
+.legacy-report > span { display: grid; gap: 3px; }
+.legacy-report strong { color: var(--mg-ink); font-size: 10px; }
+.legacy-report small { font-size: 8px; line-height: 1.4; }
 
 .team-grid { display: grid; gap: 14px; }
 .invite-panel,

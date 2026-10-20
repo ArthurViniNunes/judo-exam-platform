@@ -20,6 +20,15 @@ export type EvaluationRecord = {
   matrixId: string | null;
   detail: string | null;
   createdAt: string;
+  items: EvaluationItemRecord[];
+};
+
+export type EvaluationItemRecord = {
+  id: string;
+  category: string;
+  name: string;
+  score: number;
+  detail: string | null;
 };
 
 export type DashboardData = {

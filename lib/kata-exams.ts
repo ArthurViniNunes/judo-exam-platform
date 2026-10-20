@@ -34,6 +34,7 @@ export type KataResult = {
   groups: { name: string; score: number; deductions: number }[];
   errorCounts: { small: number; medium: number; large: number; severe: number };
   notes?: string;
+  items: { category: string; name: string; score: number; detail: string }[];
 };
 
 type KataDefinition = {
@@ -147,5 +148,25 @@ export function calculateKataResult(groups: KataGroup[], marks: Record<string, K
       return { name: group.name, score: Math.round(groupScore * 10) / 10, deductions: groupDeductions };
     }),
     errorCounts,
+    items: groups.flatMap((group) =>
+      group.techniques.map((technique) => {
+        const mark = marks[technique.id] ?? EMPTY_KATA_MARK;
+        const errors = [
+          ...Array.from(
+            { length: Number(mark.small1) + Number(mark.small2) },
+            () => "erro pequeno (−1)",
+          ),
+          ...(mark.medium ? ["erro médio (−3)"] : []),
+          ...(mark.large ? ["erro grande (−5)"] : []),
+          ...(mark.severe ? ["erro grave/esquecimento (−10)"] : []),
+        ];
+        return {
+          category: group.name,
+          name: technique.name,
+          score: itemScore(technique),
+          detail: errors.length ? errors.join(", ") : "Sem erros registrados.",
+        };
+      }),
+    ),
   };
 }

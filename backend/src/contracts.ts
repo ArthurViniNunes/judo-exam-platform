@@ -18,6 +18,24 @@ export type EvaluationInput = {
   result?: string;
   matrixId?: string;
   detail?: string;
+  items?: EvaluationItemInput[];
+};
+
+export type EvaluationItemInput = {
+  category: string;
+  name: string;
+  score: number;
+  detail?: string;
+};
+
+export type EvaluationItemRow = {
+  id: string;
+  evaluation_id: string;
+  category: string;
+  name: string;
+  score: number;
+  detail: string | null;
+  position: number;
 };
 
 export type EvaluationRow = {
@@ -34,6 +52,7 @@ export type EvaluationRow = {
   matrix_id: string | null;
   detail: string | null;
   created_at: string;
+  items?: EvaluationItemRow[];
 };
 
 export type StudentRow = {

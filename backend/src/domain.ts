@@ -35,6 +35,26 @@ export function isEvaluation(value: unknown): value is EvaluationInput {
   if (!value || typeof value !== "object") return false;
   const item = value as Partial<EvaluationInput>;
 
+  const validItems =
+    item.items === undefined ||
+    (Array.isArray(item.items) &&
+      item.items.length <= 300 &&
+      item.items.every(
+        (entry) =>
+          entry &&
+          typeof entry.category === "string" &&
+          entry.category.trim().length > 0 &&
+          entry.category.trim().length <= 100 &&
+          typeof entry.name === "string" &&
+          entry.name.trim().length > 0 &&
+          entry.name.trim().length <= 180 &&
+          typeof entry.score === "number" &&
+          entry.score >= 0 &&
+          entry.score <= 100 &&
+          (entry.detail === undefined ||
+            (typeof entry.detail === "string" && entry.detail.length <= 500)),
+      ));
+
   return Boolean(
     item.athlete?.trim() &&
       item.belt?.trim() &&
@@ -43,7 +63,8 @@ export function isEvaluation(value: unknown): value is EvaluationInput {
         item.type === "kata") &&
       typeof item.score === "number" &&
       item.score >= 0 &&
-      item.score <= 100,
+      item.score <= 100 &&
+      validItems,
   );
 }
 
@@ -61,6 +82,15 @@ export function formatEvaluation(row: EvaluationRow) {
     matrixId: row.matrix_id,
     detail: row.detail,
     createdAt: row.created_at,
+    items: (row.items ?? [])
+      .sort((left, right) => left.position - right.position)
+      .map((item) => ({
+        id: item.id,
+        category: item.category,
+        name: item.name,
+        score: item.score,
+        detail: item.detail,
+      })),
   };
 }
 

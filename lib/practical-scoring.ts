@@ -5,6 +5,7 @@ export type PracticalResult = {
   approved: boolean;
   detail: string;
   categories: { name: string; score: number }[];
+  items: { category: string; name: string; score: number; detail?: string }[];
 };
 
 export function calculatePracticalResult(
@@ -36,6 +37,13 @@ export function calculatePracticalResult(
     score: Math.round(rawScore * 10) / 10,
     approved,
     categories,
+    items: exam.flatMap((category) =>
+      category.techniques.map((technique) => ({
+        category: category.name,
+        name: technique.name,
+        score: scores[technique.id],
+      })),
+    ),
     detail: approved
       ? "O atleta atingiu os critérios de aprovação da avaliação prática."
       : reasons.join(" "),

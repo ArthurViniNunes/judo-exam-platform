@@ -121,7 +121,27 @@ export function TechnicalForm({
       return;
     }
 
-    onFinish(calculatePracticalResult(exam, scores));
+    const result = calculatePracticalResult(exam, scores);
+    const items = exam.flatMap((category) =>
+      category.techniques.flatMap((technique) => {
+        const parts = getTechniqueEvaluationParts(technique.name);
+        if (parts.length === 1) {
+          return [{
+            category: category.name,
+            name: technique.name,
+            score: scores[technique.id],
+          }];
+        }
+        return parts.map((part, index) => ({
+          category: category.name,
+          name: `${technique.name} — ${part}`,
+          score: sequenceScores[technique.id]?.[index],
+          detail: `Parte ${index + 1} de ${parts.length} do mesmo card.`,
+        }));
+      }),
+    );
+
+    onFinish({ ...result, items });
   };
 
   return (

@@ -3,6 +3,8 @@ import type { EvaluationRow, StudentRow } from "../backend/src/contracts";
 import {
   dashboardFromRows,
   canDeleteEvaluation,
+  formatEvaluation,
+  isEvaluation,
   isValidEmail,
   normalizeEmail,
   normalizeName,
@@ -57,6 +59,11 @@ describe("regras da avaliação prática", () => {
     const result = calculatePracticalResult(exam, { a: 7, b: 7, c: 10 });
     expect(result.approved).toBe(true);
     expect(result.score).toBe(8);
+    expect(result.items).toEqual([
+      { category: "Nage Waza", name: "A", score: 7 },
+      { category: "Renraku-Henka Waza", name: "B", score: 7 },
+      { category: "Kaeshi Waza", name: "C", score: 10 },
+    ]);
   });
 
   it("reprova quando três grupos ficam abaixo de 7 mesmo com média geral suficiente", () => {
@@ -173,6 +180,14 @@ describe("regras da avaliação de kata", () => {
     const result = calculateKataResult(groups, marks);
     expect(result.severeApplied).toBe(true);
     expect(result.score).toBeCloseTo(result.rawScore / 2, 1);
+    expect(result.items[0]).toEqual(
+      expect.objectContaining({
+        category: "Abertura",
+        name: "Cerimônia de abertura",
+        score: 0,
+      }),
+    );
+    expect(result.items[0].detail).toContain("erro grave");
   });
 });
 
@@ -219,6 +234,49 @@ describe("domínio administrativo", () => {
     expect(
       canDeleteEvaluation({ ...evaluator, id: "admin", role: "super_admin" }, row),
     ).toBe(true);
+  });
+
+  it("valida e formata as notas individuais de uma avaliação", () => {
+    const input = {
+      athlete: "Ana Silva",
+      belt: "Amarela",
+      type: "técnica" as const,
+      score: 80,
+      items: [
+        { category: "Nage Waza", name: "O-soto-gari", score: 70 },
+      ],
+    };
+    expect(isEvaluation(input)).toBe(true);
+    expect(isEvaluation({ ...input, items: [{ ...input.items[0], score: 120 }] })).toBe(false);
+
+    const formatted = formatEvaluation(
+      evaluation({
+        items: [
+          {
+            id: "item-2",
+            evaluation_id: "evaluation-1",
+            category: "Nage Waza",
+            name: "O-soto-gari",
+            score: 70,
+            detail: null,
+            position: 1,
+          },
+          {
+            id: "item-1",
+            evaluation_id: "evaluation-1",
+            category: "Nage Waza",
+            name: "De-ashi-harai",
+            score: 100,
+            detail: "Sem auxílio.",
+            position: 0,
+          },
+        ],
+      }),
+    );
+    expect(formatted.items.map((item) => item.name)).toEqual([
+      "De-ashi-harai",
+      "O-soto-gari",
+    ]);
   });
 
   it("gera um link de convite que recupera nome e e-mail sem perder acentos", () => {

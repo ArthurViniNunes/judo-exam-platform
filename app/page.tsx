@@ -28,6 +28,7 @@ const initialPracticalResult: PracticalResult = {
   approved: false,
   detail: "",
   categories: [],
+  items: [],
 };
 
 const initialKataResult: KataResult = {
@@ -38,6 +39,7 @@ const initialKataResult: KataResult = {
   reviewedCount: 0,
   groups: [],
   errorCounts: { small: 0, medium: 0, large: 0, severe: 0 },
+  items: [],
 };
 
 export default function App() {
@@ -118,6 +120,10 @@ export default function App() {
       score: practicalResult.score * 10,
       result: practicalResult.approved ? "Aprovado" : "Reexame necessário",
       detail: practicalResult.detail,
+      items: practicalResult.items.map((item) => ({
+        ...item,
+        score: item.score * 10,
+      })),
     };
 
     void apiRequest("/api/evaluations", {
@@ -143,6 +149,10 @@ export default function App() {
       score: evaluationResult.score * 10,
       result: "Registro técnico",
       detail,
+      items: evaluationResult.items.map((item) => ({
+        ...item,
+        score: item.score * 10,
+      })),
     };
 
     void apiRequest("/api/evaluations", {

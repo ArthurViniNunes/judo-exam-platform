@@ -1,4 +1,9 @@
-import type { AuthUser, EvaluationRow, StudentRow } from "./contracts";
+import type {
+  AuthUser,
+  EvaluationItemRow,
+  EvaluationRow,
+  StudentRow,
+} from "./contracts";
 import {
   canDeleteEvaluation,
   dashboardFromRows,
@@ -24,9 +29,41 @@ async function evaluationRows(
      ORDER BY evaluations.created_at DESC
      LIMIT 2000`,
   );
-  const result = filterId
-    ? await statement.bind(filterId).all<EvaluationRow>()
-    : await statement.all<EvaluationRow>();
+  const itemStatement = env.DB.prepare(
+    `SELECT evaluation_items.*
+     FROM evaluation_items
+     INNER JOIN evaluations
+       ON evaluations.id = evaluation_items.evaluation_id
+     ${where}
+     ORDER BY evaluation_items.position`,
+  );
+  const [result, itemResult] = filterId
+    ? await Promise.all([
+        statement.bind(filterId).all<EvaluationRow>(),
+        itemStatement.bind(filterId).all<EvaluationItemRow>(),
+      ])
+    : await Promise.all([
+        statement.all<EvaluationRow>(),
+        itemStatement.all<EvaluationItemRow>(),
+      ]);
+  const itemsByEvaluation = new Map<string, EvaluationItemRow[]>();
+  for (const item of itemResult.results) {
+    const items = itemsByEvaluation.get(item.evaluation_id) ?? [];
+    items.push(item);
+    itemsByEvaluation.set(item.evaluation_id, items);
+  }
+  return result.results.map((row) => ({
+    ...row,
+    items: itemsByEvaluation.get(row.id) ?? [],
+  }));
+}
+
+async function evaluationItems(env: Env, evaluationId: string) {
+  const result = await env.DB.prepare(
+    "SELECT * FROM evaluation_items WHERE evaluation_id = ? ORDER BY position",
+  )
+    .bind(evaluationId)
+    .all<EvaluationItemRow>();
   return result.results;
 }
 
@@ -162,7 +199,10 @@ export async function createEvaluation(
   )
     .bind(id, user.id)
     .first<EvaluationRow>();
-  if (duplicate) return json(request, env, formatEvaluation(duplicate));
+  if (duplicate) {
+    const items = await evaluationItems(env, duplicate.id);
+    return json(request, env, formatEvaluation({ ...duplicate, items }));
+  }
 
   const normalized = normalizeName(body.athlete);
   let student = await env.DB.prepare(
@@ -185,10 +225,10 @@ export async function createEvaluation(
     .bind(student.id, user.id)
     .run();
 
-  const row = await env.DB.prepare(
-    "INSERT INTO evaluations (id, athlete, student_id, evaluator_id, professor, belt, type, score, result, matrix_id, detail) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING *",
-  )
-    .bind(
+  const statements = [
+    env.DB.prepare(
+      "INSERT INTO evaluations (id, athlete, student_id, evaluator_id, professor, belt, type, score, result, matrix_id, detail) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+    ).bind(
       id,
       body.athlete.trim(),
       student.id,
@@ -200,13 +240,37 @@ export async function createEvaluation(
       body.result?.trim() || null,
       body.matrixId || null,
       body.detail?.trim() || null,
-    )
-    .first<EvaluationRow>();
+    ),
+    ...(body.items ?? []).map((item, position) =>
+      env.DB.prepare(
+        "INSERT INTO evaluation_items (id, evaluation_id, category, name, score, detail, position) VALUES (?, ?, ?, ?, ?, ?, ?)",
+      ).bind(
+        crypto.randomUUID(),
+        id,
+        item.category.trim(),
+        item.name.trim(),
+        Math.round(item.score * 10) / 10,
+        item.detail?.trim() || null,
+        position,
+      ),
+    ),
+  ];
+  await env.DB.batch(statements);
+  const [row, items] = await Promise.all([
+    env.DB.prepare("SELECT * FROM evaluations WHERE id = ?")
+      .bind(id)
+      .first<EvaluationRow>(),
+    evaluationItems(env, id),
+  ]);
 
   return json(
     request,
     env,
-    formatEvaluation({ ...row!, evaluator_name: user.name }),
+    formatEvaluation({
+      ...row!,
+      evaluator_name: user.name,
+      items,
+    }),
     201,
   );
 }

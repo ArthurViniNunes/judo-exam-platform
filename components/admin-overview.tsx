@@ -26,7 +26,23 @@ import {
   Metric,
   scoreLabel,
 } from "@/components/admin-portal-shared";
-import type { AuthUser, DashboardData, ManagedUser, StudentRecord } from "@/lib/platform";
+import type {
+  AuthUser,
+  DashboardData,
+  EvaluationItemRecord,
+  ManagedUser,
+  StudentRecord,
+} from "@/lib/platform";
+
+function groupItems(items: EvaluationItemRecord[]) {
+  const groups = new Map<string, EvaluationItemRecord[]>();
+  for (const item of items) {
+    const entries = groups.get(item.category) ?? [];
+    entries.push(item);
+    groups.set(item.category, entries);
+  }
+  return Array.from(groups, ([category, entries]) => ({ category, entries }));
+}
 
 type OverviewProps = {
   data: DashboardData;
@@ -234,6 +250,7 @@ export function StudentsView({
 }: StudentsViewProps) {
   const [search, setSearch] = useState("");
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [reportEvaluationId, setReportEvaluationId] = useState<string | null>(null);
   const [registering, setRegistering] = useState(false);
   const [studentName, setStudentName] = useState("");
   const [studentEvaluatorId, setStudentEvaluatorId] = useState(evaluatorId);
@@ -383,7 +400,7 @@ export function StudentsView({
           detail={
             search
               ? "Tente buscar por outro nome."
-              : "O aluno entra automaticamente na lista quando uma avaliação é concluída."
+              : "Cadastre um judoca previamente ou conclua uma avaliação para iniciar a lista."
           }
         />
       ) : (
@@ -393,7 +410,10 @@ export function StudentsView({
               <button
                 key={student.id}
                 className={selectedId === student.id ? "selected" : ""}
-                onClick={() => setSelectedId(student.id)}
+                onClick={() => {
+                  setSelectedId(student.id);
+                  setReportEvaluationId(null);
+                }}
               >
                 <span className="student-avatar">{initials(student.name)}</span>
                 <div>
@@ -407,14 +427,23 @@ export function StudentsView({
                 {student.evaluations.length ? (
                   <span
                     className={`evolution-chip ${student.evolution > 0 ? "up" : student.evolution < 0 ? "down" : "stable"}`}
+                    aria-label={
+                      student.evaluations.length > 1
+                        ? `Evolução de ${scoreLabel(student.evolution)}`
+                        : `Nota ${scoreLabel(student.latestScore)}`
+                    }
                   >
-                    {student.evolution > 0 ? (
+                    {student.evaluations.length > 1 && student.evolution > 0 ? (
                       <ArrowUpRight size={15} />
-                    ) : student.evolution < 0 ? (
+                    ) : student.evaluations.length > 1 && student.evolution < 0 ? (
                       <ArrowDownRight size={15} />
                     ) : null}
-                    {student.evolution > 0 ? "+" : ""}
-                    {scoreLabel(Math.abs(student.evolution))}
+                    {student.evaluations.length > 1 && student.evolution > 0 ? "+" : ""}
+                    {scoreLabel(
+                      student.evaluations.length > 1
+                        ? Math.abs(student.evolution)
+                        : student.latestScore,
+                    )}
                   </span>
                 ) : <span className="student-unscored">Sem nota</span>}
                 <ChevronRight size={18} />
@@ -460,19 +489,57 @@ export function StudentsView({
                   ))}
                 </div> : <EmptyState icon={<ClipboardCheck size={27} />} title="Ainda sem avaliações" detail="O histórico será iniciado quando este judoca concluir um exame." />}
                 {selected.evaluations.length > 0 && <div className="student-history">
-                  {[...selected.evaluations].reverse().map((evaluation) => (
-                    <article key={evaluation.id}>
+                  {[...selected.evaluations].reverse().map((evaluation) => {
+                    const reportOpen = reportEvaluationId === evaluation.id;
+                    return <article key={evaluation.id} className={reportOpen ? "report-open" : ""}>
                       <i />
-                      <div>
-                        <strong>{evaluation.belt}</strong>
+                      <button
+                        className="student-history-summary"
+                        onClick={() => setReportEvaluationId(reportOpen ? null : evaluation.id)}
+                        aria-expanded={reportOpen}
+                      >
                         <span>
-                          {evaluation.type} · {formatDate(evaluation.createdAt)}
+                          <strong>{evaluation.belt}</strong>
+                          <span>{evaluation.type} · {formatDate(evaluation.createdAt)}</span>
+                          <small>{evaluation.evaluatorName}</small>
                         </span>
-                        <small>{evaluation.evaluatorName}</small>
-                      </div>
-                      <b>{scoreLabel(evaluation.score)}</b>
-                    </article>
-                  ))}
+                        <b>{scoreLabel(evaluation.score)}</b>
+                        <ChevronDown size={17} />
+                      </button>
+                      {reportOpen && (
+                        <section className="individual-report" aria-label={`Relatório de ${formatDate(evaluation.createdAt)}`}>
+                          <header>
+                            <div>
+                              <span>Resultado geral</span>
+                              <strong>{evaluation.result || (evaluation.type === "kata" ? "Registro técnico" : evaluation.score >= 70 ? "Aprovado" : "Reexame necessário")}</strong>
+                            </div>
+                            <b>{scoreLabel(evaluation.score)}</b>
+                          </header>
+                          {evaluation.detail && <p>{evaluation.detail}</p>}
+                          {evaluation.items.length ? (
+                            <div className="report-groups">
+                              {groupItems(evaluation.items).map((group) => (
+                                <section key={group.category}>
+                                  <h3>{group.category}</h3>
+                                  {group.entries.map((item) => (
+                                    <div key={item.id}>
+                                      <span><strong>{item.name}</strong>{item.detail && <small>{item.detail}</small>}</span>
+                                      <b>{scoreLabel(item.score)}</b>
+                                    </div>
+                                  ))}
+                                </section>
+                              ))}
+                            </div>
+                          ) : (
+                            <div className="legacy-report">
+                              <ClipboardCheck size={21} />
+                              <span><strong>Detalhamento indisponível</strong><small>Esta avaliação foi registrada antes do relatório por item.</small></span>
+                            </div>
+                          )}
+                        </section>
+                      )}
+                    </article>;
+                  })}
                 </div>}
               </>
             ) : (
