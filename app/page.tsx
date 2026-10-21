@@ -20,7 +20,8 @@ import {
   type View,
 } from "@/components/exam-flow";
 import { ProfileDialog } from "@/components/profile-dialog";
-import type { AuthUser, ExamStudent } from "@/lib/platform";
+import type { AuthUser, ExamStudent, ThemeSettings } from "@/lib/platform";
+import { DEFAULT_THEME_SETTINGS } from "@/lib/theme";
 import { KATAS, type KataId, type KataMode, type KataResult } from "@/lib/kata-exams";
 import { PRACTICAL_BELTS, type PracticalBeltId } from "@/lib/practical-exams";
 
@@ -49,6 +50,9 @@ export default function App() {
   const [dark, setDark] = useState(false);
   const [themeReady, setThemeReady] = useState(false);
   const [authReady, setAuthReady] = useState(false);
+  const [themeSettings, setThemeSettings] = useState<ThemeSettings>(
+    DEFAULT_THEME_SETTINGS,
+  );
   const [user, setUser] = useState<AuthUser | null>(null);
   const [profileOpen, setProfileOpen] = useState(false);
   const [adminSection, setAdminSection] = useState<AdminSection>("overview");
@@ -62,6 +66,19 @@ export default function App() {
   const [kataId, setKataId] = useState<KataId>("nage-no-kata");
   const [kataMode, setKataMode] = useState<KataMode>("partial");
   const [kataResult, setKataResult] = useState<KataResult>(initialKataResult);
+
+  useEffect(() => {
+    apiRequest<ThemeSettings>("/api/settings/theme")
+      .then(setThemeSettings)
+      .catch(() => setThemeSettings(DEFAULT_THEME_SETTINGS));
+  }, []);
+
+  useEffect(() => {
+    const root = document.documentElement;
+    root.style.setProperty("--theme-light-accent", themeSettings.lightAccent);
+    root.style.setProperty("--theme-dark-accent", themeSettings.darkAccent);
+    root.style.setProperty("--theme-dark-bg", themeSettings.darkBackground);
+  }, [themeSettings]);
 
   useEffect(() => {
     const savedTheme = window.localStorage.getItem("ajrc-theme");
@@ -220,6 +237,8 @@ export default function App() {
           }}
           onLogout={logout}
           onOpenProfile={() => setProfileOpen(true)}
+          themeSettings={themeSettings}
+          onThemeSaved={setThemeSettings}
         />
         {profileOpen && (
           <ProfileDialog

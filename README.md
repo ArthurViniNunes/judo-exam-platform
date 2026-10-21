@@ -13,6 +13,7 @@ Aplicação web da Associação Judô Rogério Cruz para aplicar, registrar e ac
 - registra notas, observações, modalidade, graduação e avaliador;
 - mostra histórico, média e evolução por aluno;
 - oferece um painel com volume de avaliações, médias, aprovação e registros recentes;
+- permite que o Super Admin escolha, com modelos prontos ou seletores de cor, a identidade visual global dos temas claro e escuro;
 - direciona a avaliação teórica do atleta para os Google Forms oficiais configurados na interface.
 
 As avaliações técnica e de kata são processadas na aplicação e persistidas na API. A avaliação teórica usa exclusivamente os formulários externos definidos em `components/exam-public.tsx`.
@@ -310,7 +311,7 @@ Se houver pelo menos um erro grave, a média geral é dividida por 2 uma única 
 
 ## API autenticada
 
-Todas as rotas abaixo, exceto `/`, `/health` e login/registro, exigem `Authorization: Bearer <token>`.
+Todas as rotas abaixo, exceto `/`, `/health`, login/registro e a leitura pública do tema, exigem `Authorization: Bearer <token>`.
 
 | Método | Rota | Acesso | Finalidade |
 | --- | --- | --- | --- |
@@ -321,6 +322,8 @@ Todas as rotas abaixo, exceto `/`, `/health` e login/registro, exigem `Authoriza
 | `GET` | `/api/auth/me` | autenticado | Retorna o usuário atual |
 | `PATCH` | `/api/auth/profile` | autenticado | Atualiza o nome do usuário |
 | `POST` | `/api/auth/logout` | autenticado | Encerra a sessão atual |
+| `GET` | `/api/settings/theme` | público | Retorna as cores globais da aplicação |
+| `PATCH` | `/api/settings/theme` | Super Admin | Valida e atualiza as cores globais |
 | `GET` | `/api/dashboard` | autenticado | Retorna indicadores e registros recentes |
 | `GET` | `/api/students` | autenticado | Lista alunos e seus históricos |
 | `GET` | `/api/students/available` | autenticado | Lista o catálogo global para iniciar exames |
@@ -343,7 +346,7 @@ corepack pnpm backend:migrate:local
 corepack pnpm backend:migrate:remote
 ```
 
-O schema ativo cobre usuários, sessões, alunos e avaliações. Tabelas históricas de questões e matrizes permanecem nas migrações já aplicadas para evitar uma operação destrutiva, mas não possuem rotas ou interfaces ativas. O estado local fica em `.wrangler/state` e não deve ser commitado.
+O schema ativo cobre usuários, sessões, alunos, avaliações e as cores globais da interface. Tabelas históricas de questões e matrizes permanecem nas migrações já aplicadas para evitar uma operação destrutiva, mas não possuem rotas ou interfaces ativas. O estado local fica em `.wrangler/state` e não deve ser commitado.
 
 ## Build e validação
 

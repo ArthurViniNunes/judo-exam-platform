@@ -11,6 +11,7 @@ import {
 } from "./evaluations";
 import { corsHeaders, json, requireSuperAdmin } from "./http";
 import { authenticate } from "./security";
+import { getThemeSettings, updateThemeSettings } from "./settings";
 import {
   cancelInvitation,
   inviteUser,
@@ -52,6 +53,9 @@ async function handlePublicRoute(
   if (url.pathname === "/api/auth/register" && request.method === "POST") {
     return register(request, env);
   }
+  if (url.pathname === "/api/settings/theme" && request.method === "GET") {
+    return getThemeSettings(request, env);
+  }
   return null;
 }
 
@@ -78,6 +82,10 @@ async function handleAuthenticatedRoute(
   }
   if (url.pathname === "/api/auth/logout" && request.method === "POST") {
     return logout(request, env);
+  }
+  if (url.pathname === "/api/settings/theme" && request.method === "PATCH") {
+    const denied = requireSuperAdmin(request, env, user);
+    return denied || updateThemeSettings(request, env);
   }
   if (url.pathname === "/api/dashboard" && request.method === "GET") {
     return getDashboard(request, env, user, url);

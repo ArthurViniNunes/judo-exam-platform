@@ -50,6 +50,12 @@ export type StudentRecord = {
 
 export type ExamStudent = Pick<StudentRecord, "id" | "name">;
 
+export type ThemeSettings = {
+  lightAccent: string;
+  darkAccent: string;
+  darkBackground: string;
+};
+
 export type ManagedUser = {
   id: string;
   email: string;

@@ -1,6 +1,6 @@
 "use client";
 
-import { ClipboardList, LayoutDashboard, ShieldCheck, Users } from "lucide-react";
+import { ClipboardList, LayoutDashboard, Palette, ShieldCheck, Users } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Overview, StudentsView } from "@/components/admin-overview";
 import { EvaluationsView } from "@/components/admin-evaluations";
@@ -10,6 +10,7 @@ import {
 } from "@/components/admin-portal-shared";
 import { AdminPortalShell } from "@/components/admin-portal-shell";
 import { TeamView } from "@/components/admin-portal-team";
+import { ThemeSettingsView } from "@/components/admin-theme-settings";
 import { apiRequest } from "@/lib/api";
 import type {
   AuthUser,
@@ -17,6 +18,7 @@ import type {
   EvaluationRecord,
   ManagedUser,
   StudentRecord,
+  ThemeSettings,
 } from "@/lib/platform";
 
 type AdminPortalProps = {
@@ -27,6 +29,8 @@ type AdminPortalProps = {
   onExit: () => void;
   onLogout: () => void;
   onOpenProfile: () => void;
+  themeSettings: ThemeSettings;
+  onThemeSaved: (settings: ThemeSettings) => void;
 };
 
 export function AdminPortal({
@@ -37,6 +41,8 @@ export function AdminPortal({
   onExit,
   onLogout,
   onOpenProfile,
+  themeSettings,
+  onThemeSaved,
 }: AdminPortalProps) {
   const [section, setSection] = useState<AdminSection>(initialSection);
   const [mobileMenu, setMobileMenu] = useState(false);
@@ -94,7 +100,10 @@ export function AdminPortal({
       { id: "evaluations" as const, label: "Notas", icon: <ClipboardList size={19} /> },
       { id: "students" as const, label: "Alunos", icon: <Users size={19} /> },
       ...(user.role === "super_admin"
-        ? [{ id: "team" as const, label: "Equipe", icon: <ShieldCheck size={19} /> }]
+        ? [
+            { id: "team" as const, label: "Equipe", icon: <ShieldCheck size={19} /> },
+            { id: "appearance" as const, label: "Cores", icon: <Palette size={19} /> },
+          ]
         : []),
     ],
     [user.role],
@@ -159,6 +168,9 @@ export function AdminPortal({
               currentUser={user}
               reload={loadData}
             />
+          )}
+          {section === "appearance" && user.role === "super_admin" && (
+            <ThemeSettingsView settings={themeSettings} onSaved={onThemeSaved} />
           )}
         </>
       )}
