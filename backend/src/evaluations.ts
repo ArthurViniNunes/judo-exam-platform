@@ -101,12 +101,18 @@ export async function listStudents(
   return json(request, env, studentsFromCatalog(catalogResult.results, rows));
 }
 
+export async function listAvailableStudents(request: Request, env: Env) {
+  const result = await env.DB.prepare(
+    "SELECT id, name FROM students ORDER BY name",
+  ).all<Pick<StudentRow, "id" | "name">>();
+  return json(request, env, result.results);
+}
+
 export async function createStudent(
   request: Request,
   env: Env,
-  user: AuthUser,
 ) {
-  const body = await request.json<{ name?: string; evaluatorId?: string }>();
+  const body = await request.json<{ name?: string }>();
   const name = body.name?.trim().replace(/\s+/g, " ") || "";
   if (name.length < 3 || name.length > 100) {
     return json(
@@ -117,53 +123,27 @@ export async function createStudent(
     );
   }
 
-  let evaluatorId = user.id;
-  if (user.role === "super_admin" && body.evaluatorId) {
-    const evaluator = await env.DB.prepare(
-      "SELECT id FROM users WHERE id = ? AND role = 'evaluator' AND status = 'active'",
-    )
-      .bind(body.evaluatorId)
-      .first<{ id: string }>();
-    if (!evaluator) {
-      return json(request, env, { error: "Selecione um avaliador ativo." }, 400);
-    }
-    evaluatorId = evaluator.id;
-  }
-
   const normalized = normalizeName(name);
-  let student = await env.DB.prepare(
+  const existingStudent = await env.DB.prepare(
     "SELECT * FROM students WHERE normalized_name = ?",
   )
     .bind(normalized)
     .first<StudentRow>();
-  if (!student) {
-    const id = crypto.randomUUID();
-    student = await env.DB.prepare(
-      "INSERT INTO students (id, name, normalized_name) VALUES (?, ?, ?) RETURNING *",
-    )
-      .bind(id, name, normalized)
-      .first<StudentRow>();
-  }
-
-  const linked = await env.DB.prepare(
-    "SELECT 1 AS linked FROM student_evaluators WHERE student_id = ? AND evaluator_id = ?",
-  )
-    .bind(student!.id, evaluatorId)
-    .first<{ linked: number }>();
-  if (linked) {
+  if (existingStudent) {
     return json(
       request,
       env,
-      { error: "Este judoca já está cadastrado para o avaliador selecionado." },
+      { error: "Este judoca já está cadastrado." },
       409,
     );
   }
 
-  await env.DB.prepare(
-    "INSERT INTO student_evaluators (student_id, evaluator_id) VALUES (?, ?)",
+  const id = crypto.randomUUID();
+  const student = await env.DB.prepare(
+    "INSERT INTO students (id, name, normalized_name) VALUES (?, ?, ?) RETURNING *",
   )
-    .bind(student!.id, evaluatorId)
-    .run();
+    .bind(id, name, normalized)
+    .first<StudentRow>();
 
   return json(request, env, { id: student!.id, name: student!.name }, 201);
 }
@@ -204,29 +184,23 @@ export async function createEvaluation(
     return json(request, env, formatEvaluation({ ...duplicate, items }));
   }
 
-  const student = user.role === "super_admin"
-    ? await env.DB.prepare("SELECT * FROM students WHERE id = ?")
-        .bind(body.studentId.trim())
-        .first<StudentRow>()
-    : await env.DB.prepare(
-        `SELECT students.* FROM students
-         INNER JOIN student_evaluators
-           ON student_evaluators.student_id = students.id
-         WHERE students.id = ? AND student_evaluators.evaluator_id = ?`,
-      )
-        .bind(body.studentId.trim(), user.id)
-        .first<StudentRow>();
+  const student = await env.DB.prepare("SELECT * FROM students WHERE id = ?")
+    .bind(body.studentId.trim())
+    .first<StudentRow>();
 
   if (!student) {
     return json(
       request,
       env,
-      { error: "Selecione um judoca previamente cadastrado para sua conta." },
+      { error: "Selecione um judoca previamente cadastrado." },
       400,
     );
   }
 
   const statements = [
+    env.DB.prepare(
+      "INSERT OR IGNORE INTO student_evaluators (student_id, evaluator_id) VALUES (?, ?)",
+    ).bind(student.id, user.id),
     env.DB.prepare(
       "INSERT INTO evaluations (id, athlete, student_id, evaluator_id, professor, belt, type, score, result, matrix_id, detail) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
     ).bind(

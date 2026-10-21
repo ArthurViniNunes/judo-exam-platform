@@ -263,9 +263,9 @@ No celular, conectado à mesma rede Wi-Fi, abra `http://192.168.0.50:3000`, subs
 1. O Super Admin entra com a conta inicial.
 2. Em **Equipe**, autoriza o e-mail do avaliador.
 3. O avaliador seleciona **Criar conta**, informa nome, e-mail autorizado e uma senha com pelo menos 10 caracteres, uma letra e um número.
-4. Em **Administração → Alunos**, o avaliador cadastra previamente os judocas que poderá avaliar.
-5. Ao iniciar uma avaliação técnica ou de kata, o avaliador seleciona um desses judocas; não existe entrada manual de nome no exame.
-6. O avaliador passa a consultar apenas seus alunos e registros, enquanto o Super Admin mantém a visão completa.
+4. Em **Administração → Alunos**, qualquer usuário autenticado pode cadastrar previamente um judoca no catálogo global.
+5. Ao iniciar uma avaliação técnica ou de kata, o avaliador escolhe qualquer judoca cadastrado; não existe entrada manual de nome no exame.
+6. Ao salvar a primeira avaliação, o sistema associa automaticamente o judoca ao usuário logado. O avaliador consulta apenas quem já avaliou e seus próprios registros, enquanto o Super Admin mantém a visão completa.
 7. O nome exibido pode ser alterado em **Ver e editar perfil**.
 
 Não há envio automático de convite, recuperação de senha ou redefinição por e-mail. A autorização precisa ser comunicada manualmente ao avaliador.
@@ -276,7 +276,7 @@ Não há envio automático de convite, recuperação de senha ou redefinição p
 
 O catálogo técnico oficial fica em `lib/practical-exams.ts`. Ele organiza as técnicas por graduação e categoria, incluindo `Nage Waza`, `Renraku-Henka Waza`, `Kaeshi Waza`, `Osaekomi Waza`, `Shime Waza` e `Kansetsu Waza`. Quando uma faixa exige técnicas anteriores, a seleção é feita automaticamente ao iniciar o exame e a origem sorteada aparece no próprio card.
 
-O início do exame exige a seleção de um judoca previamente cadastrado. A API recebe o identificador desse cadastro, recupera o nome oficial no banco e, para avaliadores comuns, confirma o vínculo entre avaliador e judoca antes de salvar qualquer nota.
+O início do exame exige a seleção de um judoca previamente cadastrado no catálogo global. A API recebe o identificador, recupera o nome oficial no banco e associa o judoca ao usuário autenticado na mesma operação que salva a primeira nota. Assim, o avaliador é definido pelo login usado no momento do exame, não no cadastro do aluno.
 
 Cada item de `Renraku-Henka Waza` recebe uma única avaliação, mesmo quando o nome contém `→`. Avaliações múltiplas no mesmo card são criadas somente quando o texto pede explicitamente mais de uma execução, como `2 Fugas de Yoko-shiho-gatame`; nesse caso, a média das execuções compõe a nota do item.
 
@@ -323,6 +323,7 @@ Todas as rotas abaixo, exceto `/`, `/health` e login/registro, exigem `Authoriza
 | `POST` | `/api/auth/logout` | autenticado | Encerra a sessão atual |
 | `GET` | `/api/dashboard` | autenticado | Retorna indicadores e registros recentes |
 | `GET` | `/api/students` | autenticado | Lista alunos e seus históricos |
+| `GET` | `/api/students/available` | autenticado | Lista o catálogo global para iniciar exames |
 | `POST` | `/api/students` | autenticado | Cadastra previamente um judoca |
 | `GET` | `/api/evaluations` | autenticado | Lista avaliações permitidas ao usuário |
 | `POST` | `/api/evaluations` | autenticado | Registra uma avaliação |

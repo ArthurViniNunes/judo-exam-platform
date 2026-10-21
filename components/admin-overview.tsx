@@ -253,7 +253,6 @@ export function StudentsView({
   const [reportEvaluationId, setReportEvaluationId] = useState<string | null>(null);
   const [registering, setRegistering] = useState(false);
   const [studentName, setStudentName] = useState("");
-  const [studentEvaluatorId, setStudentEvaluatorId] = useState(evaluatorId);
   const [registerError, setRegisterError] = useState("");
   const [registerSuccess, setRegisterSuccess] = useState("");
   const [savingStudent, setSavingStudent] = useState(false);
@@ -271,14 +270,11 @@ export function StudentsView({
     try {
       await apiRequest("/api/students", {
         method: "POST",
-        body: JSON.stringify({
-          name: studentName,
-          ...(user.role === "super_admin"
-            ? { evaluatorId: studentEvaluatorId }
-            : {}),
-        }),
+        body: JSON.stringify({ name: studentName }),
       });
-      setRegisterSuccess(`${studentName.trim()} foi cadastrado.`);
+      setRegisterSuccess(
+        `${studentName.trim()} foi cadastrado e já está disponível nos exames.`,
+      );
       setStudentName("");
       await reload();
     } catch (caught) {
@@ -305,7 +301,6 @@ export function StudentsView({
             setRegistering((current) => !current);
             setRegisterError("");
             setRegisterSuccess("");
-            setStudentEvaluatorId(evaluatorId);
           }}
           aria-expanded={registering}
         >
@@ -316,7 +311,7 @@ export function StudentsView({
         <section className="student-registration" aria-label="Cadastrar judoca">
           <div>
             <h2>Cadastro prévio</h2>
-            <p>O judoca ficará disponível antes da primeira avaliação.</p>
+            <p>O judoca ficará disponível para todos os avaliadores.</p>
           </div>
           <label>
             Nome completo
@@ -327,33 +322,11 @@ export function StudentsView({
               autoComplete="off"
             />
           </label>
-          {user.role === "super_admin" && (
-            <label>
-              Avaliador responsável
-              <select
-                value={studentEvaluatorId}
-                onChange={(event) => setStudentEvaluatorId(event.target.value)}
-              >
-                <option value="">Selecione um avaliador</option>
-                {users
-                  .filter(
-                    (item) => item.role === "evaluator" && item.status === "active",
-                  )
-                  .map((item) => (
-                    <option key={item.id} value={item.id}>{item.name}</option>
-                  ))}
-              </select>
-            </label>
-          )}
           {registerError && <p className="management-error">{registerError}</p>}
           {registerSuccess && <p className="management-success">{registerSuccess}</p>}
           <button
             className="management-primary"
-            disabled={
-              savingStudent ||
-              studentName.trim().length < 3 ||
-              (user.role === "super_admin" && !studentEvaluatorId)
-            }
+            disabled={savingStudent || studentName.trim().length < 3}
             onClick={() => void registerStudent()}
           >
             {savingStudent ? "Cadastrando…" : "Cadastrar judoca"}
@@ -400,7 +373,9 @@ export function StudentsView({
           detail={
             search
               ? "Tente buscar por outro nome."
-              : "Cadastre um judoca previamente ou conclua uma avaliação para iniciar a lista."
+              : user.role === "super_admin"
+                ? "Cadastre um judoca previamente para iniciar a lista."
+                : "Os judocas avaliados por você aparecerão aqui. Cadastros novos ficam disponíveis na tela do exame."
           }
         />
       ) : (

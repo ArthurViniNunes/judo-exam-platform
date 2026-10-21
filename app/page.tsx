@@ -20,7 +20,7 @@ import {
   type View,
 } from "@/components/exam-flow";
 import { ProfileDialog } from "@/components/profile-dialog";
-import type { AuthUser, ExamStudent, StudentRecord } from "@/lib/platform";
+import type { AuthUser, ExamStudent } from "@/lib/platform";
 import { KATAS, type KataId, type KataMode, type KataResult } from "@/lib/kata-exams";
 import { PRACTICAL_BELTS, type PracticalBeltId } from "@/lib/practical-exams";
 
@@ -78,8 +78,8 @@ export default function App() {
     setExamStudentsLoading(true);
     setExamStudentsError("");
     try {
-      const students = await apiRequest<StudentRecord[]>("/api/students");
-      setExamStudents(students.map(({ id, name }) => ({ id, name })));
+      const students = await apiRequest<ExamStudent[]>("/api/students/available");
+      setExamStudents(students);
     } catch (caught) {
       setExamStudents([]);
       setExamStudentsError(

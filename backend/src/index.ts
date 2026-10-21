@@ -5,6 +5,7 @@ import {
   createStudent,
   deleteEvaluation,
   getDashboard,
+  listAvailableStudents,
   listEvaluations,
   listStudents,
 } from "./evaluations";
@@ -81,11 +82,14 @@ async function handleAuthenticatedRoute(
   if (url.pathname === "/api/dashboard" && request.method === "GET") {
     return getDashboard(request, env, user, url);
   }
+  if (url.pathname === "/api/students/available" && request.method === "GET") {
+    return listAvailableStudents(request, env);
+  }
   if (url.pathname === "/api/students" && request.method === "GET") {
     return listStudents(request, env, user, url);
   }
   if (url.pathname === "/api/students" && request.method === "POST") {
-    return createStudent(request, env, user);
+    return createStudent(request, env);
   }
   if (url.pathname === "/api/evaluations" && request.method === "GET") {
     return listEvaluations(request, env, user, url);
