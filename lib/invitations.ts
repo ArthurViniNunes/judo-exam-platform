@@ -5,6 +5,7 @@ export type InvitationPrefill = {
 
 export function buildInvitationPath(invitation: InvitationPrefill) {
   const params = new URLSearchParams({
+    acesso: "avaliador",
     cadastro: "1",
     email: invitation.email,
     nome: invitation.name,

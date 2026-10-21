@@ -21,15 +21,15 @@ explicam por que a arquitetura chegou a este formato estão no
 ```mermaid
 C4Context
   title Contexto da Plataforma de Exames
+  Person(student, "Aluno", "Realiza a prova teórica da própria graduação")
   Person(evaluator, "Avaliador", "Aplica exames e acompanha seus alunos")
   Person(admin, "Super Admin", "Gerencia avaliadores e possui visão global")
-  System(platform, "Plataforma de Exames", "Avaliações técnicas, kata e administração")
-  System_Ext(forms, "Google Forms", "Exames teóricos oficiais")
+  System(platform, "Plataforma de Exames", "Avaliações teóricas, técnicas, kata e administração")
   System_Ext(youtube, "YouTube", "Vídeos de referência das técnicas")
 
+  Rel(student, platform, "Usa a entrada principal pelo navegador")
   Rel(evaluator, platform, "Usa pelo navegador")
   Rel(admin, platform, "Administra pelo navegador")
-  Rel(platform, forms, "Abre formulário externo")
   Rel(platform, youtube, "Incorpora vídeo com youtube-nocookie.com")
 ```
 
@@ -54,6 +54,8 @@ components/                  apresentação e fluxos por área
   admin-*                    administração
   technical-exam.tsx         avaliação prática
   kata-exam.tsx              avaliação de kata
+  student-auth-screen.tsx    entrada principal e cadastro do aluno
+  student-portal.tsx         área teórica restrita ao contexto estudantil
 lib/                         domínio executado no navegador e contratos da API
   practical-exams.ts         catálogo, seleção automática e vídeos
   practical-scoring.ts       regra de aprovação da prática
@@ -61,6 +63,7 @@ lib/                         domínio executado no navegador e contratos da API
 backend/src/                 módulos do Worker
   index.ts                   composição e roteamento HTTP
   auth.ts                    casos de uso de autenticação e perfil
+  student-auth.ts            cadastro e autenticação no contexto de aluno
   security.ts                senha, sessão e autenticação da requisição
   evaluations.ts             consultas e escrita de avaliações
   users.ts                   equipe e convites
@@ -100,7 +103,9 @@ sequenceDiagram
 
 ```mermaid
 erDiagram
+  USERS ||--o{ USER_ROLES : recebe
   USERS ||--o{ SESSIONS : possui
+  USERS ||--o| STUDENTS : representa
   USERS ||--o{ EVALUATIONS : aplica
   STUDENTS ||--o{ EVALUATIONS : recebe
   EVALUATIONS ||--o{ EVALUATION_CATEGORIES : resume
@@ -110,8 +115,21 @@ erDiagram
   USERS {
     text id PK
     text email UK
+    text status
+  }
+  USER_ROLES {
+    text user_id FK
     text role
     text status
+  }
+  SESSIONS {
+    text user_id FK
+    text context
+  }
+  STUDENTS {
+    text id PK
+    text user_id FK
+    text name
   }
   EVALUATIONS {
     text id PK

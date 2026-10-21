@@ -4,6 +4,9 @@ Aplicação web da Associação Judô Rogério Cruz para aplicar, registrar e ac
 
 ## O que a plataforma faz
 
+- oferece entradas separadas para alunos e equipe, com o acesso de aluno como porta principal;
+- permite que a mesma identidade acumule os papéis de aluno e avaliador sem misturar seus contextos de sessão;
+- cadastra o aluno na equipe ao criar sua conta e reserva sua área para a futura prova teórica interna;
 - autentica avaliadores e Super Admins com contas individuais;
 - permite que o Super Admin autorize e desative avaliadores;
 - aplica avaliações técnicas por graduação, selecionando automaticamente técnicas de faixas anteriores quando necessário;
@@ -15,9 +18,9 @@ Aplicação web da Associação Judô Rogério Cruz para aplicar, registrar e ac
 - mostra histórico, média e evolução por aluno;
 - oferece um painel com volume de avaliações, médias, aprovação e registros recentes;
 - permite que o Super Admin escolha, com modelos prontos ou seletores de cor, a identidade visual global dos temas claro e escuro;
-- direciona a avaliação teórica do atleta para os Google Forms oficiais configurados na interface.
+- mantém a avaliação teórica externa desativada enquanto as questões da prova interna são preparadas.
 
-As avaliações técnica e de kata são processadas na aplicação e persistidas na API. A avaliação teórica usa exclusivamente os formulários externos definidos em `components/exam-public.tsx`.
+As avaliações técnica e de kata são processadas na aplicação e persistidas na API. A área do aluno já está disponível, mas exibe a prova teórica como **não liberada** até a implementação das questões, tentativas, correção e elegibilidade para a prova prática.
 
 ## Arquitetura
 
@@ -33,7 +36,7 @@ Cloudflare Worker (API) ---- Cloudflare D1 / SQLite
 - **Backend:** Cloudflare Worker modular; `backend/src/index.ts` apenas compõe as rotas e os módulos de negócio ficam no mesmo diretório.
 - **Banco:** D1 em produção e D1 local persistido pelo Wrangler em `.wrangler/state`.
 - **Autenticação:** sessões de sete dias; tokens não são armazenados em texto no banco. As senhas usam PBKDF2 com SHA-256 e 100.000 iterações.
-- **Perfis:** `super_admin` tem visão global e gerencia a equipe; `evaluator` acessa seus próprios alunos e avaliações.
+- **Perfis e contextos:** uma identidade pode ter `student`, `evaluator` e `super_admin`; cada sessão é restrita ao contexto `student` ou `professional` escolhido na entrada.
 - **Cliente HTTP:** `lib/api.ts` envia o token Bearer e trata expiração da sessão.
 
 ## Requisitos
@@ -135,7 +138,7 @@ O terminal precisa permanecer aberto enquanto o sistema estiver em uso. Para enc
 - API: <http://127.0.0.1:8787>;
 - saúde da API: <http://127.0.0.1:8787/health>.
 
-Use preferencialmente `127.0.0.1`, como nos endereços acima. Na tela de login, use:
+Use preferencialmente `127.0.0.1`, como nos endereços acima. Na tela inicial, escolha **Acesso de avaliador** e use:
 
 - e-mail: `admin@judorogeriocruz.com.br`;
 - senha: o valor definido em `SUPER_ADMIN_INITIAL_PASSWORD`.
@@ -262,13 +265,15 @@ No celular, conectado à mesma rede Wi-Fi, abra `http://192.168.0.50:3000`, subs
 
 ## Fluxo de acesso
 
-1. O Super Admin entra com a conta inicial.
-2. Em **Equipe**, informa nome, e-mail e graduação do avaliador para autorizar o acesso.
-3. O avaliador seleciona **Criar conta**, informa nome, e-mail autorizado e uma senha com pelo menos 10 caracteres, uma letra e um número.
-4. Em **Administração → Alunos**, qualquer usuário autenticado pode cadastrar previamente um judoca no catálogo global.
-5. Ao iniciar uma avaliação técnica ou de kata, o avaliador escolhe qualquer judoca cadastrado; não existe entrada manual de nome no exame.
-6. Ao salvar a primeira avaliação, o sistema associa automaticamente o judoca ao usuário logado. O avaliador consulta apenas quem já avaliou e seus próprios registros, enquanto o Super Admin mantém a visão completa.
-7. O nome exibido pode ser alterado em **Ver e editar perfil**.
+1. A página principal abre a **Área do aluno**. No primeiro acesso, o judoca cria sua conta e entra automaticamente no cadastro de alunos da equipe.
+2. Enquanto as questões não forem publicadas, a área do aluno informa que a prova teórica ainda não foi liberada; nenhum formulário externo é aberto.
+3. Avaliadores usam o botão **Acesso de avaliador**. O Super Admin também pode compartilhar um convite, que já abre essa entrada no modo de criação de conta.
+4. Em **Equipe**, o Super Admin informa nome, e-mail e graduação do avaliador para autorizar o acesso profissional.
+5. Se um aluno também for avaliador, ele usa a mesma identidade e senha nas duas entradas. Cada login cria uma sessão limitada ao contexto escolhido.
+6. Em **Administração → Alunos**, usuários profissionais podem continuar cadastrando previamente judocas que ainda não possuem conta.
+7. Ao iniciar uma avaliação técnica ou de kata, o avaliador escolhe um judoca cadastrado; não existe entrada manual de nome no exame.
+8. Ao salvar a primeira avaliação, o sistema associa automaticamente o judoca ao usuário logado. O avaliador consulta apenas quem já avaliou e seus próprios registros, enquanto o Super Admin mantém a visão completa.
+9. O nome exibido pode ser alterado em **Ver e editar perfil**.
 
 Não há envio automático de convite, recuperação de senha ou redefinição por e-mail. A autorização precisa ser comunicada manualmente ao avaliador.
 
@@ -320,6 +325,8 @@ Todas as rotas abaixo, exceto `/`, `/health`, login/registro e a leitura públic
 | `GET` | `/health` | público | Verifica Worker, D1 e configuração do Super Admin |
 | `POST` | `/api/auth/login` | público | Inicia uma sessão |
 | `POST` | `/api/auth/register` | público | Ativa um e-mail previamente autorizado |
+| `POST` | `/api/student-auth/register` | público | Cria a identidade e o cadastro vinculados do aluno |
+| `POST` | `/api/student-auth/login` | público | Inicia uma sessão no contexto de aluno |
 | `GET` | `/api/auth/me` | autenticado | Retorna o usuário atual |
 | `PATCH` | `/api/auth/profile` | autenticado | Atualiza o nome do usuário |
 | `POST` | `/api/auth/logout` | autenticado | Encerra a sessão atual |

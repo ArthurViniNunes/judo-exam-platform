@@ -1,6 +1,6 @@
 # ADR 012 — Identidade de aluno e elegibilidade originada no exame teórico
 
-- Estado: proposta
+- Estado: aceita; implementação incremental
 - Data: 2026-10-21
 
 ## Contexto
@@ -81,3 +81,11 @@ o estado de prova não liberada.
 - o portal futuro deve reutilizar a mesma identidade de aluno;
 - migrações precisam preservar alunos atuais sem conta e resolver duplicatas
   explicitamente.
+
+## Estado da implementação
+
+Os papéis múltiplos, o contexto explícito da sessão, o cadastro vinculado do
+aluno e as duas entradas foram entregues. A área estudantil permanece no estado
+"prova não liberada". Versionamento de questões, tentativas, correção comentada
+e elegibilidade para a avaliação prática serão implementados nos próximos
+marcos desta decisão.

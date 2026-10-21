@@ -363,6 +363,9 @@ describe("domínio administrativo", () => {
       name: "Fábio Nunes",
     });
 
+    expect(new URL(path, "https://example.com").searchParams.get("acesso")).toBe(
+      "avaliador",
+    );
     expect(readInvitationPrefill(new URL(path, "https://example.com").search)).toEqual({
       email: "avaliador@example.com",
       name: "Fábio Nunes",

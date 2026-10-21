@@ -65,7 +65,11 @@ export async function apiRequest<T>(path: string, init?: RequestInit): Promise<T
     } catch {
       // Keep the status-based message when the body is not JSON.
     }
-    if (response.status === 401 && path !== "/api/auth/login") {
+    if (
+      response.status === 401 &&
+      path !== "/api/auth/login" &&
+      path !== "/api/student-auth/login"
+    ) {
       setAuthToken(null);
       if (typeof window !== "undefined") {
         window.dispatchEvent(new Event("ajrc:session-expired"));

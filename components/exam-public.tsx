@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import {
-  Activity, Award, BookOpen, CheckCircle2, ClipboardCheck, ExternalLink, Home, LayoutDashboard, LogOut, Menu,
+  Activity, Award, CheckCircle2, ClipboardCheck, Home, LayoutDashboard, LogOut, Menu,
   Moon, PlayCircle, Sun, Target, X,
 } from "lucide-react";
 import type { AuthUser } from "@/lib/platform";
@@ -17,16 +17,8 @@ const LOGO =
   "https://media.base44.com/images/public/6a9b8ceb32f349c5600d2fdc/ecc432c62_41508.png/v1/fit/w_176,h_176,q_90,usm_0.66_1.00_0.01,enc_webp,quality_auto/ecc432c62_41508.webp";
 
 export type View =
-  | "home" | "theory-links" | "technical-setup" | "technical-form" | "technical-result"
+  | "home" | "technical-setup" | "technical-form" | "technical-result"
   | "kata-setup" | "kata-form" | "kata-result" | "admin";
-
-const theoreticalExams = [
-  { name: "Amarela, ponta laranja e laranja infantil", detail: "Exame unificado para as três graduações", color: "#eac54f", href: "https://forms.gle/x9DQbfGksXzXkRNh8" },
-  { name: "Laranja - 4º Kyu", detail: "Exame teórico da faixa laranja", color: "#ef8d32", href: "https://forms.gle/p5Fkw1zz1XwSPAQ28" },
-  { name: "Verde - 3º Kyu", detail: "Exame teórico da faixa verde", color: "#5c9c61", href: "https://forms.gle/51cCW7ZstVea6TDy9" },
-  { name: "Roxa - 2º Kyu", detail: "Exame teórico da faixa roxa", color: "#8563a5", href: "https://forms.gle/HR3tLZPKPGgtJy4o6" },
-  { name: "Marrom - 1º Kyu", detail: "Exame teórico da faixa marrom", color: "#795548", href: "https://forms.gle/N1RwZdpD6cEKZWKC6" },
-] as const;
 
 export function Brand({ compact = false }: { compact?: boolean }) {
   return (
@@ -96,7 +88,6 @@ function PublicMenu({
         </div>
         <nav>
           <button onClick={() => navigate("home")}><Home size={19} /> Início do simulado</button>
-          <button onClick={() => navigate("theory-links")}><BookOpen size={19} /> Avaliação teórica</button>
           <button onClick={() => navigate("technical-setup")}><ClipboardCheck size={19} /> Avaliação técnica</button>
           <button onClick={() => navigate("kata-setup")}><Activity size={19} /> Avaliação de kata</button>
           <button onClick={() => navigate("admin")}><LayoutDashboard size={19} /> Área administrativa</button>
@@ -159,17 +150,12 @@ export function HomeView({ navigate }: { navigate: (view: View) => void }) {
         <Brand />
         <h1>O QUE DESEJA ACESSAR?</h1>
         <div className="choice-grid">
-          <button onClick={() => navigate("theory-links")}>
-            <BookOpen size={32} />
-            <span>AVALIAÇÃO TEÓRICA</span>
-            <small>História, filosofia e regras</small>
-          </button>
           <button onClick={() => navigate("technical-setup")}>
             <Award size={34} />
             <span>AVALIAÇÃO TÉCNICA</span>
             <small>Fundamentos, técnicas e suas aplicações</small>
           </button>
-          <button onClick={() => navigate("kata-setup")}>
+          <button className="choice-kata" onClick={() => navigate("kata-setup")}>
             <Activity size={34} />
             <span>AVALIAÇÃO DE KATA</span>
             <small>Nage-no-Kata e Katame-no-Kata</small>
@@ -181,28 +167,6 @@ export function HomeView({ navigate }: { navigate: (view: View) => void }) {
           </button>
         </div>
         <ProjectCredits />
-      </div>
-    </section>
-  );
-}
-
-export function TheoryLinksView({ onBack }: { onBack: () => void }) {
-  return (
-    <section className="modal-screen">
-      <div className="public-card belt-card theory-link-card">
-        <span className="eyebrow">EXAME TEÓRICO</span>
-        <h2>Escolha sua graduação</h2>
-        <p className="theory-intro">O exame será aberto no formulário oficial da associação, em uma nova aba.</p>
-        <div className="belt-list">
-          {theoreticalExams.map((exam) => (
-            <a key={exam.href} href={exam.href} target="_blank" rel="noopener noreferrer">
-              <i style={{ background: exam.color }} />
-              <span><strong>{exam.name}</strong><small>{exam.detail}</small></span>
-              <ExternalLink size={18} />
-            </a>
-          ))}
-        </div>
-        <button className="outline-wide" onClick={onBack}>VOLTAR</button>
       </div>
     </section>
   );

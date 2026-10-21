@@ -11,6 +11,8 @@ import {
 import { AdminPortal } from "@/components/admin-portal";
 import type { AdminSection } from "@/components/admin-portal-shared";
 import { AuthScreen } from "@/components/auth-screen";
+import { StudentAuthScreen } from "@/components/student-auth-screen";
+import { StudentPortal } from "@/components/student-portal";
 import {
   Brand,
   HomeView,
@@ -21,7 +23,6 @@ import {
   TechnicalForm,
   TechnicalResultView,
   TechnicalSetup,
-  TheoryLinksView,
   type PracticalResult,
   type View,
 } from "@/components/exam-flow";
@@ -37,6 +38,8 @@ import {
   type TechnicalDraft,
 } from "@/lib/offline-evaluations";
 import { useEvaluationPersistence } from "@/lib/use-evaluation-persistence";
+
+type EntryPortal = "student" | "professional";
 
 const initialPracticalResult: PracticalResult = {
   score: 0,
@@ -63,6 +66,8 @@ export default function App() {
   const [dark, setDark] = useState(false);
   const [themeReady, setThemeReady] = useState(false);
   const [authReady, setAuthReady] = useState(false);
+  const [entryReady, setEntryReady] = useState(false);
+  const [entryPortal, setEntryPortal] = useState<EntryPortal>("student");
   const [themeSettings, setThemeSettings] = useState<ThemeSettings>(
     DEFAULT_THEME_SETTINGS,
   );
@@ -85,6 +90,19 @@ export default function App() {
   const [lastSubmission, setLastSubmission] = useState<EvaluationSubmission | null>(null);
   const [evaluationSaveError, setEvaluationSaveError] = useState("");
   const persistence = useEvaluationPersistence(user?.id);
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const requestedAccess = params.get("acesso");
+    const isProfessionalEntry =
+      requestedAccess === "avaliador" ||
+      (requestedAccess !== "aluno" && params.get("cadastro") === "1");
+    const timer = window.setTimeout(() => {
+      setEntryPortal(isProfessionalEntry ? "professional" : "student");
+      setEntryReady(true);
+    }, 0);
+    return () => window.clearTimeout(timer);
+  }, []);
 
   useEffect(() => {
     apiRequest<ThemeSettings>("/api/settings/theme")
@@ -145,6 +163,9 @@ export default function App() {
       .then(({ user: authenticatedUser }) => {
         setCachedAuthUser(authenticatedUser);
         setUser(authenticatedUser);
+        setEntryPortal(
+          authenticatedUser.context === "student" ? "student" : "professional",
+        );
       })
       .catch(() => {
         const cachedUser = getAuthToken()
@@ -163,6 +184,9 @@ export default function App() {
 
   useEffect(() => {
     const expire = () => {
+      const cachedUser = getCachedAuthUser<AuthUser>();
+      setEntryPortal(cachedUser?.context === "professional" ? "professional" : "student");
+      setCachedAuthUser(null);
       setUser(null);
       setView("home");
     };
@@ -185,7 +209,15 @@ export default function App() {
     window.scrollTo({ top: 0, behavior: "auto" });
   };
 
-  const logout = () => {
+  const selectEntryPortal = useCallback((portal: EntryPortal) => {
+    setEntryPortal(portal);
+    const url = portal === "professional"
+      ? `${window.location.pathname}?acesso=avaliador`
+      : window.location.pathname;
+    window.history.replaceState({}, "", url);
+  }, []);
+
+  const logoutTo = (targetPortal: EntryPortal) => {
     if (
       persistence.hasPendingData &&
       !window.confirm(
@@ -201,10 +233,13 @@ export default function App() {
     setAuthToken(null);
     setCachedAuthUser(null);
     setUser(null);
+    selectEntryPortal(targetPortal);
     setView("home");
     setMenuOpen(false);
     setProfileOpen(false);
   };
+
+  const logout = () => logoutTo(entryPortal);
 
   const queueLastSubmission = async (
     evaluation: EvaluationSubmission,
@@ -373,6 +408,9 @@ export default function App() {
   const authenticated = (authenticatedUser: AuthUser) => {
     setCachedAuthUser(authenticatedUser);
     setUser(authenticatedUser);
+    setEntryPortal(
+      authenticatedUser.context === "student" ? "student" : "professional",
+    );
   };
 
   const updateAuthenticatedUser = (authenticatedUser: AuthUser) => {
@@ -380,7 +418,7 @@ export default function App() {
     setUser(authenticatedUser);
   };
 
-  if (!authReady) {
+  if (!authReady || !entryReady) {
     return (
       <main className={`auth-screen auth-loading-screen${dark ? " dark" : ""}`}>
         <Brand />
@@ -391,7 +429,33 @@ export default function App() {
   }
 
   if (!user) {
-    return <AuthScreen dark={dark} setDark={setDark} onAuthenticated={authenticated} />;
+    return entryPortal === "student" ? (
+      <StudentAuthScreen
+        dark={dark}
+        setDark={setDark}
+        onAuthenticated={authenticated}
+        onUseProfessional={() => selectEntryPortal("professional")}
+      />
+    ) : (
+      <AuthScreen
+        dark={dark}
+        setDark={setDark}
+        onAuthenticated={authenticated}
+        onUseStudent={() => selectEntryPortal("student")}
+      />
+    );
+  }
+
+  if (user.context === "student") {
+    return (
+      <StudentPortal
+        user={user}
+        dark={dark}
+        setDark={setDark}
+        onLogout={() => logoutTo("student")}
+        onUseProfessional={() => logoutTo("professional")}
+      />
+    );
   }
 
   if (view === "admin") {
@@ -439,7 +503,6 @@ export default function App() {
         onRetrySync={() => void persistence.retrySync()}
       >
         {view === "home" && <HomeView navigate={navigate} />}
-        {view === "theory-links" && <TheoryLinksView onBack={() => navigate("home")} />}
         {view === "technical-setup" && (
           <TechnicalSetup
             onBack={() => navigate("home")}

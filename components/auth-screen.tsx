@@ -25,9 +25,10 @@ type AuthScreenProps = {
   dark: boolean;
   setDark: (value: boolean) => void;
   onAuthenticated: (user: AuthUser) => void;
+  onUseStudent: () => void;
 };
 
-export function AuthScreen({ dark, setDark, onAuthenticated }: AuthScreenProps) {
+export function AuthScreen({ dark, setDark, onAuthenticated, onUseStudent }: AuthScreenProps) {
   const [mode, setMode] = useState<"login" | "register">("login");
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -113,6 +114,7 @@ export function AuthScreen({ dark, setDark, onAuthenticated }: AuthScreenProps) 
       </section>
 
       <section className="auth-panel" aria-labelledby="auth-title">
+        <div className="auth-audience"><ShieldCheck size={17} /> Acesso da equipe</div>
         <div className="auth-mode" role="tablist" aria-label="Acesso à plataforma">
           <button role="tab" aria-selected={mode === "login"} className={mode === "login" ? "active" : ""} onClick={() => changeMode("login")}>Entrar</button>
           <button role="tab" aria-selected={mode === "register"} className={mode === "register" ? "active" : ""} onClick={() => changeMode("register")}>Criar conta</button>
@@ -120,7 +122,7 @@ export function AuthScreen({ dark, setDark, onAuthenticated }: AuthScreenProps) 
         <div className="auth-heading">
           <span className="auth-heading-icon">{mode === "login" ? <LockKeyhole size={22} /> : <UserRoundPlus size={22} />}</span>
           <div>
-            <h2 id="auth-title">{mode === "login" ? "Bem-vindo de volta" : "Ative seu acesso"}</h2>
+            <h2 id="auth-title">{mode === "login" ? "Acesso do avaliador" : "Ative seu acesso"}</h2>
             <p>{mode === "login" ? "Use o e-mail cadastrado na associação." : "Seu e-mail precisa ter sido liberado pelo Super Admin."}</p>
           </div>
         </div>
@@ -145,6 +147,9 @@ export function AuthScreen({ dark, setDark, onAuthenticated }: AuthScreenProps) 
           <button className="auth-submit" disabled={busy}>{busy ? "Aguarde…" : mode === "login" ? "Entrar na plataforma" : "Criar minha conta"}<ArrowRight size={19} /></button>
         </form>
         <p className="auth-help"><ShieldCheck size={17} /> {mode === "login" ? "Ainda não tem conta? Escolha “Criar conta” acima." : "E-mail não autorizado? Solicite a inclusão ao responsável pela associação."}</p>
+        <button className="auth-return-link" type="button" onClick={onUseStudent}>
+          Voltar para a entrada de alunos
+        </button>
       </section>
     </main>
   );
