@@ -229,6 +229,7 @@ export async function createEvaluation(
   request: Request,
   env: Env,
   user: AuthUser,
+  source: "direct" | "sync" = "direct",
 ) {
   const body: unknown = await request.json();
   if (!isEvaluation(body)) {
@@ -242,11 +243,19 @@ export async function createEvaluation(
 
   const id = body.id || crypto.randomUUID();
   const duplicate = await env.DB.prepare(
-    "SELECT * FROM evaluations WHERE id = ? AND evaluator_id = ?",
+    "SELECT * FROM evaluations WHERE id = ?",
   )
-    .bind(id, user.id)
+    .bind(id)
     .first<EvaluationRow>();
   if (duplicate) {
+    if (duplicate.evaluator_id !== user.id) {
+      return json(
+        request,
+        env,
+        { error: "Este identificador de avaliação já está em uso." },
+        409,
+      );
+    }
     const [items, categories] = await Promise.all([
       evaluationItems(env, duplicate.id),
       evaluationCategories(env, duplicate.id),
@@ -329,6 +338,22 @@ export async function createEvaluation(
       ),
     ),
     ...itemStatements,
+    env.DB.prepare(
+      "INSERT INTO audit_events (id, actor_user_id, action, entity_type, entity_id, request_id, metadata_json) VALUES (?, ?, ?, 'evaluation', ?, ?, ?)",
+    ).bind(
+      crypto.randomUUID(),
+      user.id,
+      source === "sync" ? "evaluation.synced" : "evaluation.created",
+      id,
+      request.headers.get("X-Request-Id") || crypto.randomUUID(),
+      JSON.stringify({
+        source,
+        studentId: student.id,
+        type: body.type,
+        categoryCount: body.categories?.length ?? 0,
+        itemCount: body.items?.length ?? 0,
+      }),
+    ),
   ];
   await env.DB.batch(statements);
   const [row, categories, items] = await Promise.all([

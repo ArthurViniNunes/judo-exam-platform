@@ -18,13 +18,16 @@ export function corsHeaders(request: Request, env: Env): HeadersInit {
         : null;
   const headers = new Headers({
     ...securityHeaders,
-    "Access-Control-Allow-Headers": "Content-Type, Authorization",
+    "Access-Control-Allow-Headers": "Content-Type, Authorization, X-Request-Id",
     "Access-Control-Allow-Methods": "GET,POST,PATCH,DELETE,OPTIONS",
+    "Access-Control-Expose-Headers": "X-Request-Id",
     "Access-Control-Max-Age": "86400",
     Vary: "Origin",
   });
 
   if (allowedOrigin) headers.set("Access-Control-Allow-Origin", allowedOrigin);
+  const requestId = request.headers.get("X-Request-Id");
+  if (requestId) headers.set("X-Request-Id", requestId);
   return headers;
 }
 

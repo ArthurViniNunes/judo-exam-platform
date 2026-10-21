@@ -105,6 +105,9 @@ async function handleAuthenticatedRoute(
   if (url.pathname === "/api/evaluations" && request.method === "POST") {
     return createEvaluation(request, env, user);
   }
+  if (url.pathname === "/api/evaluations/sync" && request.method === "POST") {
+    return createEvaluation(request, env, user, "sync");
+  }
   const evaluationMatch = url.pathname.match(/^\/api\/evaluations\/([^/]+)$/);
   if (evaluationMatch && request.method === "DELETE") {
     return deleteEvaluation(request, env, user, evaluationMatch[1]);
@@ -143,19 +146,25 @@ async function handle(request: Request, env: Env): Promise<Response> {
 
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
+    const headers = new Headers(request.headers);
+    if (!headers.has("X-Request-Id")) {
+      headers.set("X-Request-Id", crypto.randomUUID());
+    }
+    const identifiedRequest = new Request(request, { headers });
     try {
-      return await handle(request, env);
+      return await handle(identifiedRequest, env);
     } catch (error) {
       console.error(
         JSON.stringify({
           message: "request failed",
-          method: request.method,
-          path: new URL(request.url).pathname,
+          requestId: headers.get("X-Request-Id"),
+          method: identifiedRequest.method,
+          path: new URL(identifiedRequest.url).pathname,
           error: error instanceof Error ? error.message : String(error),
         }),
       );
       return json(
-        request,
+        identifiedRequest,
         env,
         { error: "O servidor não conseguiu concluir a operação." },
         500,
