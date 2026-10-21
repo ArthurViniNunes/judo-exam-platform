@@ -19,6 +19,18 @@ import { authenticate } from "./security";
 import { getThemeSettings, updateThemeSettings } from "./settings";
 import { loginStudent, registerStudent } from "./student-auth";
 import {
+  closeTheoryVersion,
+  createTheoryQuestion,
+  createTheoryVersion,
+  deleteTheoryQuestion,
+  deleteTheoryVersion,
+  getTheoryVersion,
+  listTheoryVersions,
+  publishTheoryVersion,
+  updateTheoryQuestion,
+  updateTheoryVersion,
+} from "./theory-admin";
+import {
   cancelInvitation,
   inviteUser,
   listUsers,
@@ -100,6 +112,52 @@ async function handleAuthenticatedRoute(
   if (url.pathname === "/api/settings/theme" && request.method === "PATCH") {
     const denied = requireSuperAdmin(request, env, user);
     return denied || updateThemeSettings(request, env);
+  }
+  if (url.pathname === "/api/theory/admin/versions") {
+    const denied = requireSuperAdmin(request, env, user);
+    if (denied) return denied;
+    if (request.method === "GET") return listTheoryVersions(request, env);
+    if (request.method === "POST") return createTheoryVersion(request, env, user);
+  }
+  const theoryPublishMatch = url.pathname.match(
+    /^\/api\/theory\/admin\/versions\/([^/]+)\/publish$/,
+  );
+  if (theoryPublishMatch && request.method === "POST") {
+    const denied = requireSuperAdmin(request, env, user);
+    return denied || publishTheoryVersion(request, env, user, theoryPublishMatch[1]);
+  }
+  const theoryCloseMatch = url.pathname.match(
+    /^\/api\/theory\/admin\/versions\/([^/]+)\/close$/,
+  );
+  if (theoryCloseMatch && request.method === "POST") {
+    const denied = requireSuperAdmin(request, env, user);
+    return denied || closeTheoryVersion(request, env, user, theoryCloseMatch[1]);
+  }
+  const theoryQuestionsMatch = url.pathname.match(
+    /^\/api\/theory\/admin\/versions\/([^/]+)\/questions$/,
+  );
+  if (theoryQuestionsMatch && request.method === "POST") {
+    const denied = requireSuperAdmin(request, env, user);
+    return denied || createTheoryQuestion(request, env, user, theoryQuestionsMatch[1]);
+  }
+  const theoryVersionMatch = url.pathname.match(
+    /^\/api\/theory\/admin\/versions\/([^/]+)$/,
+  );
+  if (theoryVersionMatch) {
+    const denied = requireSuperAdmin(request, env, user);
+    if (denied) return denied;
+    if (request.method === "GET") return getTheoryVersion(request, env, theoryVersionMatch[1]);
+    if (request.method === "PATCH") return updateTheoryVersion(request, env, user, theoryVersionMatch[1]);
+    if (request.method === "DELETE") return deleteTheoryVersion(request, env, user, theoryVersionMatch[1]);
+  }
+  const theoryQuestionMatch = url.pathname.match(
+    /^\/api\/theory\/admin\/questions\/([^/]+)$/,
+  );
+  if (theoryQuestionMatch) {
+    const denied = requireSuperAdmin(request, env, user);
+    if (denied) return denied;
+    if (request.method === "PATCH") return updateTheoryQuestion(request, env, user, theoryQuestionMatch[1]);
+    if (request.method === "DELETE") return deleteTheoryQuestion(request, env, user, theoryQuestionMatch[1]);
   }
   if (url.pathname === "/api/dashboard" && request.method === "GET") {
     return getDashboard(request, env, user, url);

@@ -332,6 +332,12 @@ Todas as rotas abaixo, exceto `/`, `/health`, login/registro e a leitura públic
 | `POST` | `/api/auth/logout` | autenticado | Encerra a sessão atual |
 | `GET` | `/api/settings/theme` | público | Retorna as cores globais da aplicação |
 | `PATCH` | `/api/settings/theme` | Super Admin | Valida e atualiza as cores globais |
+| `GET/POST` | `/api/theory/admin/versions` | Super Admin | Lista ou cria versões teóricas em rascunho |
+| `GET/PATCH/DELETE` | `/api/theory/admin/versions/:id` | Super Admin | Consulta, configura ou exclui um rascunho |
+| `POST` | `/api/theory/admin/versions/:id/questions` | Super Admin | Adiciona uma questão ao rascunho |
+| `PATCH/DELETE` | `/api/theory/admin/questions/:id` | Super Admin | Edita ou remove uma questão do rascunho |
+| `POST` | `/api/theory/admin/versions/:id/publish` | Super Admin | Valida e congela uma versão oficial |
+| `POST` | `/api/theory/admin/versions/:id/close` | Super Admin | Encerra uma versão publicada |
 | `GET` | `/api/dashboard` | autenticado | Retorna indicadores e registros recentes |
 | `GET` | `/api/students` | autenticado | Lista alunos e seus históricos |
 | `GET` | `/api/students/available` | autenticado | Lista o catálogo global para iniciar exames |
@@ -355,7 +361,7 @@ corepack pnpm backend:migrate:local
 corepack pnpm backend:migrate:remote
 ```
 
-O schema ativo cobre usuários e suas graduações, sessões, alunos, avaliações, médias por categoria, notas por técnica, execuções múltiplas, auditoria e as cores globais da interface. Tabelas históricas de questões e matrizes permanecem nas migrações já aplicadas para evitar uma operação destrutiva, mas não possuem rotas ou interfaces ativas. O estado local fica em `.wrangler/state` e não deve ser commitado.
+O schema ativo cobre usuários e suas graduações, sessões, alunos, avaliações, médias por categoria, notas por técnica, execuções múltiplas, auditoria, cores globais e provas teóricas versionadas. Tabelas históricas de questões e matrizes permanecem nas migrações já aplicadas para evitar uma operação destrutiva, mas não são reutilizadas pelo fluxo novo. O estado local fica em `.wrangler/state` e não deve ser commitado.
 
 ## Uso com conexão instável
 

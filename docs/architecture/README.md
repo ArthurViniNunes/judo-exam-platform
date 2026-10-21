@@ -64,6 +64,8 @@ backend/src/                 módulos do Worker
   index.ts                   composição e roteamento HTTP
   auth.ts                    casos de uso de autenticação e perfil
   student-auth.ts            cadastro e autenticação no contexto de aluno
+  theory-admin.ts            versões, questões e publicação da prova teórica
+  theory-domain.ts           validação pura do conteúdo teórico
   security.ts                senha, sessão e autenticação da requisição
   evaluations.ts             consultas e escrita de avaliações
   users.ts                   equipe e convites
