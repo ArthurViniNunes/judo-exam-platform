@@ -47,6 +47,13 @@ export function activeRoleForContext(
   return roles.includes("evaluator") ? "evaluator" : null;
 }
 
+export function rolesFromCsv(value: string | null | undefined): Role[] {
+  return (value?.split(",") ?? []).filter(
+    (role): role is Role =>
+      role === "super_admin" || role === "evaluator" || role === "student",
+  );
+}
+
 export function canDeleteEvaluation(user: AuthUser, row: EvaluationRow) {
   return user.role === "super_admin" || row.evaluator_id === user.id;
 }

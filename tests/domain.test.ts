@@ -9,6 +9,7 @@ import {
   isValidEmail,
   normalizeEmail,
   normalizeName,
+  rolesFromCsv,
   studentsFromRows,
   studentsFromCatalog,
 } from "../backend/src/domain";
@@ -52,6 +53,14 @@ describe("contexto de autenticação", () => {
   it("não transforma a rota escolhida em permissão", () => {
     expect(activeRoleForContext(["student"], "professional")).toBeNull();
     expect(activeRoleForContext(["evaluator"], "student")).toBeNull();
+  });
+
+  it("descarta papéis desconhecidos vindos do banco", () => {
+    expect(rolesFromCsv("student,evaluator,invalid")).toEqual([
+      "student",
+      "evaluator",
+    ]);
+    expect(rolesFromCsv(null)).toEqual([]);
   });
 });
 

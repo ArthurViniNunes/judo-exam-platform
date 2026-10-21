@@ -1,5 +1,10 @@
 import type { AuthUser, Role, UserStatus } from "./contracts";
-import { activeRoleForContext, normalizeEmail, publicUser } from "./domain";
+import {
+  activeRoleForContext,
+  normalizeEmail,
+  publicUser,
+  rolesFromCsv,
+} from "./domain";
 import { empty, json } from "./http";
 import {
   createSession,
@@ -34,10 +39,7 @@ export async function login(request: Request, env: Env) {
       }
     >();
 
-  const roles = (user?.active_roles?.split(",") ?? []).filter(
-    (role): role is Role =>
-      role === "super_admin" || role === "evaluator" || role === "student",
-  );
+  const roles = rolesFromCsv(user?.active_roles);
   const role = activeRoleForContext(roles, "professional");
   if (!user?.password_hash || !user.password_salt || user.status !== "active" || !role) {
     return json(request, env, { error: "E-mail ou senha inválidos." }, 401);

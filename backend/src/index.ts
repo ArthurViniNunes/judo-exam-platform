@@ -17,6 +17,7 @@ import {
 } from "./http";
 import { authenticate } from "./security";
 import { getThemeSettings, updateThemeSettings } from "./settings";
+import { loginStudent, registerStudent } from "./student-auth";
 import {
   cancelInvitation,
   inviteUser,
@@ -57,6 +58,12 @@ async function handlePublicRoute(
   }
   if (url.pathname === "/api/auth/register" && request.method === "POST") {
     return register(request, env);
+  }
+  if (url.pathname === "/api/student-auth/login" && request.method === "POST") {
+    return loginStudent(request, env);
+  }
+  if (url.pathname === "/api/student-auth/register" && request.method === "POST") {
+    return registerStudent(request, env);
   }
   if (url.pathname === "/api/settings/theme" && request.method === "GET") {
     return getThemeSettings(request, env);

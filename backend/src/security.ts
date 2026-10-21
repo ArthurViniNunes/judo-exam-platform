@@ -1,5 +1,5 @@
-import type { AuthUser, Role, SessionContext, UserStatus } from "./contracts";
-import { activeRoleForContext, normalizeEmail } from "./domain";
+import type { AuthUser, SessionContext, UserStatus } from "./contracts";
+import { activeRoleForContext, normalizeEmail, rolesFromCsv } from "./domain";
 
 const encoder = new TextEncoder();
 const sessionDurationMs = 7 * 24 * 60 * 60 * 1000;
@@ -154,10 +154,7 @@ export async function authenticate(
     }>();
   if (!row) return null;
 
-  const roles = (row.active_roles?.split(",") ?? []).filter(
-    (role): role is Role =>
-      role === "super_admin" || role === "evaluator" || role === "student",
-  );
+  const roles = rolesFromCsv(row.active_roles);
   const role = activeRoleForContext(roles, row.context);
   if (!role) return null;
   return { ...row, role, roles };
