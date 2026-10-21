@@ -3,7 +3,8 @@
 Este documento apresenta a visão técnica atual do sistema. As decisões que
 explicam por que a arquitetura chegou a este formato estão no
 [índice de ADRs](adr/README.md); os procedimentos operacionais ficam no
-[runbook](../operations/runbook.md).
+[runbook](../operations/runbook.md). A próxima evolução está documentada como
+[proposta de produto](../product/evolution-plan.md) e ainda depende de aprovação.
 
 ## Objetivos arquiteturais
 
@@ -90,7 +91,7 @@ sequenceDiagram
   D-->>UI: Nota, categorias e resultado
   UI->>API: POST /api/evaluations
   API->>API: Autentica, valida e associa avaliador
-  API->>DB: Cria/associa aluno e grava avaliação
+  API->>DB: Grava cabeçalho, categorias, técnicas e execuções em um lote atômico
   DB-->>API: Registro persistido
   API-->>UI: 201 + avaliação
 ```
@@ -102,6 +103,9 @@ erDiagram
   USERS ||--o{ SESSIONS : possui
   USERS ||--o{ EVALUATIONS : aplica
   STUDENTS ||--o{ EVALUATIONS : recebe
+  EVALUATIONS ||--o{ EVALUATION_CATEGORIES : resume
+  EVALUATIONS ||--o{ EVALUATION_ITEMS : detalha
+  EVALUATION_ITEMS ||--o{ EVALUATION_ITEM_PARTS : divide
 
   USERS {
     text id PK
@@ -116,11 +120,32 @@ erDiagram
     text type
     integer score
   }
+  EVALUATION_CATEGORIES {
+    text evaluation_id FK
+    text name
+    real score
+    integer position
+  }
+  EVALUATION_ITEMS {
+    text evaluation_id FK
+    text category
+    text name
+    real score
+    integer position
+  }
+  EVALUATION_ITEM_PARTS {
+    text evaluation_item_id FK
+    text name
+    real score
+    integer position
+  }
 ```
 
 ## Invariantes
 
 - o backend deriva o avaliador da sessão; o cliente não escolhe a autoria;
+- a graduação do avaliador é definida pelo Super Admin e não se confunde com a
+  graduação pretendida do judoca;
 - um avaliador comum só consulta as próprias avaliações;
 - apenas o Super Admin convida e gerencia usuários;
 - IDs de avaliações são idempotentes por avaliador;
@@ -129,7 +154,8 @@ erDiagram
 - erro grave de kata divide a nota geral por dois uma única vez;
 - seleções automáticas não repetem uma técnica fixa na mesma categoria;
 - o catálogo de técnicas e as regras de aprovação não são configuráveis pela interface;
-- sequências de Renraku-Henka usam a média das avaliações de seus movimentos.
+- sequências de Renraku-Henka recebem uma única nota; apenas itens que pedem
+  explicitamente múltiplas execuções guardam as notas das partes e sua média.
 
 ## Qualidade e observabilidade
 

@@ -10,7 +10,7 @@ Aplicação web da Associação Judô Rogério Cruz para aplicar, registrar e ac
 - trata cada sequência de `Renraku-Henka Waza` como um único movimento e cria avaliações adicionais somente quando o item pede explicitamente duas ou mais execuções;
 - oferece vídeos de apoio do YouTube com reprodução iniciada ao abrir a referência;
 - aplica `Nage-no-Kata` parcial ou completo e `Katame-no-Kata`;
-- registra notas, observações, modalidade, graduação e avaliador;
+- registra a nota final, a média de cada categoria, cada técnica, eventuais execuções múltiplas, observações, graduação, data e avaliador;
 - mostra histórico, média e evolução por aluno;
 - oferece um painel com volume de avaliações, médias, aprovação e registros recentes;
 - permite que o Super Admin escolha, com modelos prontos ou seletores de cor, a identidade visual global dos temas claro e escuro;
@@ -262,7 +262,7 @@ No celular, conectado à mesma rede Wi-Fi, abra `http://192.168.0.50:3000`, subs
 ## Fluxo de acesso
 
 1. O Super Admin entra com a conta inicial.
-2. Em **Equipe**, autoriza o e-mail do avaliador.
+2. Em **Equipe**, informa nome, e-mail e graduação do avaliador para autorizar o acesso.
 3. O avaliador seleciona **Criar conta**, informa nome, e-mail autorizado e uma senha com pelo menos 10 caracteres, uma letra e um número.
 4. Em **Administração → Alunos**, qualquer usuário autenticado pode cadastrar previamente um judoca no catálogo global.
 5. Ao iniciar uma avaliação técnica ou de kata, o avaliador escolhe qualquer judoca cadastrado; não existe entrada manual de nome no exame.
@@ -346,7 +346,7 @@ corepack pnpm backend:migrate:local
 corepack pnpm backend:migrate:remote
 ```
 
-O schema ativo cobre usuários, sessões, alunos, avaliações e as cores globais da interface. Tabelas históricas de questões e matrizes permanecem nas migrações já aplicadas para evitar uma operação destrutiva, mas não possuem rotas ou interfaces ativas. O estado local fica em `.wrangler/state` e não deve ser commitado.
+O schema ativo cobre usuários e suas graduações, sessões, alunos, avaliações, médias por categoria, notas por técnica, execuções múltiplas e as cores globais da interface. Tabelas históricas de questões e matrizes permanecem nas migrações já aplicadas para evitar uma operação destrutiva, mas não possuem rotas ou interfaces ativas. O estado local fica em `.wrangler/state` e não deve ser commitado.
 
 ## Build e validação
 
@@ -435,6 +435,7 @@ tentaria usar `npx wrangler deploy` sem escolher entre
 
 ## Documentação técnica
 
+- [Plano de evolução proposto](docs/product/evolution-plan.md): fases, critérios de aceite, UX, dados, APIs e decisões pendentes;
 - [Visão de arquitetura](docs/architecture/README.md): limites, diagramas, fluxos e invariantes;
 - [ADRs](docs/architecture/adr/README.md): decisões, alternativas e consequências;
 - [Runbook](docs/operations/runbook.md): checklist de exame, diagnóstico e rollback;
@@ -463,7 +464,7 @@ backend/migrations/           Migrações do D1
 tests/                        Regressões das regras de negócio
 scripts/dev-all.mjs           Inicialização local dos dois serviços
 scripts/serve-static.mjs      Servidor local do build estático
-docs/                         Arquitetura, ADRs e operação
+docs/                         Produto, arquitetura, ADRs e operação
 ```
 
 ## Segurança e limitações conhecidas
