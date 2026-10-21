@@ -1,4 +1,6 @@
-export type Role = "super_admin" | "evaluator";
+export type Role = "super_admin" | "evaluator" | "student";
+export type ProfessionalRole = Exclude<Role, "student">;
+export type SessionContext = "professional" | "student";
 export type UserStatus = "invited" | "active" | "disabled";
 export type EvaluationType = "teórica" | "técnica" | "kata";
 export type AuthUser = {
@@ -7,6 +9,9 @@ export type AuthUser = {
   name: string;
   evaluator_rank: string | null;
   role: Role;
+  roles: Role[];
+  context: SessionContext;
+  student_id: string | null;
   status: UserStatus;
 };
 

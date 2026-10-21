@@ -1,5 +1,5 @@
-import type { AuthUser, Role } from "./contracts";
-import { normalizeEmail, publicUser } from "./domain";
+import type { AuthUser, Role, UserStatus } from "./contracts";
+import { activeRoleForContext, normalizeEmail, publicUser } from "./domain";
 import { empty, json } from "./http";
 import {
   createSession,
@@ -14,14 +14,32 @@ export async function login(request: Request, env: Env) {
   await ensureSuperAdmin(env);
   const body = await request.json<{ email?: string; password?: string }>();
   const user = await env.DB.prepare(
-    "SELECT id, email, name, evaluator_rank, role, status, password_hash, password_salt FROM users WHERE email = ?",
+    `SELECT users.id, users.email, users.name, users.evaluator_rank,
+            users.status, users.password_hash, users.password_salt,
+            students.id AS student_id,
+            (SELECT GROUP_CONCAT(user_roles.role)
+             FROM user_roles
+             WHERE user_roles.user_id = users.id
+               AND user_roles.status = 'active') AS active_roles
+       FROM users
+       LEFT JOIN students ON students.user_id = users.id
+      WHERE users.email = ?`,
   )
     .bind(normalizeEmail(body.email || ""))
     .first<
-      AuthUser & { password_hash: string | null; password_salt: string | null }
+      Omit<AuthUser, "role" | "roles" | "context"> & {
+        password_hash: string | null;
+        password_salt: string | null;
+        active_roles: string | null;
+      }
     >();
 
-  if (!user?.password_hash || !user.password_salt || user.status !== "active") {
+  const roles = (user?.active_roles?.split(",") ?? []).filter(
+    (role): role is Role =>
+      role === "super_admin" || role === "evaluator" || role === "student",
+  );
+  const role = activeRoleForContext(roles, "professional");
+  if (!user?.password_hash || !user.password_salt || user.status !== "active" || !role) {
     return json(request, env, { error: "E-mail ou senha inválidos." }, 401);
   }
 
@@ -30,14 +48,20 @@ export async function login(request: Request, env: Env) {
     return json(request, env, { error: "E-mail ou senha inválidos." }, 401);
   }
 
-  const session = await createSession(env, user.id);
+  const authenticatedUser: AuthUser = {
+    ...user,
+    role,
+    roles,
+    context: "professional",
+  };
+  const session = await createSession(env, user.id, "professional");
   await env.DB.prepare(
     "UPDATE users SET last_login_at = CURRENT_TIMESTAMP WHERE id = ?",
   )
     .bind(user.id)
     .run();
 
-  return json(request, env, { ...session, user: publicUser(user) });
+  return json(request, env, { ...session, user: publicUser(authenticatedUser) });
 }
 
 export async function register(request: Request, env: Env) {
@@ -68,15 +92,21 @@ export async function register(request: Request, env: Env) {
   }
 
   const invited = await env.DB.prepare(
-    "SELECT id, email, evaluator_rank, role, status, password_hash FROM users WHERE email = ?",
+    `SELECT users.id, users.email, users.evaluator_rank, users.status,
+            users.password_hash, user_roles.role, user_roles.status AS role_status
+       FROM users
+       JOIN user_roles ON user_roles.user_id = users.id
+        AND user_roles.role = 'evaluator'
+      WHERE users.email = ?`,
   )
     .bind(email)
     .first<{
       id: string;
       email: string;
       evaluator_rank: string | null;
-      role: Role;
-      status: AuthUser["status"];
+      role: "evaluator";
+      status: UserStatus;
+      role_status: UserStatus;
       password_hash: string | null;
     }>();
 
@@ -91,7 +121,7 @@ export async function register(request: Request, env: Env) {
       403,
     );
   }
-  if (invited.status === "disabled") {
+  if (invited.status === "disabled" || invited.role_status === "disabled") {
     return json(
       request,
       env,
@@ -109,13 +139,22 @@ export async function register(request: Request, env: Env) {
   }
 
   const credentials = await derivePassword(password);
-  await env.DB.prepare(
-    "UPDATE users SET name = ?, password_hash = ?, password_salt = ?, status = 'active', last_login_at = CURRENT_TIMESTAMP WHERE id = ?",
-  )
-    .bind(name, credentials.hash, credentials.salt, invited.id)
-    .run();
+  await env.DB.batch([
+    env.DB.prepare(
+      "UPDATE users SET name = ?, password_hash = ?, password_salt = ?, status = 'active', last_login_at = CURRENT_TIMESTAMP WHERE id = ?",
+    ).bind(name, credentials.hash, credentials.salt, invited.id),
+    env.DB.prepare(
+      "UPDATE user_roles SET status = 'active', updated_at = CURRENT_TIMESTAMP WHERE user_id = ? AND role = 'evaluator'",
+    ).bind(invited.id),
+  ]);
 
-  const session = await createSession(env, invited.id);
+  const activeRoles = await env.DB.prepare(
+    "SELECT role FROM user_roles WHERE user_id = ? AND status = 'active' ORDER BY role",
+  )
+    .bind(invited.id)
+    .all<{ role: Role }>();
+  const roles = activeRoles.results.map((entry) => entry.role);
+  const session = await createSession(env, invited.id, "professional");
   return json(
     request,
     env,
@@ -126,7 +165,10 @@ export async function register(request: Request, env: Env) {
         email,
         name,
         evaluatorRank: invited.evaluator_rank,
-        role: invited.role,
+        role: activeRoleForContext(roles, "professional") ?? "evaluator",
+        roles,
+        context: "professional",
+        studentId: null,
       },
     },
     201,

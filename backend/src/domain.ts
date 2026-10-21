@@ -4,6 +4,8 @@ import type {
   EvaluationRow,
   EvaluationType,
   StudentRow,
+  Role,
+  SessionContext,
 } from "./contracts";
 
 export function normalizeEmail(value: string) {
@@ -30,7 +32,19 @@ export function publicUser(user: AuthUser) {
     name: user.name,
     evaluatorRank: user.evaluator_rank,
     role: user.role,
+    roles: user.roles,
+    context: user.context,
+    studentId: user.student_id,
   };
+}
+
+export function activeRoleForContext(
+  roles: Role[],
+  context: SessionContext,
+): Role | null {
+  if (context === "student") return roles.includes("student") ? "student" : null;
+  if (roles.includes("super_admin")) return "super_admin";
+  return roles.includes("evaluator") ? "evaluator" : null;
 }
 
 export function canDeleteEvaluation(user: AuthUser, row: EvaluationRow) {

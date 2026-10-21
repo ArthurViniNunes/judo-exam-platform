@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { EvaluationRow, StudentRow } from "../backend/src/contracts";
 import {
+  activeRoleForContext,
   dashboardFromRows,
   canDeleteEvaluation,
   formatEvaluation,
@@ -31,6 +32,28 @@ import {
 } from "../lib/practical-exams";
 import { calculatePracticalResult } from "../lib/practical-scoring";
 import { EVALUATOR_RANKS, isEvaluatorRank } from "../lib/judo-ranks";
+
+describe("contexto de autenticação", () => {
+  it("seleciona o papel permitido para cada porta de entrada", () => {
+    expect(activeRoleForContext(["student", "evaluator"], "student")).toBe(
+      "student",
+    );
+    expect(
+      activeRoleForContext(["student", "evaluator"], "professional"),
+    ).toBe("evaluator");
+    expect(
+      activeRoleForContext(
+        ["student", "evaluator", "super_admin"],
+        "professional",
+      ),
+    ).toBe("super_admin");
+  });
+
+  it("não transforma a rota escolhida em permissão", () => {
+    expect(activeRoleForContext(["student"], "professional")).toBeNull();
+    expect(activeRoleForContext(["evaluator"], "student")).toBeNull();
+  });
+});
 
 function evaluation(overrides: Partial<EvaluationRow> = {}): EvaluationRow {
   return {
@@ -228,6 +251,9 @@ describe("domínio administrativo", () => {
       name: "Avaliador",
       evaluator_rank: "Faixa preta — 1º dan",
       role: "evaluator" as const,
+      roles: ["evaluator" as const],
+      context: "professional" as const,
+      student_id: null,
       status: "active" as const,
     };
 

@@ -58,3 +58,18 @@ export function requireSuperAdmin(
         403,
       );
 }
+
+export function requireProfessionalContext(
+  request: Request,
+  env: Env,
+  user: AuthUser,
+): Response | null {
+  return user.context === "professional"
+    ? null
+    : json(
+        request,
+        env,
+        { error: "Entre pelo acesso de avaliadores para realizar esta ação." },
+        403,
+      );
+}

@@ -1,4 +1,6 @@
-export type UserRole = "super_admin" | "evaluator";
+export type UserRole = "super_admin" | "evaluator" | "student";
+export type ProfessionalRole = Exclude<UserRole, "student">;
+export type SessionContext = "professional" | "student";
 
 export type AuthUser = {
   id: string;
@@ -6,6 +8,9 @@ export type AuthUser = {
   name: string;
   evaluatorRank: string | null;
   role: UserRole;
+  roles: UserRole[];
+  context: SessionContext;
+  studentId: string | null;
 };
 
 export type EvaluationRecord = {
@@ -96,7 +101,7 @@ export type ManagedUser = {
   email: string;
   name: string;
   evaluator_rank: string | null;
-  role: UserRole;
+  role: ProfessionalRole;
   status: "invited" | "active" | "disabled";
   created_at: string;
   last_login_at: string | null;

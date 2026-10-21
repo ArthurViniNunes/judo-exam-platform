@@ -9,7 +9,12 @@ import {
   listEvaluations,
   listStudents,
 } from "./evaluations";
-import { corsHeaders, json, requireSuperAdmin } from "./http";
+import {
+  corsHeaders,
+  json,
+  requireProfessionalContext,
+  requireSuperAdmin,
+} from "./http";
 import { authenticate } from "./security";
 import { getThemeSettings, updateThemeSettings } from "./settings";
 import {
@@ -83,6 +88,8 @@ async function handleAuthenticatedRoute(
   if (url.pathname === "/api/auth/logout" && request.method === "POST") {
     return logout(request, env);
   }
+  const professionalOnly = requireProfessionalContext(request, env, user);
+  if (professionalOnly) return professionalOnly;
   if (url.pathname === "/api/settings/theme" && request.method === "PATCH") {
     const denied = requireSuperAdmin(request, env, user);
     return denied || updateThemeSettings(request, env);

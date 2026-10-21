@@ -1,5 +1,5 @@
-import type { AuthUser } from "./contracts";
-import { normalizeEmail } from "./domain";
+import type { AuthUser, Role, SessionContext, UserStatus } from "./contracts";
+import { activeRoleForContext, normalizeEmail } from "./domain";
 
 const encoder = new TextEncoder();
 const sessionDurationMs = 7 * 24 * 60 * 60 * 1000;
@@ -65,39 +65,54 @@ export async function ensureSuperAdmin(env: Env) {
   )
     .bind(email)
     .first<{ id: string; password_hash: string | null }>();
-  if (existing?.password_hash) return;
-
-  const credentials = await derivePassword(password);
-  if (existing) {
-    await env.DB.prepare(
-      "UPDATE users SET password_hash = ?, password_salt = ?, role = 'super_admin', status = 'active' WHERE id = ?",
-    )
-      .bind(credentials.hash, credentials.salt, existing.id)
-      .run();
+  if (existing?.password_hash) {
+    await env.DB.batch([
+      env.DB.prepare(
+        "UPDATE users SET role = 'super_admin', status = 'active' WHERE id = ?",
+      ).bind(existing.id),
+      env.DB.prepare(
+        "INSERT INTO user_roles (user_id, role, status, updated_at) VALUES (?, 'super_admin', 'active', CURRENT_TIMESTAMP) ON CONFLICT(user_id, role) DO UPDATE SET status = 'active', updated_at = CURRENT_TIMESTAMP",
+      ).bind(existing.id),
+    ]);
     return;
   }
 
-  await env.DB.prepare(
-    "INSERT INTO users (id, email, name, password_hash, password_salt, role, status) VALUES (?, ?, ?, ?, ?, 'super_admin', 'active')",
-  )
-    .bind(
-      crypto.randomUUID(),
-      email,
-      "Super Admin",
-      credentials.hash,
-      credentials.salt,
-    )
-    .run();
+  const credentials = await derivePassword(password);
+  if (existing) {
+    await env.DB.batch([
+      env.DB.prepare(
+        "UPDATE users SET password_hash = ?, password_salt = ?, role = 'super_admin', status = 'active' WHERE id = ?",
+      ).bind(credentials.hash, credentials.salt, existing.id),
+      env.DB.prepare(
+        "INSERT INTO user_roles (user_id, role, status, updated_at) VALUES (?, 'super_admin', 'active', CURRENT_TIMESTAMP) ON CONFLICT(user_id, role) DO UPDATE SET status = 'active', updated_at = CURRENT_TIMESTAMP",
+      ).bind(existing.id),
+    ]);
+    return;
+  }
+
+  const userId = crypto.randomUUID();
+  await env.DB.batch([
+    env.DB.prepare(
+      "INSERT INTO users (id, email, name, password_hash, password_salt, role, status) VALUES (?, ?, ?, ?, ?, 'super_admin', 'active')",
+    ).bind(userId, email, "Super Admin", credentials.hash, credentials.salt),
+    env.DB.prepare(
+      "INSERT INTO user_roles (user_id, role, status) VALUES (?, 'super_admin', 'active')",
+    ).bind(userId),
+  ]);
 }
 
-export async function createSession(env: Env, userId: string) {
+export async function createSession(
+  env: Env,
+  userId: string,
+  context: SessionContext,
+) {
   const token = randomHex();
   const tokenHash = await sha256(token);
   const expiresAt = new Date(Date.now() + sessionDurationMs).toISOString();
   await env.DB.prepare(
-    "INSERT INTO sessions (token_hash, user_id, expires_at) VALUES (?, ?, ?)",
+    "INSERT INTO sessions (token_hash, user_id, expires_at, context) VALUES (?, ?, ?, ?)",
   )
-    .bind(tokenHash, userId, expiresAt)
+    .bind(tokenHash, userId, expiresAt, context)
     .run();
   return { token, expiresAt };
 }
@@ -112,11 +127,40 @@ export async function authenticate(
     : "";
   if (!token) return null;
 
-  return env.DB.prepare(
-    "SELECT users.id, users.email, users.name, users.evaluator_rank, users.role, users.status FROM sessions JOIN users ON users.id = sessions.user_id WHERE sessions.token_hash = ? AND sessions.expires_at > ? AND users.status = 'active'",
+  const row = await env.DB.prepare(
+    `SELECT users.id, users.email, users.name, users.evaluator_rank,
+            users.status, sessions.context, students.id AS student_id,
+            (SELECT GROUP_CONCAT(user_roles.role)
+             FROM user_roles
+             WHERE user_roles.user_id = users.id
+               AND user_roles.status = 'active') AS active_roles
+       FROM sessions
+       JOIN users ON users.id = sessions.user_id
+       LEFT JOIN students ON students.user_id = users.id
+      WHERE sessions.token_hash = ?
+        AND sessions.expires_at > ?
+        AND users.status = 'active'`,
   )
     .bind(await sha256(token), new Date().toISOString())
-    .first<AuthUser>();
+    .first<{
+      id: string;
+      email: string;
+      name: string;
+      evaluator_rank: string | null;
+      status: UserStatus;
+      context: SessionContext;
+      student_id: string | null;
+      active_roles: string | null;
+    }>();
+  if (!row) return null;
+
+  const roles = (row.active_roles?.split(",") ?? []).filter(
+    (role): role is Role =>
+      role === "super_admin" || role === "evaluator" || role === "student",
+  );
+  const role = activeRoleForContext(roles, row.context);
+  if (!role) return null;
+  return { ...row, role, roles };
 }
 
 export async function revokeSession(request: Request, env: Env) {
