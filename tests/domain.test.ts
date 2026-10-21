@@ -33,6 +33,11 @@ import {
 } from "../lib/practical-exams";
 import { calculatePracticalResult } from "../lib/practical-scoring";
 import { EVALUATOR_RANKS, isEvaluatorRank } from "../lib/judo-ranks";
+import {
+  validateTheoryPublication,
+  validateTheoryQuestionInput,
+  validateTheoryVersionInput,
+} from "../backend/src/theory-domain";
 
 describe("contexto de autenticação", () => {
   it("seleciona o papel permitido para cada porta de entrada", () => {
@@ -61,6 +66,79 @@ describe("contexto de autenticação", () => {
       "evaluator",
     ]);
     expect(rolesFromCsv(null)).toEqual([]);
+  });
+});
+
+describe("provas teóricas versionadas", () => {
+  it("normaliza uma versão sem inventar regras ainda não configuradas", () => {
+    expect(
+      validateTheoryVersionInput({
+        beltId: "yellow",
+        minimumScore: null,
+        questionOrder: null,
+      }),
+    ).toMatchObject({
+      beltId: "yellow",
+      beltName: "Faixa amarela — 5º Kyu",
+      minimumScore: null,
+      questionOrder: null,
+    });
+  });
+
+  it("aceita questão completa com uma única alternativa correta", () => {
+    expect(
+      validateTheoryQuestionInput({
+        category: "História",
+        prompt: "Quem fundou o Judô?",
+        points: 10,
+        explanation: "A resposta será explicada após a entrega.",
+        options: [
+          { text: "Jigoro Kano", isCorrect: true },
+          { text: "Outra pessoa", isCorrect: false },
+        ],
+        media: null,
+      }),
+    ).toMatchObject({ category: "História", points: 10 });
+  });
+
+  it("recusa YouTube quando o metadado pode revelar a resposta", () => {
+    expect(
+      validateTheoryQuestionInput({
+        category: "Técnicas",
+        prompt: "Qual técnica aparece na mídia?",
+        points: 10,
+        explanation: "Explicação futura.",
+        options: [
+          { text: "Opção A", isCorrect: true },
+          { text: "Opção B", isCorrect: false },
+        ],
+        media: {
+          kind: "youtube",
+          sourceUrl: "https://www.youtube.com/watch?v=abc",
+          altText: "Mídia da questão",
+          metadataSensitive: true,
+        },
+      }),
+    ).toMatch(/não podem ser usados/);
+  });
+
+  it("bloqueia publicação incompleta e identifica a questão", () => {
+    expect(
+      validateTheoryPublication(
+        { minimumScore: null, questionOrder: null },
+        [{
+          explanation: "",
+          optionCount: 2,
+          correctOptionCount: 1,
+          mediaKind: null,
+          metadataSensitive: false,
+        }],
+      ),
+    ).toEqual([
+      "Defina a nota mínima.",
+      "Defina a ordem das questões.",
+      "Questão 1: informe a explicação do gabarito.",
+    ]);
   });
 });
 
