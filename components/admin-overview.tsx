@@ -18,6 +18,7 @@ import {
 } from "lucide-react";
 import { useState } from "react";
 import { apiRequest } from "@/lib/api";
+import { EvaluationReport } from "@/components/evaluation-report";
 import {
   EmptyState,
   formatDate,
@@ -29,20 +30,9 @@ import {
 import type {
   AuthUser,
   DashboardData,
-  EvaluationItemRecord,
   ManagedUser,
   StudentRecord,
 } from "@/lib/platform";
-
-function groupItems(items: EvaluationItemRecord[]) {
-  const groups = new Map<string, EvaluationItemRecord[]>();
-  for (const item of items) {
-    const entries = groups.get(item.category) ?? [];
-    entries.push(item);
-    groups.set(item.category, entries);
-  }
-  return Array.from(groups, ([category, entries]) => ({ category, entries }));
-}
 
 type OverviewProps = {
   data: DashboardData;
@@ -210,7 +200,9 @@ export function Overview({
                     {evaluation.belt} · {evaluation.type} · {formatDate(evaluation.createdAt, true)}
                   </small>
                   {user.role === "super_admin" && (
-                    <em>Avaliador: {evaluation.evaluatorName}</em>
+                    <em>
+                      Avaliador: {evaluation.evaluatorName} · {evaluation.evaluatorRank || "graduação não informada"}
+                    </em>
                   )}
                 </div>
                 <b>{scoreLabel(evaluation.score)}</b>
@@ -476,43 +468,14 @@ export function StudentsView({
                         <span>
                           <strong>{evaluation.belt}</strong>
                           <span>{evaluation.type} · {formatDate(evaluation.createdAt)}</span>
-                          <small>{evaluation.evaluatorName}</small>
+                          <small>
+                            {evaluation.evaluatorName} · {evaluation.evaluatorRank || "graduação não informada"}
+                          </small>
                         </span>
                         <b>{scoreLabel(evaluation.score)}</b>
                         <ChevronDown size={17} />
                       </button>
-                      {reportOpen && (
-                        <section className="individual-report" aria-label={`Relatório de ${formatDate(evaluation.createdAt)}`}>
-                          <header>
-                            <div>
-                              <span>Resultado geral</span>
-                              <strong>{evaluation.result || (evaluation.type === "kata" ? "Registro técnico" : evaluation.score >= 70 ? "Aprovado" : "Reexame necessário")}</strong>
-                            </div>
-                            <b>{scoreLabel(evaluation.score)}</b>
-                          </header>
-                          {evaluation.detail && <p>{evaluation.detail}</p>}
-                          {evaluation.items.length ? (
-                            <div className="report-groups">
-                              {groupItems(evaluation.items).map((group) => (
-                                <section key={group.category}>
-                                  <h3>{group.category}</h3>
-                                  {group.entries.map((item) => (
-                                    <div key={item.id}>
-                                      <span><strong>{item.name}</strong>{item.detail && <small>{item.detail}</small>}</span>
-                                      <b>{scoreLabel(item.score)}</b>
-                                    </div>
-                                  ))}
-                                </section>
-                              ))}
-                            </div>
-                          ) : (
-                            <div className="legacy-report">
-                              <ClipboardCheck size={21} />
-                              <span><strong>Detalhamento indisponível</strong><small>Esta avaliação foi registrada antes do relatório por item.</small></span>
-                            </div>
-                          )}
-                        </section>
-                      )}
+                      {reportOpen && <EvaluationReport evaluation={evaluation} />}
                     </article>;
                   })}
                 </div>}

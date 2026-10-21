@@ -3,6 +3,7 @@ import { Check, Copy, Link2, Trash2, UserPlus } from "lucide-react";
 import type { AuthUser, ManagedUser } from "@/lib/platform";
 import { apiRequest } from "@/lib/api";
 import { buildInvitationPath } from "@/lib/invitations";
+import { EVALUATOR_RANKS } from "@/lib/judo-ranks";
 import { initials, LoadingBlock } from "./admin-portal-shared";
 
 type TeamViewProps = {
@@ -12,11 +13,13 @@ type TeamViewProps = {
   reload: () => Promise<void>;
 };
 
-type Invitation = Pick<ManagedUser, "id" | "email" | "name">;
+type Invitation = Pick<ManagedUser, "id" | "email" | "name" | "evaluator_rank">;
 
 export function TeamView({ users, loading, currentUser, reload }: TeamViewProps) {
   const [email, setEmail] = useState("");
   const [name, setName] = useState("");
+  const [evaluatorRank, setEvaluatorRank] = useState("");
+  const [rankDrafts, setRankDrafts] = useState<Record<string, string>>({});
   const [busy, setBusy] = useState(false);
   const [actionId, setActionId] = useState("");
   const [copiedId, setCopiedId] = useState("");
@@ -50,12 +53,13 @@ export function TeamView({ users, loading, currentUser, reload }: TeamViewProps)
     try {
       const invited = await apiRequest<Invitation>("/api/users/invite", {
         method: "POST",
-        body: JSON.stringify({ email, name }),
+        body: JSON.stringify({ email, name, evaluatorRank }),
       });
       setInvitation(invited);
       setCopiedId("");
       setName("");
       setEmail("");
+      setEvaluatorRank("");
       setMessage("Acesso autorizado. Agora compartilhe o link de ativação.");
       await reload();
     } catch (caught) {
@@ -66,6 +70,34 @@ export function TeamView({ users, loading, currentUser, reload }: TeamViewProps)
       );
     } finally {
       setBusy(false);
+    }
+  };
+
+  const updateRank = async (person: ManagedUser, nextRank: string) => {
+    setRankDrafts((current) => ({ ...current, [person.id]: nextRank }));
+    setError("");
+    setMessage("");
+    setActionId(person.id);
+    try {
+      await apiRequest(`/api/users/${person.id}`, {
+        method: "PATCH",
+        body: JSON.stringify({ evaluatorRank: nextRank }),
+      });
+      await reload();
+      setMessage(`Graduação de ${person.name} atualizada.`);
+    } catch (caught) {
+      setRankDrafts((current) => {
+        const next = { ...current };
+        delete next[person.id];
+        return next;
+      });
+      setError(
+        caught instanceof Error
+          ? caught.message
+          : "Não foi possível atualizar a graduação.",
+      );
+    } finally {
+      setActionId("");
     }
   };
 
@@ -155,6 +187,19 @@ export function TeamView({ users, loading, currentUser, reload }: TeamViewProps)
               placeholder="avaliador@exemplo.com"
             />
           </label>
+          <label>
+            Graduação do avaliador
+            <select
+              required
+              value={evaluatorRank}
+              onChange={(event) => setEvaluatorRank(event.target.value)}
+            >
+              <option value="">Selecione a graduação</option>
+              {EVALUATOR_RANKS.map((rank) => (
+                <option key={rank} value={rank}>{rank}</option>
+              ))}
+            </select>
+          </label>
           {error && (
             <div className="management-error" role="alert">
               {error}
@@ -172,7 +217,7 @@ export function TeamView({ users, loading, currentUser, reload }: TeamViewProps)
               </span>
               <div>
                 <strong>Link pronto para compartilhar</strong>
-                <small>{invitation.email}</small>
+                <small>{invitation.email} · {invitation.evaluator_rank}</small>
               </div>
               <button
                 type="button"
@@ -200,6 +245,11 @@ export function TeamView({ users, loading, currentUser, reload }: TeamViewProps)
               <div className="team-member-info">
                 <strong>{person.name}</strong>
                 <small>{person.email}</small>
+                <small className="team-member-rank">
+                  {person.role === "evaluator"
+                    ? person.evaluator_rank || "Graduação não informada"
+                    : "Administração geral"}
+                </small>
                 <p>
                   {person.role === "super_admin"
                     ? "Super Admin"
@@ -217,6 +267,22 @@ export function TeamView({ users, loading, currentUser, reload }: TeamViewProps)
                     ? "Pendente"
                     : "Desativado"}
               </span>
+              {person.role === "evaluator" && (
+                <label className="team-rank-select">
+                  <span>Graduação</span>
+                  <select
+                    aria-label={`Graduação de ${person.name}`}
+                    value={rankDrafts[person.id] ?? person.evaluator_rank ?? ""}
+                    disabled={actionId === person.id}
+                    onChange={(event) => void updateRank(person, event.target.value)}
+                  >
+                    <option value="" disabled>Selecione</option>
+                    {EVALUATOR_RANKS.map((rank) => (
+                      <option key={rank} value={rank}>{rank}</option>
+                    ))}
+                  </select>
+                </label>
+              )}
               {person.id !== currentUser.id && person.role !== "super_admin" && (
                 <div className="team-member-actions">
                   {person.status === "invited" ? (

@@ -5,7 +5,13 @@ export type PracticalResult = {
   approved: boolean;
   detail: string;
   categories: { name: string; score: number }[];
-  items: { category: string; name: string; score: number; detail?: string }[];
+  items: {
+    category: string;
+    name: string;
+    score: number;
+    detail?: string;
+    parts?: { name: string; score: number }[];
+  }[];
 };
 
 export function calculatePracticalResult(

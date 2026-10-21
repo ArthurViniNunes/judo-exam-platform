@@ -30,6 +30,7 @@ import {
   type ExamCategory,
 } from "../lib/practical-exams";
 import { calculatePracticalResult } from "../lib/practical-scoring";
+import { EVALUATOR_RANKS, isEvaluatorRank } from "../lib/judo-ranks";
 
 function evaluation(overrides: Partial<EvaluationRow> = {}): EvaluationRow {
   return {
@@ -225,6 +226,7 @@ describe("domínio administrativo", () => {
       id: "evaluator-owner",
       email: "owner@example.com",
       name: "Avaliador",
+      evaluator_rank: "Faixa preta — 1º dan",
       role: "evaluator" as const,
       status: "active" as const,
     };
@@ -242,16 +244,41 @@ describe("domínio administrativo", () => {
       belt: "Amarela",
       type: "técnica" as const,
       score: 80,
+      categories: [{ name: "Nage Waza", score: 85 }],
       items: [
-        { category: "Nage Waza", name: "O-soto-gari", score: 70 },
+        {
+          category: "Nage Waza",
+          name: "2 Fugas de Yoko-shiho-gatame",
+          score: 85,
+          parts: [
+            { name: "1ª fuga", score: 70 },
+            { name: "2ª fuga", score: 100 },
+          ],
+        },
       ],
     };
     expect(isEvaluation(input)).toBe(true);
     expect(isEvaluation({ ...input, studentId: "" })).toBe(false);
+    expect(isEvaluation({ ...input, categories: [{ name: "Nage Waza", score: -1 }] })).toBe(false);
     expect(isEvaluation({ ...input, items: [{ ...input.items[0], score: 120 }] })).toBe(false);
+    expect(
+      isEvaluation({
+        ...input,
+        items: [{ ...input.items[0], parts: [{ name: "1ª fuga", score: 101 }] }],
+      }),
+    ).toBe(false);
 
     const formatted = formatEvaluation(
       evaluation({
+        categories: [
+          {
+            id: "category-1",
+            evaluation_id: "evaluation-1",
+            name: "Nage Waza",
+            score: 85,
+            position: 0,
+          },
+        ],
         items: [
           {
             id: "item-2",
@@ -270,6 +297,15 @@ describe("domínio administrativo", () => {
             score: 100,
             detail: "Sem auxílio.",
             position: 0,
+            parts: [
+              {
+                id: "part-1",
+                evaluation_item_id: "item-1",
+                name: "1ª execução",
+                score: 100,
+                position: 0,
+              },
+            ],
           },
         ],
       }),
@@ -277,6 +313,12 @@ describe("domínio administrativo", () => {
     expect(formatted.items.map((item) => item.name)).toEqual([
       "De-ashi-harai",
       "O-soto-gari",
+    ]);
+    expect(formatted.categories).toEqual([
+      { id: "category-1", name: "Nage Waza", score: 85 },
+    ]);
+    expect(formatted.items[0].parts).toEqual([
+      { id: "part-1", name: "1ª execução", score: 100 },
     ]);
   });
 
@@ -298,6 +340,13 @@ describe("domínio administrativo", () => {
     );
     expect(isValidEmail("avaliador@example.com")).toBe(true);
     expect(isValidEmail("avaliador@localhost")).toBe(false);
+  });
+
+  it("aceita somente graduações previstas para avaliadores", () => {
+    expect(EVALUATOR_RANKS).toContain("Faixa preta — 1º dan");
+    expect(isEvaluatorRank("Faixa coral — 6º dan")).toBe(true);
+    expect(isEvaluatorRank("Faixa inventada")).toBe(false);
+    expect(isEvaluatorRank(1)).toBe(false);
   });
 
   it("aplica no cadastro a mesma regra de senha usada pela API", () => {

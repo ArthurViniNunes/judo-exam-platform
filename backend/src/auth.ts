@@ -14,7 +14,7 @@ export async function login(request: Request, env: Env) {
   await ensureSuperAdmin(env);
   const body = await request.json<{ email?: string; password?: string }>();
   const user = await env.DB.prepare(
-    "SELECT id, email, name, role, status, password_hash, password_salt FROM users WHERE email = ?",
+    "SELECT id, email, name, evaluator_rank, role, status, password_hash, password_salt FROM users WHERE email = ?",
   )
     .bind(normalizeEmail(body.email || ""))
     .first<
@@ -68,12 +68,13 @@ export async function register(request: Request, env: Env) {
   }
 
   const invited = await env.DB.prepare(
-    "SELECT id, email, role, status, password_hash FROM users WHERE email = ?",
+    "SELECT id, email, evaluator_rank, role, status, password_hash FROM users WHERE email = ?",
   )
     .bind(email)
     .first<{
       id: string;
       email: string;
+      evaluator_rank: string | null;
       role: Role;
       status: AuthUser["status"];
       password_hash: string | null;
@@ -120,7 +121,13 @@ export async function register(request: Request, env: Env) {
     env,
     {
       ...session,
-      user: { id: invited.id, email, name, role: invited.role },
+      user: {
+        id: invited.id,
+        email,
+        name,
+        evaluatorRank: invited.evaluator_rank,
+        role: invited.role,
+      },
     },
     201,
   );

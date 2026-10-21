@@ -4,6 +4,7 @@ export type AuthUser = {
   id: string;
   email: string;
   name: string;
+  evaluatorRank: string | null;
   role: UserRole;
 };
 
@@ -13,6 +14,7 @@ export type EvaluationRecord = {
   studentId: string | null;
   evaluatorId: string | null;
   evaluatorName: string;
+  evaluatorRank: string | null;
   belt: string;
   type: "teórica" | "técnica" | "kata";
   score: number;
@@ -20,7 +22,20 @@ export type EvaluationRecord = {
   matrixId: string | null;
   detail: string | null;
   createdAt: string;
+  categories: EvaluationCategoryRecord[];
   items: EvaluationItemRecord[];
+};
+
+export type EvaluationCategoryRecord = {
+  id: string;
+  name: string;
+  score: number;
+};
+
+export type EvaluationItemPartRecord = {
+  id: string;
+  name: string;
+  score: number;
 };
 
 export type EvaluationItemRecord = {
@@ -29,6 +44,7 @@ export type EvaluationItemRecord = {
   name: string;
   score: number;
   detail: string | null;
+  parts: EvaluationItemPartRecord[];
 };
 
 export type DashboardData = {
@@ -60,6 +76,7 @@ export type ManagedUser = {
   id: string;
   email: string;
   name: string;
+  evaluator_rank: string | null;
   role: UserRole;
   status: "invited" | "active" | "disabled";
   created_at: string;

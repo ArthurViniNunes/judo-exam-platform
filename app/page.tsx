@@ -168,9 +168,17 @@ export default function App() {
       score: practicalResult.score * 10,
       result: practicalResult.approved ? "Aprovado" : "Reexame necessário",
       detail: practicalResult.detail,
+      categories: practicalResult.categories.map((category) => ({
+        ...category,
+        score: category.score * 10,
+      })),
       items: practicalResult.items.map((item) => ({
         ...item,
         score: item.score * 10,
+        parts: item.parts?.map((part) => ({
+          ...part,
+          score: part.score * 10,
+        })),
       })),
     };
 

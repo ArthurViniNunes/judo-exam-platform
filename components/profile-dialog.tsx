@@ -1,6 +1,6 @@
 "use client";
 
-import { Check, Mail, Pencil, ShieldCheck, UserRound, X } from "lucide-react";
+import { Award, Check, Mail, Pencil, ShieldCheck, UserRound, X } from "lucide-react";
 import { FormEvent, useEffect, useState } from "react";
 import { apiRequest } from "@/lib/api";
 import type { AuthUser } from "@/lib/platform";
@@ -59,6 +59,7 @@ export function ProfileDialog({ user, dark, onClose, onSaved }: ProfileDialogPro
         <form onSubmit={submit}>
           <label>Nome exibido<span className="profile-input"><UserRound size={18} /><input autoFocus required minLength={3} maxLength={80} value={name} onChange={(event) => { setName(event.target.value); setSaved(false); }} /></span></label>
           <label>E-mail<span className="profile-input readonly"><Mail size={18} /><input value={user.email} readOnly aria-readonly="true" /></span><small>O e-mail de acesso só pode ser alterado pelo responsável da plataforma.</small></label>
+          <div className="profile-role"><Award size={19} /><span><small>Graduação</small><strong>{user.evaluatorRank || "Não informada"}</strong></span></div>
           <div className="profile-role"><ShieldCheck size={19} /><span><small>Nível de acesso</small><strong>{user.role === "super_admin" ? "Super Admin" : "Avaliador"}</strong></span></div>
           {error && <div className="profile-error" role="alert">{error}</div>}
           {saved && <div className="profile-success" role="status"><Check size={17} /> Nome atualizado em todo o sistema.</div>}

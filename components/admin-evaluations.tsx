@@ -1,6 +1,6 @@
 "use client";
 
-import { ClipboardList, Search, Trash2 } from "lucide-react";
+import { ChevronDown, ClipboardList, FileText, Search, Trash2 } from "lucide-react";
 import { useMemo, useState } from "react";
 import {
   EmptyState,
@@ -10,6 +10,7 @@ import {
 } from "@/components/admin-portal-shared";
 import type { EvaluationRecord } from "@/lib/platform";
 import { apiRequest } from "@/lib/api";
+import { EvaluationReport } from "@/components/evaluation-report";
 
 function resultLabel(evaluation: EvaluationRecord) {
   if (evaluation.result) return evaluation.result;
@@ -34,6 +35,7 @@ export function EvaluationsView({
 }) {
   const [search, setSearch] = useState("");
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [reportId, setReportId] = useState<string | null>(null);
   const [deleteError, setDeleteError] = useState("");
   const normalizedSearch = search.trim().toLocaleLowerCase("pt-BR");
   const filtered = useMemo(
@@ -42,6 +44,7 @@ export function EvaluationsView({
         [
           evaluation.athlete,
           evaluation.evaluatorName,
+          evaluation.evaluatorRank || "",
           evaluation.belt,
           evaluation.type,
           resultLabel(evaluation),
@@ -124,12 +127,12 @@ export function EvaluationsView({
               <div className="evaluation-athlete">
                 <small>Judoca</small>
                 <strong>{evaluation.athlete}</strong>
-                <span>{evaluation.type}</span>
+                <span>{evaluation.type} · {evaluation.belt}</span>
               </div>
               <div className="evaluation-context">
                 <small>Avaliador e graduação</small>
                 <strong>{evaluation.evaluatorName}</strong>
-                <span>{evaluation.belt}</span>
+                <span>{evaluation.evaluatorRank || "Graduação não informada"}</span>
               </div>
               <div className="evaluation-date">
                 <small>Data da avaliação</small>
@@ -147,15 +150,28 @@ export function EvaluationsView({
                   {resultLabel(evaluation)}
                 </span>
               </div>
-              <button
-                className="evaluation-delete"
-                onClick={() => void deleteEvaluation(evaluation)}
-                disabled={deletingId === evaluation.id}
-                aria-label={`Excluir avaliação de ${evaluation.athlete}`}
-                title="Excluir avaliação"
-              >
-                <Trash2 size={18} />
-              </button>
+              <div className="evaluation-actions">
+                <button
+                  className="evaluation-report-toggle"
+                  onClick={() => setReportId(reportId === evaluation.id ? null : evaluation.id)}
+                  aria-expanded={reportId === evaluation.id}
+                  aria-label={`Ver relatório detalhado de ${evaluation.athlete}`}
+                >
+                  <FileText size={18} />
+                  <span>Detalhes</span>
+                  <ChevronDown size={16} />
+                </button>
+                <button
+                  className="evaluation-delete"
+                  onClick={() => void deleteEvaluation(evaluation)}
+                  disabled={deletingId === evaluation.id}
+                  aria-label={`Excluir avaliação de ${evaluation.athlete}`}
+                  title="Excluir avaliação"
+                >
+                  <Trash2 size={18} />
+                </button>
+              </div>
+              {reportId === evaluation.id && <EvaluationReport evaluation={evaluation} />}
             </article>
           ))}
         </section>

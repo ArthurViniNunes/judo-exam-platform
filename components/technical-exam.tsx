@@ -136,21 +136,20 @@ export function TechnicalForm({
 
     const result = calculatePracticalResult(exam, scores);
     const items = exam.flatMap((category) =>
-      category.techniques.flatMap((technique) => {
+      category.techniques.map((technique) => {
         const parts = getTechniqueEvaluationParts(technique.name);
-        if (parts.length === 1) {
-          return [{
-            category: category.name,
-            name: technique.name,
-            score: scores[technique.id],
-          }];
-        }
-        return parts.map((part, index) => ({
+        return {
           category: category.name,
-          name: `${technique.name} — ${part}`,
-          score: sequenceScores[technique.id]?.[index],
-          detail: `Parte ${index + 1} de ${parts.length} do mesmo card.`,
-        }));
+          name: technique.name,
+          score: scores[technique.id],
+          parts:
+            parts.length > 1
+              ? parts.map((part, index) => ({
+                  name: part,
+                  score: sequenceScores[technique.id]?.[index],
+                }))
+              : undefined,
+        };
       }),
     );
 

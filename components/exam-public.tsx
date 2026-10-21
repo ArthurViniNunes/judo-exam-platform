@@ -102,7 +102,7 @@ function PublicMenu({
         </nav>
         <div className="menu-account">
           <span className="avatar">{user?.name.split(/\s+/).slice(0, 2).map((part) => part[0]).join("").toUpperCase() || "AJ"}</span>
-          <button className="menu-profile-button" onClick={() => { onClose(); onOpenProfile?.(); }}><strong>{user?.name || "Associação"}</strong><small>Ver e editar perfil</small></button>
+          <button className="menu-profile-button" onClick={() => { onClose(); onOpenProfile?.(); }}><strong>{user?.name || "Associação"}</strong><small>{user?.evaluatorRank || "Ver e editar perfil"}</small></button>
           {onLogout ? <button onClick={onLogout} aria-label="Sair da conta"><LogOut size={18} /></button> : <LogOut size={18} />}
         </div>
         <ProjectCredits compact />

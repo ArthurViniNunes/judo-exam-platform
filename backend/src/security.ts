@@ -113,7 +113,7 @@ export async function authenticate(
   if (!token) return null;
 
   return env.DB.prepare(
-    "SELECT users.id, users.email, users.name, users.role, users.status FROM sessions JOIN users ON users.id = sessions.user_id WHERE sessions.token_hash = ? AND sessions.expires_at > ? AND users.status = 'active'",
+    "SELECT users.id, users.email, users.name, users.evaluator_rank, users.role, users.status FROM sessions JOIN users ON users.id = sessions.user_id WHERE sessions.token_hash = ? AND sessions.expires_at > ? AND users.status = 'active'",
   )
     .bind(await sha256(token), new Date().toISOString())
     .first<AuthUser>();

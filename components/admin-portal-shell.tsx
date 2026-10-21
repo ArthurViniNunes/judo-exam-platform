@@ -91,7 +91,7 @@ export function AdminPortalShell({
           <span>{initials(user.name)}</span>
           <button className="management-profile-button" onClick={onOpenProfile}>
             <strong>{user.name}</strong>
-            <small>Editar perfil</small>
+            <small>{user.evaluatorRank || "Editar perfil"}</small>
           </button>
           <button onClick={onLogout} aria-label="Sair da conta">
             <LogOut size={18} />
@@ -132,7 +132,7 @@ export function AdminPortalShell({
             <span>{initials(user.name)}</span>
             <div>
               <strong>{user.name}</strong>
-              <small>Editar perfil</small>
+              <small>{user.evaluatorRank || "Editar perfil"}</small>
             </div>
             <Pencil size={16} />
           </button>

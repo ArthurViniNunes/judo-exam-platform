@@ -24,7 +24,13 @@ export function normalizeName(value: string) {
 }
 
 export function publicUser(user: AuthUser) {
-  return { id: user.id, email: user.email, name: user.name, role: user.role };
+  return {
+    id: user.id,
+    email: user.email,
+    name: user.name,
+    evaluatorRank: user.evaluator_rank,
+    role: user.role,
+  };
 }
 
 export function canDeleteEvaluation(user: AuthUser, row: EvaluationRow) {
@@ -34,6 +40,21 @@ export function canDeleteEvaluation(user: AuthUser, row: EvaluationRow) {
 export function isEvaluation(value: unknown): value is EvaluationInput {
   if (!value || typeof value !== "object") return false;
   const item = value as Partial<EvaluationInput>;
+
+  const validCategories =
+    item.categories === undefined ||
+    (Array.isArray(item.categories) &&
+      item.categories.length <= 20 &&
+      item.categories.every(
+        (category) =>
+          category &&
+          typeof category.name === "string" &&
+          category.name.trim().length > 0 &&
+          category.name.trim().length <= 100 &&
+          typeof category.score === "number" &&
+          category.score >= 0 &&
+          category.score <= 100,
+      ));
 
   const validItems =
     item.items === undefined ||
@@ -52,7 +73,20 @@ export function isEvaluation(value: unknown): value is EvaluationInput {
           entry.score >= 0 &&
           entry.score <= 100 &&
           (entry.detail === undefined ||
-            (typeof entry.detail === "string" && entry.detail.length <= 500)),
+            (typeof entry.detail === "string" && entry.detail.length <= 500)) &&
+          (entry.parts === undefined ||
+            (Array.isArray(entry.parts) &&
+              entry.parts.length <= 10 &&
+              entry.parts.every(
+                (part) =>
+                  part &&
+                  typeof part.name === "string" &&
+                  part.name.trim().length > 0 &&
+                  part.name.trim().length <= 120 &&
+                  typeof part.score === "number" &&
+                  part.score >= 0 &&
+                  part.score <= 100,
+              ))),
       ));
 
   return Boolean(
@@ -65,6 +99,7 @@ export function isEvaluation(value: unknown): value is EvaluationInput {
       typeof item.score === "number" &&
       item.score >= 0 &&
       item.score <= 100 &&
+      validCategories &&
       validItems,
   );
 }
@@ -76,6 +111,7 @@ export function formatEvaluation(row: EvaluationRow) {
     studentId: row.student_id,
     evaluatorId: row.evaluator_id,
     evaluatorName: row.evaluator_name || row.professor || "Não informado",
+    evaluatorRank: row.evaluator_rank ?? null,
     belt: row.belt,
     type: row.type,
     score: row.score,
@@ -83,6 +119,13 @@ export function formatEvaluation(row: EvaluationRow) {
     matrixId: row.matrix_id,
     detail: row.detail,
     createdAt: row.created_at,
+    categories: (row.categories ?? [])
+      .sort((left, right) => left.position - right.position)
+      .map((category) => ({
+        id: category.id,
+        name: category.name,
+        score: category.score,
+      })),
     items: (row.items ?? [])
       .sort((left, right) => left.position - right.position)
       .map((item) => ({
@@ -91,6 +134,13 @@ export function formatEvaluation(row: EvaluationRow) {
         name: item.name,
         score: item.score,
         detail: item.detail,
+        parts: (item.parts ?? [])
+          .sort((left, right) => left.position - right.position)
+          .map((part) => ({
+            id: part.id,
+            name: part.name,
+            score: part.score,
+          })),
       })),
   };
 }

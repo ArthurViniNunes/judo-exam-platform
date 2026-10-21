@@ -5,6 +5,7 @@ export type AuthUser = {
   id: string;
   email: string;
   name: string;
+  evaluator_rank: string | null;
   role: Role;
   status: UserStatus;
 };
@@ -18,7 +19,18 @@ export type EvaluationInput = {
   result?: string;
   matrixId?: string;
   detail?: string;
+  categories?: EvaluationCategoryInput[];
   items?: EvaluationItemInput[];
+};
+
+export type EvaluationCategoryInput = {
+  name: string;
+  score: number;
+};
+
+export type EvaluationItemPartInput = {
+  name: string;
+  score: number;
 };
 
 export type EvaluationItemInput = {
@@ -26,6 +38,23 @@ export type EvaluationItemInput = {
   name: string;
   score: number;
   detail?: string;
+  parts?: EvaluationItemPartInput[];
+};
+
+export type EvaluationCategoryRow = {
+  id: string;
+  evaluation_id: string;
+  name: string;
+  score: number;
+  position: number;
+};
+
+export type EvaluationItemPartRow = {
+  id: string;
+  evaluation_item_id: string;
+  name: string;
+  score: number;
+  position: number;
 };
 
 export type EvaluationItemRow = {
@@ -36,6 +65,7 @@ export type EvaluationItemRow = {
   score: number;
   detail: string | null;
   position: number;
+  parts?: EvaluationItemPartRow[];
 };
 
 export type EvaluationRow = {
@@ -44,6 +74,7 @@ export type EvaluationRow = {
   student_id: string | null;
   evaluator_id: string | null;
   evaluator_name?: string | null;
+  evaluator_rank?: string | null;
   professor: string | null;
   belt: string;
   type: EvaluationType;
@@ -52,6 +83,7 @@ export type EvaluationRow = {
   matrix_id: string | null;
   detail: string | null;
   created_at: string;
+  categories?: EvaluationCategoryRow[];
   items?: EvaluationItemRow[];
 };
 

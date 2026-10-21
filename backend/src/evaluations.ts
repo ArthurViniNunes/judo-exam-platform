@@ -1,5 +1,7 @@
 import type {
   AuthUser,
+  EvaluationCategoryRow,
+  EvaluationItemPartRow,
   EvaluationItemRow,
   EvaluationRow,
   StudentRow,
@@ -22,7 +24,8 @@ async function evaluationRows(
   const filterId = user.role === "super_admin" ? evaluatorId : user.id;
   const where = filterId ? "WHERE evaluations.evaluator_id = ?" : "";
   const statement = env.DB.prepare(
-    `SELECT evaluations.*, users.name AS evaluator_name
+    `SELECT evaluations.*, users.name AS evaluator_name,
+            users.evaluator_rank AS evaluator_rank
      FROM evaluations
      LEFT JOIN users ON users.id = evaluations.evaluator_id
      ${where}
@@ -37,33 +40,97 @@ async function evaluationRows(
      ${where}
      ORDER BY evaluation_items.position`,
   );
-  const [result, itemResult] = filterId
+  const categoryStatement = env.DB.prepare(
+    `SELECT evaluation_categories.*
+     FROM evaluation_categories
+     INNER JOIN evaluations
+       ON evaluations.id = evaluation_categories.evaluation_id
+     ${where}
+     ORDER BY evaluation_categories.position`,
+  );
+  const partStatement = env.DB.prepare(
+    `SELECT evaluation_item_parts.*
+     FROM evaluation_item_parts
+     INNER JOIN evaluation_items
+       ON evaluation_items.id = evaluation_item_parts.evaluation_item_id
+     INNER JOIN evaluations
+       ON evaluations.id = evaluation_items.evaluation_id
+     ${where}
+     ORDER BY evaluation_item_parts.position`,
+  );
+  const [result, itemResult, categoryResult, partResult] = filterId
     ? await Promise.all([
         statement.bind(filterId).all<EvaluationRow>(),
         itemStatement.bind(filterId).all<EvaluationItemRow>(),
+        categoryStatement.bind(filterId).all<EvaluationCategoryRow>(),
+        partStatement.bind(filterId).all<EvaluationItemPartRow>(),
       ])
     : await Promise.all([
         statement.all<EvaluationRow>(),
         itemStatement.all<EvaluationItemRow>(),
+        categoryStatement.all<EvaluationCategoryRow>(),
+        partStatement.all<EvaluationItemPartRow>(),
       ]);
+  const partsByItem = new Map<string, EvaluationItemPartRow[]>();
+  for (const part of partResult.results) {
+    const parts = partsByItem.get(part.evaluation_item_id) ?? [];
+    parts.push(part);
+    partsByItem.set(part.evaluation_item_id, parts);
+  }
   const itemsByEvaluation = new Map<string, EvaluationItemRow[]>();
   for (const item of itemResult.results) {
     const items = itemsByEvaluation.get(item.evaluation_id) ?? [];
-    items.push(item);
+    items.push({ ...item, parts: partsByItem.get(item.id) ?? [] });
     itemsByEvaluation.set(item.evaluation_id, items);
+  }
+  const categoriesByEvaluation = new Map<string, EvaluationCategoryRow[]>();
+  for (const category of categoryResult.results) {
+    const categories = categoriesByEvaluation.get(category.evaluation_id) ?? [];
+    categories.push(category);
+    categoriesByEvaluation.set(category.evaluation_id, categories);
   }
   return result.results.map((row) => ({
     ...row,
+    categories: categoriesByEvaluation.get(row.id) ?? [],
     items: itemsByEvaluation.get(row.id) ?? [],
   }));
 }
 
 async function evaluationItems(env: Env, evaluationId: string) {
+  const [itemResult, partResult] = await Promise.all([
+    env.DB.prepare(
+      "SELECT * FROM evaluation_items WHERE evaluation_id = ? ORDER BY position",
+    )
+      .bind(evaluationId)
+      .all<EvaluationItemRow>(),
+    env.DB.prepare(
+      `SELECT evaluation_item_parts.* FROM evaluation_item_parts
+       INNER JOIN evaluation_items
+         ON evaluation_items.id = evaluation_item_parts.evaluation_item_id
+       WHERE evaluation_items.evaluation_id = ?
+       ORDER BY evaluation_item_parts.position`,
+    )
+      .bind(evaluationId)
+      .all<EvaluationItemPartRow>(),
+  ]);
+  const partsByItem = new Map<string, EvaluationItemPartRow[]>();
+  for (const part of partResult.results) {
+    const parts = partsByItem.get(part.evaluation_item_id) ?? [];
+    parts.push(part);
+    partsByItem.set(part.evaluation_item_id, parts);
+  }
+  return itemResult.results.map((item) => ({
+    ...item,
+    parts: partsByItem.get(item.id) ?? [],
+  }));
+}
+
+async function evaluationCategories(env: Env, evaluationId: string) {
   const result = await env.DB.prepare(
-    "SELECT * FROM evaluation_items WHERE evaluation_id = ? ORDER BY position",
+    "SELECT * FROM evaluation_categories WHERE evaluation_id = ? ORDER BY position",
   )
     .bind(evaluationId)
-    .all<EvaluationItemRow>();
+    .all<EvaluationCategoryRow>();
   return result.results;
 }
 
@@ -180,8 +247,15 @@ export async function createEvaluation(
     .bind(id, user.id)
     .first<EvaluationRow>();
   if (duplicate) {
-    const items = await evaluationItems(env, duplicate.id);
-    return json(request, env, formatEvaluation({ ...duplicate, items }));
+    const [items, categories] = await Promise.all([
+      evaluationItems(env, duplicate.id),
+      evaluationCategories(env, duplicate.id),
+    ]);
+    return json(
+      request,
+      env,
+      formatEvaluation({ ...duplicate, categories, items }),
+    );
   }
 
   const student = await env.DB.prepare("SELECT * FROM students WHERE id = ?")
@@ -197,6 +271,33 @@ export async function createEvaluation(
     );
   }
 
+  const itemStatements = (body.items ?? []).flatMap((item, position) => {
+    const itemId = crypto.randomUUID();
+    return [
+      env.DB.prepare(
+        "INSERT INTO evaluation_items (id, evaluation_id, category, name, score, detail, position) VALUES (?, ?, ?, ?, ?, ?, ?)",
+      ).bind(
+        itemId,
+        id,
+        item.category.trim(),
+        item.name.trim(),
+        Math.round(item.score * 10) / 10,
+        item.detail?.trim() || null,
+        position,
+      ),
+      ...(item.parts ?? []).map((part, partPosition) =>
+        env.DB.prepare(
+          "INSERT INTO evaluation_item_parts (id, evaluation_item_id, name, score, position) VALUES (?, ?, ?, ?, ?)",
+        ).bind(
+          crypto.randomUUID(),
+          itemId,
+          part.name.trim(),
+          Math.round(part.score * 10) / 10,
+          partPosition,
+        ),
+      ),
+    ];
+  });
   const statements = [
     env.DB.prepare(
       "INSERT OR IGNORE INTO student_evaluators (student_id, evaluator_id) VALUES (?, ?)",
@@ -216,25 +317,25 @@ export async function createEvaluation(
       body.matrixId || null,
       body.detail?.trim() || null,
     ),
-    ...(body.items ?? []).map((item, position) =>
+    ...(body.categories ?? []).map((category, position) =>
       env.DB.prepare(
-        "INSERT INTO evaluation_items (id, evaluation_id, category, name, score, detail, position) VALUES (?, ?, ?, ?, ?, ?, ?)",
+        "INSERT INTO evaluation_categories (id, evaluation_id, name, score, position) VALUES (?, ?, ?, ?, ?)",
       ).bind(
         crypto.randomUUID(),
         id,
-        item.category.trim(),
-        item.name.trim(),
-        Math.round(item.score * 10) / 10,
-        item.detail?.trim() || null,
+        category.name.trim(),
+        Math.round(category.score * 10) / 10,
         position,
       ),
     ),
+    ...itemStatements,
   ];
   await env.DB.batch(statements);
-  const [row, items] = await Promise.all([
+  const [row, categories, items] = await Promise.all([
     env.DB.prepare("SELECT * FROM evaluations WHERE id = ?")
       .bind(id)
       .first<EvaluationRow>(),
+    evaluationCategories(env, id),
     evaluationItems(env, id),
   ]);
 
@@ -244,6 +345,7 @@ export async function createEvaluation(
     formatEvaluation({
       ...row!,
       evaluator_name: user.name,
+      categories,
       items,
     }),
     201,
