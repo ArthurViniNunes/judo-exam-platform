@@ -7,6 +7,12 @@
 
 ## 1. Objetivo
 
+> Atualização prioritária: antes das fases abaixo, será executada a
+> [Fase 0 — exame teórico dentro da plataforma](theoretical-exam-plan.md).
+> Ela cria a identidade do aluno e passa a definir a graduação autorizada para
+> a avaliação prática. A base offline da Fase 1 continua em execução porque
+> será reutilizada pelo novo fluxo teórico.
+
 Transformar a plataforma em uma ferramenta confiável para operar um dia de
 exame com vários avaliadores e celulares, sem perder a simplicidade atual. O
 sistema deve continuar útil fora do evento: acompanhar a evolução técnica,
@@ -61,6 +67,7 @@ As prioridades do produto são, nesta ordem:
 
 | Fase | Resultado utilizável | Porte relativo | Depende de |
 | --- | --- | --- | --- |
+| 0 | Aluno faz o teórico na plataforma e obtém elegibilidade para a prática | Muito grande | Regras da prova e identidade |
 | 1 | Avaliações resilientes e estado de salvamento confiável | Grande | Modelo detalhado atual |
 | 2 | Evento com vários avaliadores e modo rápido | Muito grande | Fase 1 |
 | 3 | Evolução, análises, filtros e PDF sob demanda | Grande | Dados completos e versionados |
