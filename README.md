@@ -10,6 +10,7 @@ Aplicação web da Associação Judô Rogério Cruz para aplicar, registrar e ac
 - trata cada sequência de `Renraku-Henka Waza` como um único movimento e cria avaliações adicionais somente quando o item pede explicitamente duas ou mais execuções;
 - oferece vídeos de apoio do YouTube com reprodução iniciada ao abrir a referência;
 - aplica `Nage-no-Kata` parcial ou completo e `Katame-no-Kata`;
+- salva rascunhos no aparelho e sincroniza avaliações concluídas quando a conexão retorna;
 - registra a nota final, a média de cada categoria, cada técnica, eventuais execuções múltiplas, observações, graduação, data e avaliador;
 - mostra histórico, média e evolução por aluno;
 - oferece um painel com volume de avaliações, médias, aprovação e registros recentes;
@@ -330,6 +331,7 @@ Todas as rotas abaixo, exceto `/`, `/health`, login/registro e a leitura públic
 | `POST` | `/api/students` | autenticado | Cadastra previamente um judoca |
 | `GET` | `/api/evaluations` | autenticado | Lista avaliações permitidas ao usuário |
 | `POST` | `/api/evaluations` | autenticado | Registra uma avaliação |
+| `POST` | `/api/evaluations/sync` | autenticado | Sincroniza uma avaliação local de forma idempotente |
 | `DELETE` | `/api/evaluations/:id` | autenticado | Exclui uma avaliação permitida ao usuário |
 | `GET` | `/api/users` | Super Admin | Lista usuários e métricas |
 | `POST` | `/api/users/invite` | Super Admin | Autoriza um e-mail |
@@ -346,7 +348,25 @@ corepack pnpm backend:migrate:local
 corepack pnpm backend:migrate:remote
 ```
 
-O schema ativo cobre usuários e suas graduações, sessões, alunos, avaliações, médias por categoria, notas por técnica, execuções múltiplas e as cores globais da interface. Tabelas históricas de questões e matrizes permanecem nas migrações já aplicadas para evitar uma operação destrutiva, mas não possuem rotas ou interfaces ativas. O estado local fica em `.wrangler/state` e não deve ser commitado.
+O schema ativo cobre usuários e suas graduações, sessões, alunos, avaliações, médias por categoria, notas por técnica, execuções múltiplas, auditoria e as cores globais da interface. Tabelas históricas de questões e matrizes permanecem nas migrações já aplicadas para evitar uma operação destrutiva, mas não possuem rotas ou interfaces ativas. O estado local fica em `.wrangler/state` e não deve ser commitado.
+
+## Uso com conexão instável
+
+Em produção, a plataforma instala um Service Worker e mantém no IndexedDB do
+aparelho os rascunhos e a fila de avaliações concluídas. O primeiro login ainda
+exige internet. Depois disso:
+
+- alterações da prova em andamento são salvas automaticamente no aparelho;
+- um rascunho pode ser retomado após fechar ou recarregar a página;
+- concluir a prova coloca o registro na fila antes de tentar enviá-lo;
+- a barra de estado distingue conteúdo local, sincronização, confirmação do
+  servidor e pendências que exigem nova tentativa;
+- envios repetidos usam o mesmo identificador e não duplicam a avaliação;
+- registros já confirmados são removidos da fila local após 24 horas.
+
+Antes de trocar de conta ou limpar os dados do navegador, confirme que a barra
+indica **Salvo no servidor**. Conteúdo administrativo não é disponibilizado
+offline.
 
 ## Build e validação
 

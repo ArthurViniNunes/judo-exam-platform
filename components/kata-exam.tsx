@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Activity, Check, ChevronRight, CircleHelp } from "lucide-react";
 import {
   EMPTY_KATA_MARK,
@@ -16,8 +16,15 @@ import {
 } from "@/lib/kata-exams";
 import { TECHNIQUE_VIDEOS, toYouTubeEmbedUrl } from "@/lib/practical-exams";
 import type { ExamStudent } from "@/lib/platform";
+import type {
+  DraftSaveState,
+  KataDraft,
+  KataDraftState,
+  OutboxRecord,
+} from "@/lib/offline-evaluations";
 import { Brand, TechniqueVideoDialog } from "./exam-public";
 import { ExamStudentSelect } from "./exam-student-select";
+import { DraftResumeList, DraftSaveIndicator, EvaluationSaveStatus } from "./exam-persistence";
 import type { View } from "./exam-public";
 
 export function KataSetup({
@@ -28,6 +35,9 @@ export function KataSetup({
   studentsError,
   onRetryStudents,
   onManageStudents,
+  drafts,
+  onResumeDraft,
+  onDiscardDraft,
 }: {
   onBack: () => void;
   onStart: (student: ExamStudent, kataId: KataId, mode: KataMode) => void;
@@ -36,6 +46,9 @@ export function KataSetup({
   studentsError: string;
   onRetryStudents: () => void;
   onManageStudents: () => void;
+  drafts: KataDraft[];
+  onResumeDraft: (draft: KataDraft) => void;
+  onDiscardDraft: (draft: KataDraft) => void;
 }) {
   const [studentId, setStudentId] = useState("");
   const [kataId, setKataId] = useState<KataId | "">("");
@@ -54,6 +67,7 @@ export function KataSetup({
         <span className="eyebrow">AVALIAÇÃO DE KATA</span>
         <h2>DADOS DA AVALIAÇÃO</h2>
         <p className="muted">Selecione um judoca do seu cadastro, o kata e a extensão da apresentação.</p>
+        <DraftResumeList drafts={drafts} onResume={(draft) => onResumeDraft(draft as KataDraft)} onDiscard={(draft) => onDiscardDraft(draft as KataDraft)} />
         <ExamStudentSelect
           students={students}
           value={studentId}
@@ -106,24 +120,55 @@ export function KataForm({
   mode,
   onFinish,
   onExit,
+  draft,
+  onSaveDraft,
 }: {
   athlete: string;
   kataId: KataId;
   mode: KataMode;
-  onFinish: (result: KataResult) => void;
+  onFinish: (result: KataResult) => void | Promise<void>;
   onExit: () => void;
+  draft: KataDraft;
+  onSaveDraft: (draft: KataDraft) => Promise<void>;
 }) {
   const kata = KATAS.find((item) => item.id === kataId) ?? KATAS[0];
   const exam = createKataExam(kataId, mode);
-  const [marks, setMarks] = useState<Record<string, KataMark>>({});
+  const [marks, setMarks] = useState<Record<string, KataMark>>(draft.data.marks);
   const [videoTechnique, setVideoTechnique] = useState<string | null>(null);
-  const [notes, setNotes] = useState("");
+  const [notes, setNotes] = useState(draft.data.notes);
+  const [draftSaveState, setDraftSaveState] = useState<DraftSaveState>("saved");
+  const saveDraftRef = useRef(onSaveDraft);
+  const saveRevisionRef = useRef(0);
+  const saveChainRef = useRef<Promise<void>>(Promise.resolve());
   const liveResult = calculateKataResult(exam, marks);
   const totalTechniques = exam.reduce((sum, item) => sum + item.techniques.length, 0);
   const progress = totalTechniques ? (liveResult.reviewedCount / totalTechniques) * 100 : 0;
   const allComplete = exam.every((group) =>
     group.techniques.every((technique) => marks[technique.id]?.reviewed),
   );
+
+  useEffect(() => {
+    saveDraftRef.current = onSaveDraft;
+  }, [onSaveDraft]);
+
+  useEffect(() => {
+    const revision = ++saveRevisionRef.current;
+    const data: KataDraftState = { marks, notes };
+    queueMicrotask(() => {
+      if (revision === saveRevisionRef.current) setDraftSaveState("saving");
+    });
+    saveChainRef.current = saveChainRef.current
+      .catch(() => undefined)
+      .then(() => saveDraftRef.current({ ...draft, data }));
+    void saveChainRef.current.then(
+      () => {
+        if (revision === saveRevisionRef.current) setDraftSaveState("saved");
+      },
+      () => {
+        if (revision === saveRevisionRef.current) setDraftSaveState("error");
+      },
+    );
+  }, [draft, marks, notes]);
 
   const updateMark = (techniqueId: string, field: keyof KataErrors) => {
     setMarks((current) => {
@@ -149,16 +194,21 @@ export function KataForm({
     });
   };
 
-  const finish = () => {
-    onFinish({ ...calculateKataResult(exam, marks), notes: notes.trim() });
+  const finish = async () => {
+    await saveChainRef.current.catch(() => undefined);
+    await onFinish({ ...calculateKataResult(exam, marks), notes: notes.trim() });
+  };
+
+  const exit = () => {
+    void saveChainRef.current.finally(onExit);
   };
 
   return (
     <section className="technical-screen kata-screen">
       <header className="quiz-header">
         <Brand compact />
-        <div><strong>{athleteName}</strong><span>{kata.name} · {kataId === "nage-no-kata" && mode === "partial" ? "Parcial" : "Completo"}</span></div>
-        <button className="text-button" onClick={onExit}>Sair</button>
+        <div><strong>{athleteName}</strong><span>{kata.name} · {kataId === "nage-no-kata" && mode === "partial" ? "Parcial" : "Completo"}</span><DraftSaveIndicator state={draftSaveState} /></div>
+        <button className="text-button" onClick={exit}>Sair</button>
       </header>
       <div className="technical-layout kata-continuous-layout">
         <aside className="steps-panel kata-steps">
@@ -241,7 +291,7 @@ export function KataForm({
             <textarea value={notes} onChange={(event) => setNotes(event.target.value)} placeholder="Registre aspectos técnicos, ritmo, postura e orientações..." />
           </label>
           <div className="quiz-actions kata-finish-action">
-            <button className="primary" disabled={!allComplete} onClick={finish}>CONCLUIR AVALIAÇÃO <ChevronRight size={17} /></button>
+            <button className="primary" disabled={!allComplete} onClick={() => void finish()}>CONCLUIR AVALIAÇÃO <ChevronRight size={17} /></button>
           </div>
         </main>
       </div>
@@ -254,7 +304,7 @@ export function KataForm({
   );
 }
 
-export function KataResultView({ result, athlete: athleteName, kataId, mode, navigate }: { result: KataResult; athlete: string; kataId: KataId; mode: KataMode; navigate: (view: View) => void }) {
+export function KataResultView({ result, athlete: athleteName, kataId, mode, navigate, saveRecord, saveError, onRetrySave }: { result: KataResult; athlete: string; kataId: KataId; mode: KataMode; navigate: (view: View) => void; saveRecord: OutboxRecord | undefined; saveError?: string; onRetrySave: () => void }) {
   const kata = KATAS.find((item) => item.id === kataId) ?? KATAS[0];
   return (
     <section className="modal-screen">
@@ -263,6 +313,7 @@ export function KataResultView({ result, athlete: athleteName, kataId, mode, nav
         <span className="eyebrow">AVALIAÇÃO DE KATA CONCLUÍDA</span>
         <h2>AVALIAÇÃO REGISTRADA</h2>
         <p className="muted">{athleteName} · {kata.name} {kataId === "nage-no-kata" ? `(${mode === "partial" ? "parcial" : "completo"})` : ""}</p>
+        <EvaluationSaveStatus record={saveRecord} localError={saveError} onRetry={onRetrySave} />
         <div className="score-ring" style={{ "--score": `${result.score * 36}deg` } as React.CSSProperties}>
           <div><strong>{result.score.toFixed(1)}</strong><span>NOTA GERAL</span></div>
         </div>

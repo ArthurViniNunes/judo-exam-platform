@@ -5,6 +5,7 @@ const API_URL = (
 ).replace(/\/$/, "");
 
 const AUTH_TOKEN_KEY = "ajrc-auth-token";
+const AUTH_USER_KEY = "ajrc-auth-user";
 
 export function getAuthToken() {
   return typeof window === "undefined"
@@ -18,7 +19,25 @@ export function setAuthToken(token: string | null) {
   else window.localStorage.removeItem(AUTH_TOKEN_KEY);
 }
 
-class ApiError extends Error {
+export function getCachedAuthUser<T>() {
+  if (typeof window === "undefined") return null;
+  const stored = window.localStorage.getItem(AUTH_USER_KEY);
+  if (!stored) return null;
+  try {
+    return JSON.parse(stored) as T;
+  } catch {
+    window.localStorage.removeItem(AUTH_USER_KEY);
+    return null;
+  }
+}
+
+export function setCachedAuthUser(user: unknown | null) {
+  if (typeof window === "undefined") return;
+  if (user) window.localStorage.setItem(AUTH_USER_KEY, JSON.stringify(user));
+  else window.localStorage.removeItem(AUTH_USER_KEY);
+}
+
+export class ApiError extends Error {
   constructor(message: string, public readonly status: number) {
     super(message);
     this.name = "ApiError";

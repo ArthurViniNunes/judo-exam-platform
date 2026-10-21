@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   ArrowLeft, Check, ChevronDown, ChevronRight, CircleHelp, Dices,
 } from "lucide-react";
@@ -11,8 +11,14 @@ import {
 } from "@/lib/practical-exams";
 import { calculatePracticalResult } from "@/lib/practical-scoring";
 import type { ExamStudent } from "@/lib/platform";
+import type {
+  DraftSaveState,
+  TechnicalDraft,
+  TechnicalDraftState,
+} from "@/lib/offline-evaluations";
 import { Brand, TechniqueVideoDialog } from "./exam-public";
 import { ExamStudentSelect } from "./exam-student-select";
+import { DraftResumeList, DraftSaveIndicator } from "./exam-persistence";
 import type { PracticalResult } from "./exam-public";
 
 export function TechnicalSetup({
@@ -23,6 +29,9 @@ export function TechnicalSetup({
   studentsError,
   onRetryStudents,
   onManageStudents,
+  drafts,
+  onResumeDraft,
+  onDiscardDraft,
 }: {
   onBack: () => void;
   onStart: (student: ExamStudent, belt: PracticalBeltId) => void;
@@ -31,6 +40,9 @@ export function TechnicalSetup({
   studentsError: string;
   onRetryStudents: () => void;
   onManageStudents: () => void;
+  drafts: TechnicalDraft[];
+  onResumeDraft: (draft: TechnicalDraft) => void;
+  onDiscardDraft: (draft: TechnicalDraft) => void;
 }) {
   const [studentId, setStudentId] = useState("");
   const [belt, setBelt] = useState<PracticalBeltId | "">("");
@@ -42,6 +54,7 @@ export function TechnicalSetup({
         <span className="eyebrow">AVALIAÇÃO DE EXAME DE FAIXA</span>
         <h2>DADOS DA AVALIAÇÃO</h2>
         <p className="muted">Selecione um judoca do seu cadastro e a graduação pretendida.</p>
+        <DraftResumeList drafts={drafts} onResume={(draft) => onResumeDraft(draft as TechnicalDraft)} onDiscard={(draft) => onDiscardDraft(draft as TechnicalDraft)} />
         <ExamStudentSelect
           students={students}
           value={studentId}
@@ -73,22 +86,59 @@ export function TechnicalForm({
   beltId,
   onFinish,
   onExit,
+  draft,
+  onSaveDraft,
 }: {
   athlete: string;
   beltId: PracticalBeltId;
-  onFinish: (result: PracticalResult) => void;
+  onFinish: (result: PracticalResult) => void | Promise<void>;
   onExit: () => void;
+  draft: TechnicalDraft;
+  onSaveDraft: (draft: TechnicalDraft) => Promise<void>;
 }) {
   const belt = PRACTICAL_BELTS.find((item) => item.id === beltId) ?? PRACTICAL_BELTS[0];
-  const [exam] = useState(() => createPracticalExam(beltId));
-  const [groupIndex, setGroupIndex] = useState(0);
-  const [standardScores, setStandardScores] = useState<Record<string, number>>({});
+  const [exam] = useState(() => draft.data.exam.length ? draft.data.exam : createPracticalExam(beltId));
+  const [groupIndex, setGroupIndex] = useState(draft.data.groupIndex);
+  const [standardScores, setStandardScores] = useState<Record<string, number>>(draft.data.standardScores);
   const [sequenceScores, setSequenceScores] = useState<
     Record<string, Record<number, number>>
-  >({});
-  const [notes, setNotes] = useState("");
+  >(draft.data.sequenceScores);
+  const [notes, setNotes] = useState(draft.data.notes);
   const [openTechnique, setOpenTechnique] = useState<string | null>(null);
   const [videoTechnique, setVideoTechnique] = useState<string | null>(null);
+  const [draftSaveState, setDraftSaveState] = useState<DraftSaveState>("saved");
+  const saveDraftRef = useRef(onSaveDraft);
+  const saveRevisionRef = useRef(0);
+  const saveChainRef = useRef<Promise<void>>(Promise.resolve());
+
+  useEffect(() => {
+    saveDraftRef.current = onSaveDraft;
+  }, [onSaveDraft]);
+
+  useEffect(() => {
+    const revision = ++saveRevisionRef.current;
+    const data: TechnicalDraftState = {
+      exam,
+      groupIndex,
+      standardScores,
+      sequenceScores,
+      notes,
+    };
+    queueMicrotask(() => {
+      if (revision === saveRevisionRef.current) setDraftSaveState("saving");
+    });
+    saveChainRef.current = saveChainRef.current
+      .catch(() => undefined)
+      .then(() => saveDraftRef.current({ ...draft, data }));
+    void saveChainRef.current.then(
+      () => {
+        if (revision === saveRevisionRef.current) setDraftSaveState("saved");
+      },
+      () => {
+        if (revision === saveRevisionRef.current) setDraftSaveState("error");
+      },
+    );
+  }, [draft, exam, groupIndex, notes, sequenceScores, standardScores]);
 
   const scores = { ...standardScores };
   for (const category of exam) {
@@ -125,7 +175,7 @@ export function TechnicalForm({
     });
   };
 
-  const next = () => {
+  const next = async () => {
     if (!group) return;
     if (groupIndex < exam.length - 1) {
       setGroupIndex(groupIndex + 1);
@@ -153,15 +203,20 @@ export function TechnicalForm({
       }),
     );
 
-    onFinish({ ...result, items });
+    await saveChainRef.current.catch(() => undefined);
+    await onFinish({ ...result, items });
+  };
+
+  const exit = () => {
+    void saveChainRef.current.finally(onExit);
   };
 
   return (
     <section className="technical-screen">
       <header className="quiz-header">
         <Brand compact />
-        <div><strong>{athlete}</strong><span>Faixa {belt.name} · {belt.kyu}</span></div>
-        <button className="text-button" onClick={onExit}>Sair</button>
+        <div><strong>{athlete}</strong><span>Faixa {belt.name} · {belt.kyu}</span><DraftSaveIndicator state={draftSaveState} /></div>
+        <button className="text-button" onClick={exit}>Sair</button>
       </header>
       <div className="technical-layout">
         <aside className="steps-panel">
@@ -278,7 +333,7 @@ export function TechnicalForm({
           </label>
           <div className="quiz-actions">
             <button className="outline" disabled={groupIndex === 0} onClick={() => { setGroupIndex(groupIndex - 1); setOpenTechnique(null); }}><ArrowLeft size={17} /> ETAPA ANTERIOR</button>
-            <button className="primary" disabled={!complete || (groupIndex === exam.length - 1 && !allComplete)} onClick={next}>{groupIndex === exam.length - 1 ? "CONCLUIR AVALIAÇÃO" : "PRÓXIMA ETAPA"} <ChevronRight size={17} /></button>
+            <button className="primary" disabled={!complete || (groupIndex === exam.length - 1 && !allComplete)} onClick={() => void next()}>{groupIndex === exam.length - 1 ? "CONCLUIR AVALIAÇÃO" : "PRÓXIMA ETAPA"} <ChevronRight size={17} /></button>
           </div>
         </div>
       </div>

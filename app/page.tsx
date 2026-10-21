@@ -1,7 +1,13 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { apiRequest, getAuthToken, setAuthToken } from "@/lib/api";
+import {
+  apiRequest,
+  getAuthToken,
+  getCachedAuthUser,
+  setAuthToken,
+  setCachedAuthUser,
+} from "@/lib/api";
 import { AdminPortal } from "@/components/admin-portal";
 import type { AdminSection } from "@/components/admin-portal-shared";
 import { AuthScreen } from "@/components/auth-screen";
@@ -21,9 +27,16 @@ import {
 } from "@/components/exam-flow";
 import { ProfileDialog } from "@/components/profile-dialog";
 import type { AuthUser, ExamStudent, ThemeSettings } from "@/lib/platform";
+import type { EvaluationSubmission } from "@/lib/platform";
 import { DEFAULT_THEME_SETTINGS } from "@/lib/theme";
 import { KATAS, type KataId, type KataMode, type KataResult } from "@/lib/kata-exams";
-import { PRACTICAL_BELTS, type PracticalBeltId } from "@/lib/practical-exams";
+import { PRACTICAL_BELTS, createPracticalExam, type PracticalBeltId } from "@/lib/practical-exams";
+import {
+  clearSyncedUserData,
+  type KataDraft,
+  type TechnicalDraft,
+} from "@/lib/offline-evaluations";
+import { useEvaluationPersistence } from "@/lib/use-evaluation-persistence";
 
 const initialPracticalResult: PracticalResult = {
   score: 0,
@@ -66,6 +79,12 @@ export default function App() {
   const [kataId, setKataId] = useState<KataId>("nage-no-kata");
   const [kataMode, setKataMode] = useState<KataMode>("partial");
   const [kataResult, setKataResult] = useState<KataResult>(initialKataResult);
+  const [activeTechnicalDraft, setActiveTechnicalDraft] = useState<TechnicalDraft | null>(null);
+  const [activeKataDraft, setActiveKataDraft] = useState<KataDraft | null>(null);
+  const [lastEvaluationId, setLastEvaluationId] = useState("");
+  const [lastSubmission, setLastSubmission] = useState<EvaluationSubmission | null>(null);
+  const [evaluationSaveError, setEvaluationSaveError] = useState("");
+  const persistence = useEvaluationPersistence(user?.id);
 
   useEffect(() => {
     apiRequest<ThemeSettings>("/api/settings/theme")
@@ -123,8 +142,16 @@ export default function App() {
     }
 
     apiRequest<{ user: AuthUser }>("/api/auth/me")
-      .then(({ user: authenticatedUser }) => setUser(authenticatedUser))
-      .catch(() => setUser(null))
+      .then(({ user: authenticatedUser }) => {
+        setCachedAuthUser(authenticatedUser);
+        setUser(authenticatedUser);
+      })
+      .catch(() => {
+        const cachedUser = getAuthToken()
+          ? getCachedAuthUser<AuthUser>()
+          : null;
+        setUser(cachedUser);
+      })
       .finally(() => setAuthReady(true));
   }, []);
 
@@ -143,6 +170,15 @@ export default function App() {
     return () => window.removeEventListener("ajrc:session-expired", expire);
   }, []);
 
+  useEffect(() => {
+    if (!persistence.hasPendingData) return;
+    const protectPendingData = (event: BeforeUnloadEvent) => {
+      event.preventDefault();
+    };
+    window.addEventListener("beforeunload", protectPendingData);
+    return () => window.removeEventListener("beforeunload", protectPendingData);
+  }, [persistence.hasPendingData]);
+
   const navigate = (nextView: View) => {
     setMenuOpen(false);
     setView(nextView);
@@ -150,18 +186,57 @@ export default function App() {
   };
 
   const logout = () => {
+    if (
+      persistence.hasPendingData &&
+      !window.confirm(
+        "Existem avaliações salvas somente neste aparelho. Deseja sair mesmo assim? Os dados serão mantidos para este usuário.",
+      )
+    ) {
+      return;
+    }
+    if (user && !persistence.hasPendingData) {
+      void clearSyncedUserData(user.id).catch(() => undefined);
+    }
     void apiRequest<void>("/api/auth/logout", { method: "POST" }).catch(() => undefined);
     setAuthToken(null);
+    setCachedAuthUser(null);
     setUser(null);
     setView("home");
     setMenuOpen(false);
     setProfileOpen(false);
   };
 
-  const saveTechnicalEvaluation = (practicalResult: PracticalResult) => {
+  const queueLastSubmission = async (
+    evaluation: EvaluationSubmission,
+    draftId?: string,
+  ) => {
+    setLastEvaluationId(evaluation.id);
+    setLastSubmission(evaluation);
+    setEvaluationSaveError("");
+    try {
+      await persistence.queueEvaluation(evaluation, draftId);
+    } catch (error) {
+      setEvaluationSaveError(
+        error instanceof Error
+          ? error.message
+          : "Não foi possível salvar a avaliação neste aparelho.",
+      );
+    }
+  };
+
+  const retryLastSubmission = () => {
+    if (evaluationSaveError && lastSubmission) {
+      void queueLastSubmission(lastSubmission, lastEvaluationId);
+      return;
+    }
+    void persistence.retrySync();
+  };
+
+  const saveTechnicalEvaluation = async (practicalResult: PracticalResult) => {
+    if (!activeTechnicalDraft) return;
     const beltName = PRACTICAL_BELTS.find((item) => item.id === belt)?.name ?? belt;
-    const evaluation = {
-      id: crypto.randomUUID(),
+    const evaluation: EvaluationSubmission = {
+      id: activeTechnicalDraft.id,
       studentId,
       belt: beltName,
       type: "técnica" as const,
@@ -182,13 +257,12 @@ export default function App() {
       })),
     };
 
-    void apiRequest("/api/evaluations", {
-      method: "POST",
-      body: JSON.stringify(evaluation),
-    }).catch(() => undefined);
+    await queueLastSubmission(evaluation, activeTechnicalDraft.id);
+    setActiveTechnicalDraft(null);
   };
 
-  const saveKataEvaluation = (evaluationResult: KataResult) => {
+  const saveKataEvaluation = async (evaluationResult: KataResult) => {
+    if (!activeKataDraft) return;
     const kataName = KATAS.find((item) => item.id === kataId)?.name ?? kataId;
     const severeNote = evaluationResult.severeApplied
       ? "Fator de erro grave aplicado."
@@ -197,8 +271,8 @@ export default function App() {
       ? ` Observações: ${evaluationResult.notes}`
       : "";
     const detail = `Descontos: ${evaluationResult.totalDeductions}. ${severeNote}${observations}`;
-    const evaluation = {
-      id: crypto.randomUUID(),
+    const evaluation: EvaluationSubmission = {
+      id: activeKataDraft.id,
       studentId,
       belt: kataName,
       type: "kata" as const,
@@ -211,10 +285,99 @@ export default function App() {
       })),
     };
 
-    void apiRequest("/api/evaluations", {
-      method: "POST",
-      body: JSON.stringify(evaluation),
-    }).catch(() => undefined);
+    await queueLastSubmission(evaluation, activeKataDraft.id);
+    setActiveKataDraft(null);
+  };
+
+  const startTechnicalEvaluation = (
+    student: ExamStudent,
+    selectedBelt: PracticalBeltId,
+  ) => {
+    if (!user) return;
+    const now = new Date().toISOString();
+    const draft: TechnicalDraft = {
+      id: crypto.randomUUID(),
+      userId: user.id,
+      kind: "technical",
+      studentId: student.id,
+      athlete: student.name,
+      beltId: selectedBelt,
+      createdAt: now,
+      updatedAt: now,
+      data: {
+        exam: createPracticalExam(selectedBelt),
+        groupIndex: 0,
+        standardScores: {},
+        sequenceScores: {},
+        notes: "",
+      },
+    };
+    setStudentId(student.id);
+    setAthlete(student.name);
+    setBelt(selectedBelt);
+    setActiveTechnicalDraft(draft);
+    void persistence.saveDraft(draft);
+    navigate("technical-form");
+  };
+
+  const resumeTechnicalEvaluation = (draft: TechnicalDraft) => {
+    setStudentId(draft.studentId);
+    setAthlete(draft.athlete);
+    setBelt(draft.beltId);
+    setActiveTechnicalDraft(draft);
+    navigate("technical-form");
+  };
+
+  const startKataEvaluation = (
+    student: ExamStudent,
+    selectedKata: KataId,
+    selectedMode: KataMode,
+  ) => {
+    if (!user) return;
+    const now = new Date().toISOString();
+    const draft: KataDraft = {
+      id: crypto.randomUUID(),
+      userId: user.id,
+      kind: "kata",
+      studentId: student.id,
+      athlete: student.name,
+      kataId: selectedKata,
+      mode: selectedMode,
+      createdAt: now,
+      updatedAt: now,
+      data: { marks: {}, notes: "" },
+    };
+    setStudentId(student.id);
+    setAthlete(student.name);
+    setKataId(selectedKata);
+    setKataMode(selectedMode);
+    setActiveKataDraft(draft);
+    void persistence.saveDraft(draft);
+    navigate("kata-form");
+  };
+
+  const resumeKataEvaluation = (draft: KataDraft) => {
+    setStudentId(draft.studentId);
+    setAthlete(draft.athlete);
+    setKataId(draft.kataId);
+    setKataMode(draft.mode);
+    setActiveKataDraft(draft);
+    navigate("kata-form");
+  };
+
+  const discardDraft = (draft: TechnicalDraft | KataDraft) => {
+    if (!window.confirm(`Descartar o rascunho da avaliação de ${draft.athlete}?`)) return;
+    void persistence.discardDraft(draft.id);
+  };
+
+  const authenticated = (authenticatedUser: AuthUser) => {
+    setCachedAuthUser(authenticatedUser);
+    setUser(authenticatedUser);
+  };
+
+  const updateAuthenticatedUser = (authenticatedUser: AuthUser) => {
+    setCachedAuthUser(authenticatedUser);
+    setUser(authenticatedUser);
   };
 
   if (!authReady) {
@@ -228,7 +391,7 @@ export default function App() {
   }
 
   if (!user) {
-    return <AuthScreen dark={dark} setDark={setDark} onAuthenticated={setUser} />;
+    return <AuthScreen dark={dark} setDark={setDark} onAuthenticated={authenticated} />;
   }
 
   if (view === "admin") {
@@ -253,7 +416,7 @@ export default function App() {
             user={user}
             dark={dark}
             onClose={() => setProfileOpen(false)}
-            onSaved={setUser}
+            onSaved={updateAuthenticatedUser}
           />
         )}
       </>
@@ -271,6 +434,9 @@ export default function App() {
         user={user}
         onLogout={logout}
         onOpenProfile={() => setProfileOpen(true)}
+        syncSummary={persistence.summary}
+        storageError={persistence.storageError}
+        onRetrySync={() => void persistence.retrySync()}
       >
         {view === "home" && <HomeView navigate={navigate} />}
         {view === "theory-links" && <TheoryLinksView onBack={() => navigate("home")} />}
@@ -285,28 +451,35 @@ export default function App() {
               setAdminSection("students");
               navigate("admin");
             }}
-            onStart={(student, selectedBelt) => {
-              setStudentId(student.id);
-              setAthlete(student.name);
-              setBelt(selectedBelt);
-              navigate("technical-form");
-            }}
+            drafts={persistence.drafts.filter((draft): draft is TechnicalDraft => draft.kind === "technical")}
+            onResumeDraft={resumeTechnicalEvaluation}
+            onDiscardDraft={discardDraft}
+            onStart={startTechnicalEvaluation}
           />
         )}
-        {view === "technical-form" && (
+        {view === "technical-form" && activeTechnicalDraft && (
           <TechnicalForm
             athlete={athlete}
             beltId={belt}
+            draft={activeTechnicalDraft}
+            onSaveDraft={persistence.saveDraft}
             onExit={() => navigate("home")}
-            onFinish={(practicalResult) => {
+            onFinish={async (practicalResult) => {
               setResult(practicalResult);
-              saveTechnicalEvaluation(practicalResult);
               navigate("technical-result");
+              await saveTechnicalEvaluation(practicalResult);
             }}
           />
         )}
         {view === "technical-result" && (
-          <TechnicalResultView result={result} athlete={athlete} navigate={navigate} />
+          <TechnicalResultView
+            result={result}
+            athlete={athlete}
+            navigate={navigate}
+            saveRecord={persistence.recordFor(lastEvaluationId)}
+            saveError={evaluationSaveError}
+            onRetrySave={retryLastSubmission}
+          />
         )}
         {view === "kata-setup" && (
           <KataSetup
@@ -319,25 +492,24 @@ export default function App() {
               setAdminSection("students");
               navigate("admin");
             }}
-            onStart={(student, selectedKata, selectedMode) => {
-              setStudentId(student.id);
-              setAthlete(student.name);
-              setKataId(selectedKata);
-              setKataMode(selectedMode);
-              navigate("kata-form");
-            }}
+            drafts={persistence.drafts.filter((draft): draft is KataDraft => draft.kind === "kata")}
+            onResumeDraft={resumeKataEvaluation}
+            onDiscardDraft={discardDraft}
+            onStart={startKataEvaluation}
           />
         )}
-        {view === "kata-form" && (
+        {view === "kata-form" && activeKataDraft && (
           <KataForm
             athlete={athlete}
             kataId={kataId}
             mode={kataMode}
+            draft={activeKataDraft}
+            onSaveDraft={persistence.saveDraft}
             onExit={() => navigate("home")}
-            onFinish={(evaluationResult) => {
+            onFinish={async (evaluationResult) => {
               setKataResult(evaluationResult);
-              saveKataEvaluation(evaluationResult);
               navigate("kata-result");
+              await saveKataEvaluation(evaluationResult);
             }}
           />
         )}
@@ -348,6 +520,9 @@ export default function App() {
             kataId={kataId}
             mode={kataMode}
             navigate={navigate}
+            saveRecord={persistence.recordFor(lastEvaluationId)}
+            saveError={evaluationSaveError}
+            onRetrySave={retryLastSubmission}
           />
         )}
       </PublicShell>
@@ -356,7 +531,7 @@ export default function App() {
           user={user}
           dark={dark}
           onClose={() => setProfileOpen(false)}
-          onSaved={setUser}
+          onSaved={updateAuthenticatedUser}
         />
       )}
     </>

@@ -1,6 +1,6 @@
 # ADR 006 — Avaliação offline-first e sincronização idempotente
 
-- Estado: proposta
+- Estado: aceita
 - Data: 2026-10-21
 
 ## Contexto
@@ -10,7 +10,7 @@ rede instável. Perder uma avaliação concluída é mais grave do que atrasar s
 chegada ao servidor. A interface atual depende da resposta da API e não possui
 uma fila persistente no aparelho.
 
-## Decisão proposta
+## Decisão
 
 Adotar uma PWA com Service Worker para os arquivos da aplicação e IndexedDB
 para rascunhos e uma caixa de saída por usuário. O cliente gera um identificador

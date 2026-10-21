@@ -66,6 +66,25 @@ export type StudentRecord = {
 
 export type ExamStudent = Pick<StudentRecord, "id" | "name">;
 
+export type EvaluationSubmission = {
+  id: string;
+  studentId: string;
+  belt: string;
+  type: "teórica" | "técnica" | "kata";
+  score: number;
+  result?: string;
+  matrixId?: string;
+  detail?: string;
+  categories?: { name: string; score: number }[];
+  items?: {
+    category: string;
+    name: string;
+    score: number;
+    detail?: string;
+    parts?: { name: string; score: number }[];
+  }[];
+};
+
 export type ThemeSettings = {
   lightAccent: string;
   darkAccent: string;

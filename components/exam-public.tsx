@@ -6,8 +6,10 @@ import {
   Moon, PlayCircle, Sun, Target, X,
 } from "lucide-react";
 import type { AuthUser } from "@/lib/platform";
+import type { OutboxRecord, SyncSummary } from "@/lib/offline-evaluations";
 import type { PracticalResult } from "@/lib/practical-scoring";
 import { TECHNIQUE_VIDEOS, toYouTubeEmbedUrl } from "@/lib/practical-exams";
+import { EvaluationSaveStatus, SyncStatusBar } from "./exam-persistence";
 
 export type { PracticalResult } from "@/lib/practical-scoring";
 
@@ -121,6 +123,9 @@ export function PublicShell({
   user,
   onLogout,
   onOpenProfile,
+  syncSummary,
+  storageError,
+  onRetrySync,
 }: {
   children: React.ReactNode;
   menuOpen: boolean;
@@ -131,12 +136,16 @@ export function PublicShell({
   user?: AuthUser;
   onLogout?: () => void;
   onOpenProfile?: () => void;
+  syncSummary: SyncSummary;
+  storageError: string;
+  onRetrySync: () => void;
 }) {
   return (
     <main className={`public-shell ${dark ? "dark" : ""}`}>
       <button className="floating-menu" aria-label="Abrir menu" onClick={() => setMenuOpen(true)}>
         <Menu size={19} />
       </button>
+      <SyncStatusBar summary={syncSummary} storageError={storageError} onRetry={onRetrySync} />
       {children}
       <PublicMenu open={menuOpen} onClose={() => setMenuOpen(false)} dark={dark} setDark={setDark} navigate={navigate} user={user} onLogout={onLogout} onOpenProfile={onOpenProfile} />
     </main>
@@ -223,10 +232,16 @@ export function TechnicalResultView({
   result,
   athlete,
   navigate,
+  saveRecord,
+  saveError,
+  onRetrySave,
 }: {
   result: PracticalResult;
   athlete: string;
   navigate: (view: View) => void;
+  saveRecord: OutboxRecord | undefined;
+  saveError?: string;
+  onRetrySave: () => void;
 }) {
   return (
     <section className="modal-screen">
@@ -237,6 +252,7 @@ export function TechnicalResultView({
         <span className="eyebrow">AVALIAÇÃO TÉCNICA CONCLUÍDA</span>
         <h2>{result.approved ? "RESULTADO APROVADO" : "REEXAME NECESSÁRIO"}</h2>
         <p className="muted">{athlete}</p>
+        <EvaluationSaveStatus record={saveRecord} localError={saveError} onRetry={onRetrySave} />
         <div className="score-ring" style={{ "--score": `${result.score * 36}deg` } as React.CSSProperties}>
           <div><strong>{result.score.toFixed(1)}</strong><span>NOTA GERAL</span></div>
         </div>
