@@ -143,8 +143,8 @@ export function validateTheoryQuestionInput(
   if (category.length < 2 || category.length > 60) {
     return "Informe uma categoria entre 2 e 60 caracteres.";
   }
-  if (prompt.length < 5 || prompt.length > 500) {
-    return "O enunciado deve ter entre 5 e 500 caracteres.";
+  if (prompt.length < 5 || prompt.length > 3000) {
+    return "O enunciado deve ter entre 5 e 3.000 caracteres.";
   }
   if (!Number.isInteger(points) || points < 1 || points > 100) {
     return "A pontuação deve ser um número inteiro entre 1 e 100.";

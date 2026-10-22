@@ -12,6 +12,7 @@ Aplicação web da Associação Judô Rogério Cruz para aplicar, registrar e ac
 - apresenta todas as questões em ordem aleatória, salva respostas, corrige no servidor e mostra o gabarito comentado depois da entrega;
 - aceita escolha única e associações em grade com uma ou várias respostas por item, exibidas em blocos verticais no celular;
 - aceita imagem, áudio, vídeo próprio ou YouTube nas questões teóricas;
+- importa, como rascunho, o modelo do exame marrom com 52 questões e 1.000 pontos;
 - autentica avaliadores e Super Admins com contas individuais;
 - permite que o Super Admin autorize e desative avaliadores;
 - aplica avaliações técnicas somente para alunos aprovados no teórico, usando automaticamente a graduação autorizada;
@@ -280,6 +281,8 @@ No celular, conectado à mesma rede Wi-Fi, abra `http://192.168.0.50:3000`, subs
 8. Ao iniciar uma avaliação técnica, o avaliador escolhe um judoca aprovado no teórico. A faixa e a data da aprovação aparecem automaticamente e não podem ser alteradas. Kata continua disponível para os judocas cadastrados.
 9. Ao salvar a primeira avaliação, o sistema associa automaticamente o judoca ao usuário logado. O avaliador consulta apenas quem já avaliou e seus próprios registros, enquanto o Super Admin mantém a visão completa.
 10. O nome exibido pode ser alterado em **Ver e editar perfil**.
+
+O Super Admin pode carregar o caderno fornecido para 1º Kyu em **Administração → Provas teóricas → Importar exame marrom**. Ele entra como rascunho: revise o gabarito provisório e inclua as 14 mídias pendentes antes de publicar. O inventário está em [`docs/product/brown-theory-exam.md`](docs/product/brown-theory-exam.md).
 
 Não há envio automático de convite, recuperação de senha ou redefinição por e-mail. A autorização precisa ser comunicada manualmente ao avaliador.
 

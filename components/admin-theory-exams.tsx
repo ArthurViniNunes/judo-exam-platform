@@ -3,6 +3,7 @@
 import {
   Archive,
   ArrowLeft,
+  BookCopy,
   Check,
   CheckCircle2,
   ChevronRight,
@@ -380,7 +381,7 @@ function QuestionEditor({
             <textarea
               required
               minLength={5}
-              maxLength={500}
+              maxLength={3000}
               rows={4}
               value={draft.prompt}
               onChange={(event) => setDraft({ ...draft, prompt: event.target.value })}
@@ -644,6 +645,28 @@ export function TheoryExamsView() {
     setErrorDetails(next.details);
   };
 
+  const importBrownTemplate = async () => {
+    if (!window.confirm("Importar o exame marrom com 52 questões e gabarito provisório? O resultado será criado como rascunho.")) return;
+    setBusy(true);
+    setError("");
+    setErrorDetails([]);
+    setMessage("");
+    try {
+      const imported = await apiRequest<TheoryExamVersion>(
+        "/api/theory/admin/templates/brown/import",
+        { method: "POST" },
+      );
+      setVersions((current) => [imported, ...current]);
+      setSelectedId(imported.id);
+      mergeVersion(imported);
+      setMessage("Exame marrom importado: revise o gabarito provisório e inclua as 14 mídias antes de publicar.");
+    } catch (caught) {
+      handleError(caught, "Não foi possível importar o exame marrom.");
+    } finally {
+      setBusy(false);
+    }
+  };
+
   const saveConfiguration = async (event: FormEvent) => {
     event.preventDefault();
     if (!version) return;
@@ -758,9 +781,14 @@ export function TheoryExamsView() {
           <h1>Provas teóricas</h1>
           <p>Prepare o conteúdo em rascunho e publique uma versão imutável por graduação.</p>
         </div>
-        <button className="management-primary" onClick={() => setCreateOpen(true)}>
-          <Plus size={18} /> Novo rascunho
-        </button>
+        <div className="theory-heading-actions">
+          <button className="management-secondary" disabled={busy} onClick={() => void importBrownTemplate()}>
+            <BookCopy size={18} /> Importar exame marrom
+          </button>
+          <button className="management-primary" onClick={() => setCreateOpen(true)}>
+            <Plus size={18} /> Novo rascunho
+          </button>
+        </div>
       </header>
 
       {error && !version && <div className="management-error" role="alert">{error}</div>}

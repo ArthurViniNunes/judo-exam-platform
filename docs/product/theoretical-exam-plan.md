@@ -262,12 +262,14 @@ aluno. Toda autorização é validada no backend.
 
 ### 0.2 — Provas versionadas
 
-**Estado: infraestrutura e gestão concluídas; conteúdo oficial pendente.** O
+**Estado: infraestrutura e gestão concluídas; modelo marrom importável entregue e conteúdo das demais faixas pendente.** O
 Super Admin já pode criar cadernos vazios por graduação, configurar a nota,
 cadastrar perguntas com gabarito, explicação e mídia, publicar uma
 versão imutável e encerrá-la. O schema de tentativas e elegibilidades também já
 existe e é usado pela área do aluno. A ordem aleatória é uma regra fixa, não
-uma configuração administrativa.
+uma configuração administrativa. O caderno marrom pode ser importado com 52
+questões e 1.000 pontos, mas permanece em rascunho até a revisão do gabarito e
+das 14 mídias pendentes.
 
 - criar schema de provas e tentativas;
 - cadastrar o conteúdo oficial quando ele for disponibilizado;

@@ -40,6 +40,10 @@ import {
 } from "../backend/src/theory-domain";
 import { eligibilityStatus } from "../backend/src/student-profile";
 import {
+  BROWN_THEORY_TEMPLATE,
+  BROWN_THEORY_TEMPLATE_SUMMARY,
+} from "../backend/src/brown-theory-template";
+import {
   scoreTheoryAttempt,
   shuffleTheoryItems,
 } from "../backend/src/theory-attempt-domain";
@@ -122,6 +126,19 @@ describe("mídia da prova teórica", () => {
 });
 
 describe("provas teóricas versionadas", () => {
+  it("mantém íntegro o modelo importável do exame marrom", () => {
+    expect(BROWN_THEORY_TEMPLATE_SUMMARY).toEqual({
+      questionCount: 52,
+      totalPoints: 1000,
+      gridQuestionCount: 9,
+      pendingMediaCount: 14,
+    });
+    expect(
+      BROWN_THEORY_TEMPLATE.map((question) => validateTheoryQuestionInput(question))
+        .filter((result) => typeof result === "string"),
+    ).toEqual([]);
+  });
+
   it("normaliza uma versão sem inventar regras ainda não configuradas", () => {
     expect(
       validateTheoryVersionInput({

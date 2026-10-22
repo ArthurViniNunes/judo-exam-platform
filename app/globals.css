@@ -4385,6 +4385,12 @@ td:first-child {
 .theory-dialog-actions { display: grid; grid-template-columns: 1fr 1.3fr; gap: 8px; }
 .theory-dialog-actions button { min-height: 48px; }
 .theory-dialog-actions.sticky { position: sticky; bottom: -20px; z-index: 2; margin: 0 -17px -20px; padding: 12px 17px max(12px, env(safe-area-inset-bottom)); border-top: 1px solid var(--mg-line); background: var(--mg-surface); }
+.theory-heading-actions { width: 100%; display: grid; gap: 8px; }
+.theory-heading-actions button { min-height: 48px; justify-content: center; }
+
+@media (min-width: 768px) {
+  .theory-heading-actions { width: auto; grid-template-columns: auto auto; }
+}
 
 .management-shell { min-height: 100vh; }
 .management-sidebar {

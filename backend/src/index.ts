@@ -28,6 +28,7 @@ import {
   deleteTheoryQuestion,
   deleteTheoryVersion,
   getTheoryVersion,
+  importBrownTheoryTemplate,
   listTheoryVersions,
   publishTheoryVersion,
   updateTheoryQuestion,
@@ -170,6 +171,10 @@ async function handleAuthenticatedRoute(
     if (denied) return denied;
     if (request.method === "GET") return listTheoryVersions(request, env);
     if (request.method === "POST") return createTheoryVersion(request, env, user);
+  }
+  if (url.pathname === "/api/theory/admin/templates/brown/import" && request.method === "POST") {
+    const denied = requireSuperAdmin(request, env, user);
+    return denied || importBrownTheoryTemplate(request, env, user);
   }
   const theoryPublishMatch = url.pathname.match(
     /^\/api\/theory\/admin\/versions\/([^/]+)\/publish$/,

@@ -1,4 +1,8 @@
 import type { AuthUser } from "./contracts";
+import {
+  BROWN_THEORY_TEMPLATE,
+  BROWN_THEORY_TEMPLATE_SUMMARY,
+} from "./brown-theory-template";
 import { empty, json } from "./http";
 import {
   validateTheoryPublication,
@@ -294,6 +298,93 @@ export async function createTheoryVersion(
   ]);
   const version = await versionSummary(env, versionId);
   return json(request, env, version, 201);
+}
+
+export async function importBrownTheoryTemplate(
+  request: Request,
+  env: Env,
+  user: AuthUser,
+) {
+  const existingDraft = await env.DB.prepare(
+    "SELECT id FROM theory_exam_versions WHERE belt_id = 'brown' AND status = 'draft' LIMIT 1",
+  ).first<{ id: string }>();
+  if (existingDraft) {
+    return json(
+      request,
+      env,
+      { error: "Já existe um rascunho para a faixa marrom. Abra esse caderno antes de importar outro." },
+      409,
+    );
+  }
+
+  const versionNumberRow = await env.DB.prepare(
+    "SELECT COALESCE(MAX(version_number), 0) + 1 AS version_number FROM theory_exam_versions WHERE belt_id = 'brown'",
+  ).first<{ version_number: number }>();
+  const versionId = crypto.randomUUID();
+  const statements: D1PreparedStatement[] = [
+    env.DB.prepare(
+      `INSERT INTO theory_exam_versions (
+         id, belt_id, belt_name, version_number, minimum_score,
+         question_order, status, created_by
+       ) VALUES (?, 'brown', 'Faixa marrom — 1º Kyu', ?, 70, 'random', 'draft', ?)`,
+    ).bind(versionId, Number(versionNumberRow?.version_number ?? 1), user.id),
+  ];
+
+  BROWN_THEORY_TEMPLATE.forEach((question, position) => {
+    const questionId = crypto.randomUUID();
+    const optionIds = question.options.map(() => crypto.randomUUID());
+    statements.push(
+      env.DB.prepare(
+        `INSERT INTO theory_questions (
+           id, version_id, category, prompt, points, explanation, position, question_type
+         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+      ).bind(
+        questionId,
+        versionId,
+        question.category,
+        question.prompt,
+        question.points,
+        question.explanation,
+        position,
+        question.type,
+      ),
+    );
+    question.options.forEach((option, optionPosition) => {
+      statements.push(
+        env.DB.prepare(
+          "INSERT INTO theory_question_options (id, question_id, text, is_correct, position) VALUES (?, ?, ?, ?, ?)",
+        ).bind(
+          optionIds[optionPosition],
+          questionId,
+          option.text,
+          question.type === "single_choice" && option.isCorrect ? 1 : 0,
+          optionPosition,
+        ),
+      );
+    });
+    question.rows.forEach((row, rowPosition) => {
+      statements.push(
+        env.DB.prepare(
+          "INSERT INTO theory_question_rows (id, question_id, text, correct_option_ids_json, position) VALUES (?, ?, ?, ?, ?)",
+        ).bind(
+          crypto.randomUUID(),
+          questionId,
+          row.text,
+          JSON.stringify(row.correctOptionIndexes.map((index) => optionIds[index])),
+          rowPosition,
+        ),
+      );
+    });
+  });
+
+  statements.push(
+    auditStatement(request, env, user, "theory_template.imported", "theory_exam_version", versionId, {
+      beltId: "brown",
+      ...BROWN_THEORY_TEMPLATE_SUMMARY,
+    }),
+  );
+  await env.DB.batch(statements);
+  return getTheoryVersion(request, env, versionId);
 }
 
 export async function updateTheoryVersion(
