@@ -20,6 +20,7 @@ export type EvaluationRecord = {
   evaluatorId: string | null;
   evaluatorName: string;
   evaluatorRank: string | null;
+  eligibilityId: string | null;
   belt: string;
   type: "teórica" | "técnica" | "kata";
   score: number;
@@ -71,6 +72,17 @@ export type StudentRecord = {
 
 export type ExamStudent = Pick<StudentRecord, "id" | "name">;
 
+export type PracticalCandidate = ExamStudent & {
+  eligibility: {
+    id: string;
+    beltId: "gray" | "blue" | "yellow" | "orange" | "green" | "purple" | "brown";
+    beltName: string;
+    validFrom: string;
+    source: "theory_attempt";
+    sourceAttemptId: string;
+  } | null;
+};
+
 export type StudentEligibility = {
   id: string;
   beltId: string;
@@ -97,6 +109,7 @@ export type StudentProfile = {
 export type EvaluationSubmission = {
   id: string;
   studentId: string;
+  beltId?: string;
   belt: string;
   type: "teórica" | "técnica" | "kata";
   score: number;

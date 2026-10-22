@@ -10,14 +10,14 @@ import {
   getTechniqueEvaluationParts, toYouTubeEmbedUrl, type PracticalBeltId,
 } from "@/lib/practical-exams";
 import { calculatePracticalResult } from "@/lib/practical-scoring";
-import type { ExamStudent } from "@/lib/platform";
+import type { PracticalCandidate } from "@/lib/platform";
 import type {
   DraftSaveState,
   TechnicalDraft,
   TechnicalDraftState,
 } from "@/lib/offline-evaluations";
 import { Brand, TechniqueVideoDialog } from "./exam-public";
-import { ExamStudentSelect } from "./exam-student-select";
+import { PracticalCandidateSelect } from "./exam-student-select";
 import { DraftResumeList, DraftSaveIndicator } from "./exam-persistence";
 import type { PracticalResult } from "./exam-public";
 
@@ -34,8 +34,8 @@ export function TechnicalSetup({
   onDiscardDraft,
 }: {
   onBack: () => void;
-  onStart: (student: ExamStudent, belt: PracticalBeltId) => void;
-  students: ExamStudent[];
+  onStart: (student: PracticalCandidate & { eligibility: NonNullable<PracticalCandidate["eligibility"]> }) => void;
+  students: PracticalCandidate[];
   studentsLoading: boolean;
   studentsError: string;
   onRetryStudents: () => void;
@@ -45,17 +45,20 @@ export function TechnicalSetup({
   onDiscardDraft: (draft: TechnicalDraft) => void;
 }) {
   const [studentId, setStudentId] = useState("");
-  const [belt, setBelt] = useState<PracticalBeltId | "">("");
-  const selectedStudent = students.find((student) => student.id === studentId);
+  const selectedStudent = students.find(
+    (student): student is PracticalCandidate & {
+      eligibility: NonNullable<PracticalCandidate["eligibility"]>;
+    } => student.id === studentId && student.eligibility !== null,
+  );
   return (
     <section className="modal-screen">
       <div className="public-card form-card technical-start">
         <Brand />
         <span className="eyebrow">AVALIAÇÃO DE EXAME DE FAIXA</span>
         <h2>DADOS DA AVALIAÇÃO</h2>
-        <p className="muted">Selecione um judoca do seu cadastro e a graduação pretendida.</p>
+        <p className="muted">Selecione um judoca aprovado no teórico. A graduação correta será preenchida automaticamente.</p>
         <DraftResumeList drafts={drafts} onResume={(draft) => onResumeDraft(draft as TechnicalDraft)} onDiscard={(draft) => onDiscardDraft(draft as TechnicalDraft)} />
-        <ExamStudentSelect
+        <PracticalCandidateSelect
           students={students}
           value={studentId}
           loading={studentsLoading}
@@ -64,15 +67,9 @@ export function TechnicalSetup({
           onRetry={onRetryStudents}
           onManageStudents={onManageStudents}
         />
-        <label>FAIXA PRETENDIDA
-          <select value={belt} onChange={(e) => setBelt(e.target.value as PracticalBeltId | "")}>
-            <option value="">Selecione a graduação</option>
-            {PRACTICAL_BELTS.map((item) => <option key={item.id} value={item.id}>Faixa {item.name} — {item.kyu}</option>)}
-          </select>
-        </label>
         <div className="button-row">
           <button className="outline" onClick={onBack}>VOLTAR</button>
-          <button className="primary" disabled={!selectedStudent || !belt} onClick={() => selectedStudent && belt && onStart(selectedStudent, belt)}>
+          <button className="primary" disabled={!selectedStudent} onClick={() => selectedStudent && onStart(selectedStudent)}>
             INICIAR AVALIAÇÃO <ChevronRight size={17} />
           </button>
         </div>

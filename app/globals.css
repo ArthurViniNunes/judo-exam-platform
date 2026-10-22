@@ -703,6 +703,73 @@ label small {
   background: #3a2028;
   color: #f0aaa6;
 }
+.practical-eligibility-card {
+  min-width: 0;
+  margin-top: 10px;
+  padding: 13px;
+  border: 1px solid color-mix(in srgb, var(--green-600) 45%, var(--green-300));
+  border-radius: 13px;
+  background: color-mix(in srgb, var(--green-50) 88%, white);
+  display: grid;
+  grid-template-columns: 13px minmax(0, 1fr) 28px;
+  align-items: center;
+  gap: 11px;
+}
+.practical-belt-mark {
+  width: 13px;
+  height: 48px;
+  border: 1px solid rgba(0, 0, 0, 0.18);
+  border-radius: 5px;
+  background: #a5a9ad;
+}
+.practical-belt-mark.belt-blue { background: #3977c5; }
+.practical-belt-mark.belt-yellow { background: #e4bd21; }
+.practical-belt-mark.belt-orange { background: #e87f20; }
+.practical-belt-mark.belt-green { background: #4e9858; }
+.practical-belt-mark.belt-purple { background: #7653a6; }
+.practical-belt-mark.belt-brown { background: #79503a; }
+.practical-eligibility-card > div { min-width: 0; display: grid; gap: 3px; }
+.practical-eligibility-card small { color: var(--muted); font-size: 9px; font-weight: 750; }
+.practical-eligibility-card strong { font-size: 14px; overflow-wrap: anywhere; }
+.practical-eligibility-card div > span {
+  color: var(--muted);
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 10px;
+  line-height: 1.4;
+}
+.practical-eligibility-card > svg { color: var(--green-700); }
+.practical-waiting-list {
+  margin-top: 12px;
+  border-top: 1px solid var(--green-200);
+}
+.practical-waiting-list summary {
+  min-height: 44px;
+  color: var(--muted);
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  cursor: pointer;
+  font-size: 11px;
+  font-weight: 700;
+}
+.practical-waiting-list ul {
+  max-height: 170px;
+  margin: 0;
+  padding: 0 0 8px 23px;
+  overflow-y: auto;
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.8;
+}
+.dark .practical-eligibility-card {
+  border-color: color-mix(in srgb, var(--green-600) 62%, #30191d);
+  background: color-mix(in srgb, var(--green-900) 30%, #2b2022);
+}
+.dark .practical-belt-mark { border-color: rgba(255, 255, 255, 0.3); }
+.dark .practical-eligibility-card > svg { color: #9fd3a6; }
+.dark .practical-waiting-list { border-color: color-mix(in srgb, var(--green-600) 26%, #4a2c30); }
 .kata-choice-field {
   min-width: 0;
   margin: 19px 0 0;

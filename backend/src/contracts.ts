@@ -18,6 +18,7 @@ export type AuthUser = {
 export type EvaluationInput = {
   id?: string;
   studentId: string;
+  beltId?: string;
   belt: string;
   type: EvaluationType;
   score: number;
@@ -86,6 +87,7 @@ export type EvaluationRow = {
   score: number;
   result: string | null;
   matrix_id: string | null;
+  eligibility_id: string | null;
   detail: string | null;
   created_at: string;
   categories?: EvaluationCategoryRow[];
@@ -97,4 +99,12 @@ export type StudentRow = {
   name: string;
   normalized_name: string;
   created_at: string;
+};
+
+export type PracticalCandidateRow = Pick<StudentRow, "id" | "name"> & {
+  eligibility_id: string | null;
+  belt_id: string | null;
+  belt_name: string | null;
+  valid_from: string | null;
+  source_attempt_id: string | null;
 };

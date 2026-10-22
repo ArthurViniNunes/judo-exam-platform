@@ -61,6 +61,9 @@ export function canDeleteEvaluation(user: AuthUser, row: EvaluationRow) {
 export function isEvaluation(value: unknown): value is EvaluationInput {
   if (!value || typeof value !== "object") return false;
   const item = value as Partial<EvaluationInput>;
+  const validBeltId =
+    item.beltId === undefined ||
+    ["gray", "blue", "yellow", "orange", "green", "purple", "brown"].includes(item.beltId);
 
   const validCategories =
     item.categories === undefined ||
@@ -113,6 +116,7 @@ export function isEvaluation(value: unknown): value is EvaluationInput {
   return Boolean(
     item.studentId?.trim() &&
       item.studentId.trim().length <= 100 &&
+      validBeltId &&
       item.belt?.trim() &&
       (item.type === "teórica" ||
         item.type === "técnica" ||
@@ -133,6 +137,7 @@ export function formatEvaluation(row: EvaluationRow) {
     evaluatorId: row.evaluator_id,
     evaluatorName: row.evaluator_name || row.professor || "Não informado",
     evaluatorRank: row.evaluator_rank ?? null,
+    eligibilityId: row.eligibility_id,
     belt: row.belt,
     type: row.type,
     score: row.score,

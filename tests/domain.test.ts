@@ -237,6 +237,7 @@ function evaluation(overrides: Partial<EvaluationRow> = {}): EvaluationRow {
     score: 80,
     result: "Aprovado",
     matrix_id: null,
+    eligibility_id: null,
     detail: null,
     created_at: "2026-10-10 12:00:00",
     ...overrides,
@@ -437,6 +438,7 @@ describe("domínio administrativo", () => {
   it("valida e formata as notas individuais de uma avaliação", () => {
     const input = {
       studentId: "student-1",
+      beltId: "yellow",
       belt: "Amarela",
       type: "técnica" as const,
       score: 80,
@@ -454,6 +456,7 @@ describe("domínio administrativo", () => {
       ],
     };
     expect(isEvaluation(input)).toBe(true);
+    expect(isEvaluation({ ...input, beltId: "faixa-inexistente" })).toBe(false);
     expect(isEvaluation({ ...input, studentId: "" })).toBe(false);
     expect(isEvaluation({ ...input, categories: [{ name: "Nage Waza", score: -1 }] })).toBe(false);
     expect(isEvaluation({ ...input, items: [{ ...input.items[0], score: 120 }] })).toBe(false);
@@ -513,6 +516,7 @@ describe("domínio administrativo", () => {
     expect(formatted.categories).toEqual([
       { id: "category-1", name: "Nage Waza", score: 85 },
     ]);
+    expect(formatted.eligibilityId).toBeNull();
     expect(formatted.items[0].parts).toEqual([
       { id: "part-1", name: "1ª execução", score: 100 },
     ]);

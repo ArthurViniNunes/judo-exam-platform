@@ -27,7 +27,7 @@ import {
   type View,
 } from "@/components/exam-flow";
 import { ProfileDialog } from "@/components/profile-dialog";
-import type { AuthUser, ExamStudent, ThemeSettings } from "@/lib/platform";
+import type { AuthUser, ExamStudent, PracticalCandidate, ThemeSettings } from "@/lib/platform";
 import type { EvaluationSubmission } from "@/lib/platform";
 import { DEFAULT_THEME_SETTINGS } from "@/lib/theme";
 import { KATAS, type KataId, type KataMode, type KataResult } from "@/lib/kata-exams";
@@ -78,6 +78,7 @@ export default function App() {
   const [studentId, setStudentId] = useState("");
   const [athlete, setAthlete] = useState("");
   const [examStudents, setExamStudents] = useState<ExamStudent[]>([]);
+  const [practicalCandidates, setPracticalCandidates] = useState<PracticalCandidate[]>([]);
   const [examStudentsLoading, setExamStudentsLoading] = useState(false);
   const [examStudentsError, setExamStudentsError] = useState("");
   const [result, setResult] = useState<PracticalResult>(initialPracticalResult);
@@ -146,11 +147,34 @@ export default function App() {
     }
   }, [user]);
 
+  const loadPracticalCandidates = useCallback(async () => {
+    if (!user) return;
+    setExamStudentsLoading(true);
+    setExamStudentsError("");
+    try {
+      setPracticalCandidates(
+        await apiRequest<PracticalCandidate[]>("/api/practical-candidates"),
+      );
+    } catch (caught) {
+      setPracticalCandidates([]);
+      setExamStudentsError(
+        caught instanceof Error
+          ? caught.message
+          : "Não foi possível carregar os candidatos.",
+      );
+    } finally {
+      setExamStudentsLoading(false);
+    }
+  }, [user]);
+
   useEffect(() => {
     if (view !== "technical-setup" && view !== "kata-setup") return;
-    const timer = window.setTimeout(() => void loadExamStudents(), 0);
+    const timer = window.setTimeout(
+      () => void (view === "technical-setup" ? loadPracticalCandidates() : loadExamStudents()),
+      0,
+    );
     return () => window.clearTimeout(timer);
-  }, [loadExamStudents, view]);
+  }, [loadExamStudents, loadPracticalCandidates, view]);
 
   useEffect(() => {
     const token = getAuthToken();
@@ -273,6 +297,7 @@ export default function App() {
     const evaluation: EvaluationSubmission = {
       id: activeTechnicalDraft.id,
       studentId,
+      beltId: belt,
       belt: beltName,
       type: "técnica" as const,
       score: practicalResult.score * 10,
@@ -325,10 +350,12 @@ export default function App() {
   };
 
   const startTechnicalEvaluation = (
-    student: ExamStudent,
-    selectedBelt: PracticalBeltId,
+    student: PracticalCandidate & {
+      eligibility: NonNullable<PracticalCandidate["eligibility"]>;
+    },
   ) => {
     if (!user) return;
+    const selectedBelt = student.eligibility.beltId;
     const now = new Date().toISOString();
     const draft: TechnicalDraft = {
       id: crypto.randomUUID(),
@@ -356,6 +383,13 @@ export default function App() {
   };
 
   const resumeTechnicalEvaluation = (draft: TechnicalDraft) => {
+    const candidate = practicalCandidates.find((item) => item.id === draft.studentId);
+    if (!candidate?.eligibility || candidate.eligibility.beltId !== draft.beltId) {
+      window.alert(
+        "Este rascunho não pode ser retomado porque a elegibilidade teórica do judoca não corresponde à graduação da avaliação.",
+      );
+      return;
+    }
     setStudentId(draft.studentId);
     setAthlete(draft.athlete);
     setBelt(draft.beltId);
@@ -506,10 +540,10 @@ export default function App() {
         {view === "technical-setup" && (
           <TechnicalSetup
             onBack={() => navigate("home")}
-            students={examStudents}
+            students={practicalCandidates}
             studentsLoading={examStudentsLoading}
             studentsError={examStudentsError}
-            onRetryStudents={() => void loadExamStudents()}
+            onRetryStudents={() => void loadPracticalCandidates()}
             onManageStudents={() => {
               setAdminSection("students");
               navigate("admin");

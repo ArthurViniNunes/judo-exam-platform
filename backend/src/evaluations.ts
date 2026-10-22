@@ -4,6 +4,7 @@ import type {
   EvaluationItemPartRow,
   EvaluationItemRow,
   EvaluationRow,
+  PracticalCandidateRow,
   StudentRow,
 } from "./contracts";
 import {
@@ -175,6 +176,43 @@ export async function listAvailableStudents(request: Request, env: Env) {
   return json(request, env, result.results);
 }
 
+export async function listPracticalCandidates(request: Request, env: Env) {
+  const result = await env.DB.prepare(
+    `SELECT students.id, students.name,
+            eligibilities.id AS eligibility_id,
+            eligibilities.belt_id,
+            eligibilities.belt_name,
+            eligibilities.valid_from,
+            eligibilities.source_attempt_id
+       FROM students
+       LEFT JOIN student_eligibilities AS eligibilities
+         ON eligibilities.student_id = students.id
+        AND eligibilities.revoked_at IS NULL
+        AND (eligibilities.valid_until IS NULL OR eligibilities.valid_until > CURRENT_TIMESTAMP)
+      ORDER BY CASE WHEN eligibilities.id IS NULL THEN 1 ELSE 0 END,
+               students.name`,
+  ).all<PracticalCandidateRow>();
+
+  return json(
+    request,
+    env,
+    result.results.map((candidate) => ({
+      id: candidate.id,
+      name: candidate.name,
+      eligibility: candidate.eligibility_id
+        ? {
+            id: candidate.eligibility_id,
+            beltId: candidate.belt_id,
+            beltName: candidate.belt_name,
+            validFrom: candidate.valid_from,
+            source: "theory_attempt" as const,
+            sourceAttemptId: candidate.source_attempt_id,
+          }
+        : null,
+    })),
+  );
+}
+
 export async function createStudent(
   request: Request,
   env: Env,
@@ -280,6 +318,53 @@ export async function createEvaluation(
     );
   }
 
+  const eligibility = body.type === "técnica"
+    ? await env.DB.prepare(
+        `SELECT id, belt_id, belt_name, source_attempt_id, valid_from
+           FROM student_eligibilities
+          WHERE student_id = ?
+            AND revoked_at IS NULL
+            AND (valid_until IS NULL OR valid_until > CURRENT_TIMESTAMP)
+          ORDER BY valid_from DESC
+          LIMIT 1`,
+      ).bind(student.id).first<{
+        id: string;
+        belt_id: string;
+        belt_name: string;
+        source_attempt_id: string;
+        valid_from: string;
+      }>()
+    : null;
+
+  if (body.type === "técnica" && !eligibility) {
+    await env.DB.prepare(
+      "INSERT INTO audit_events (id, actor_user_id, action, entity_type, entity_id, request_id, metadata_json) VALUES (?, ?, 'evaluation.rejected_missing_eligibility', 'student', ?, ?, ?)",
+    ).bind(
+      crypto.randomUUID(),
+      user.id,
+      student.id,
+      request.headers.get("X-Request-Id") || crypto.randomUUID(),
+      JSON.stringify({ source, evaluationId: id }),
+    ).run();
+    return json(
+      request,
+      env,
+      { error: "Este judoca ainda não possui aprovação teórica para iniciar a avaliação prática." },
+      409,
+    );
+  }
+
+  if (eligibility && body.beltId && body.beltId !== eligibility.belt_id) {
+    return json(
+      request,
+      env,
+      { error: "A graduação da avaliação não corresponde à aprovação teórica do judoca." },
+      409,
+    );
+  }
+
+  const evaluationBelt = eligibility?.belt_name ?? body.belt.trim();
+
   const itemStatements = (body.items ?? []).flatMap((item, position) => {
     const itemId = crypto.randomUUID();
     return [
@@ -312,18 +397,19 @@ export async function createEvaluation(
       "INSERT OR IGNORE INTO student_evaluators (student_id, evaluator_id) VALUES (?, ?)",
     ).bind(student.id, user.id),
     env.DB.prepare(
-      "INSERT INTO evaluations (id, athlete, student_id, evaluator_id, professor, belt, type, score, result, matrix_id, detail) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+      "INSERT INTO evaluations (id, athlete, student_id, evaluator_id, professor, belt, type, score, result, matrix_id, eligibility_id, detail) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
     ).bind(
       id,
       student.name,
       student.id,
       user.id,
       user.name,
-      body.belt.trim(),
+      evaluationBelt,
       body.type,
       Math.round(body.score),
       body.result?.trim() || null,
       body.matrixId || null,
+      eligibility?.id ?? null,
       body.detail?.trim() || null,
     ),
     ...(body.categories ?? []).map((category, position) =>
@@ -352,6 +438,8 @@ export async function createEvaluation(
         type: body.type,
         categoryCount: body.categories?.length ?? 0,
         itemCount: body.items?.length ?? 0,
+        eligibilityId: eligibility?.id ?? null,
+        eligibilitySourceAttemptId: eligibility?.source_attempt_id ?? null,
       }),
     ),
   ];

@@ -13,7 +13,7 @@ Aplicação web da Associação Judô Rogério Cruz para aplicar, registrar e ac
 - aceita imagem, áudio, vídeo próprio ou YouTube nas questões teóricas;
 - autentica avaliadores e Super Admins com contas individuais;
 - permite que o Super Admin autorize e desative avaliadores;
-- aplica avaliações técnicas por graduação, selecionando automaticamente técnicas de faixas anteriores quando necessário;
+- aplica avaliações técnicas somente para alunos aprovados no teórico, usando automaticamente a graduação autorizada;
 - trata cada sequência de `Renraku-Henka Waza` como um único movimento e cria avaliações adicionais somente quando o item pede explicitamente duas ou mais execuções;
 - oferece vídeos de apoio do YouTube com reprodução iniciada ao abrir a referência;
 - aplica `Nage-no-Kata` parcial ou completo e `Katame-no-Kata`;
@@ -276,7 +276,7 @@ No celular, conectado à mesma rede Wi-Fi, abra `http://192.168.0.50:3000`, subs
 5. Em **Equipe**, o Super Admin informa nome, e-mail e graduação do avaliador para autorizar o acesso profissional.
 6. Se um aluno também for avaliador, ele usa a mesma identidade e senha nas duas entradas. Cada login cria uma sessão limitada ao contexto escolhido.
 7. Em **Administração → Alunos**, usuários profissionais podem continuar cadastrando previamente judocas que ainda não possuem conta.
-8. Ao iniciar uma avaliação técnica ou de kata, o avaliador escolhe um judoca cadastrado; não existe entrada manual de nome no exame.
+8. Ao iniciar uma avaliação técnica, o avaliador escolhe um judoca aprovado no teórico. A faixa e a data da aprovação aparecem automaticamente e não podem ser alteradas. Kata continua disponível para os judocas cadastrados.
 9. Ao salvar a primeira avaliação, o sistema associa automaticamente o judoca ao usuário logado. O avaliador consulta apenas quem já avaliou e seus próprios registros, enquanto o Super Admin mantém a visão completa.
 10. O nome exibido pode ser alterado em **Ver e editar perfil**.
 
@@ -288,7 +288,7 @@ Não há envio automático de convite, recuperação de senha ou redefinição p
 
 O catálogo técnico oficial fica em `lib/practical-exams.ts`. Ele organiza as técnicas por graduação e categoria, incluindo `Nage Waza`, `Renraku-Henka Waza`, `Kaeshi Waza`, `Osaekomi Waza`, `Shime Waza` e `Kansetsu Waza`. Quando uma faixa exige técnicas anteriores, a seleção é feita automaticamente ao iniciar o exame e a origem sorteada aparece no próprio card.
 
-O início do exame exige a seleção de um judoca previamente cadastrado no catálogo global. A API recebe o identificador, recupera o nome oficial no banco e associa o judoca ao usuário autenticado na mesma operação que salva a primeira nota. Assim, o avaliador é definido pelo login usado no momento do exame, não no cadastro do aluno.
+O início do exame exige a seleção de um judoca com aprovação teórica ativa. A API recupera do banco o nome, a graduação autorizada e a data da aprovação. Ao salvar, o backend consulta novamente a elegibilidade e rejeita a avaliação se ela estiver ausente, revogada ou associada a outra faixa. Assim, nem o frontend nem uma fila offline conseguem substituir a graduação autorizada.
 
 Cada item de `Renraku-Henka Waza` recebe uma única avaliação, mesmo quando o nome contém `→`. Avaliações múltiplas no mesmo card são criadas somente quando o texto pede explicitamente mais de uma execução, como `2 Fugas de Yoko-shiho-gatame`; nesse caso, a média das execuções compõe a nota do item.
 
@@ -354,6 +354,7 @@ Todas as rotas abaixo, exceto `/`, `/health`, login/registro e a leitura públic
 | `GET` | `/api/dashboard` | autenticado | Retorna indicadores e registros recentes |
 | `GET` | `/api/students` | autenticado | Lista alunos e seus históricos |
 | `GET` | `/api/students/available` | autenticado | Lista o catálogo global para iniciar exames |
+| `GET` | `/api/practical-candidates` | autenticado | Lista candidatos, faixa autorizada e origem da elegibilidade prática |
 | `POST` | `/api/students` | autenticado | Cadastra previamente um judoca |
 | `GET` | `/api/evaluations` | autenticado | Lista avaliações permitidas ao usuário |
 | `POST` | `/api/evaluations` | autenticado | Registra uma avaliação |

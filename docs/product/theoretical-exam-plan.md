@@ -1,6 +1,6 @@
 # Plano prioritário — exame teórico dentro da plataforma
 
-- Estado: Fases 0.1 e 0.2 entregues; aplicação da prova aguarda regras de negócio
+- Estado: Fases 0.1 a 0.4 entregues; conteúdo oficial e preparação de produção pendentes
 - Prioridade: máxima, antes das fases 2 a 5
 - Impacto: autenticação, cadastro de alunos, elegibilidade e início do exame prático
 - Data: 2026-10-21
@@ -296,11 +296,17 @@ e apresenta a correção comentada no mesmo fluxo.
 
 ### 0.4 — Integração com a prova prática
 
-- listar candidatos com elegibilidade;
-- remover escolha manual da faixa;
-- validar novamente a elegibilidade ao salvar a prática;
-- mostrar origem e data da aprovação teórica;
-- cobrir exceções e auditoria.
+**Estado: concluída para o fluxo normal.** O avaliador escolhe somente entre os
+judocas habilitados, visualiza a graduação e a data da aprovação teórica e
+não informa a faixa manualmente. O backend revalida a elegibilidade ao receber
+a nota, grava sua origem na avaliação e audita tentativas sem autorização.
+
+- [x] listar candidatos com elegibilidade;
+- [x] remover escolha manual da faixa;
+- [x] validar novamente a elegibilidade ao salvar a prática;
+- [x] mostrar origem e data da aprovação teórica;
+- [x] auditar rejeições e vincular a elegibilidade utilizada;
+- [ ] definir, antes de implementar, se existirá exceção administrativa.
 
 ### 0.5 — Migração e entrada em produção
 

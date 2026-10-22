@@ -7,6 +7,7 @@ import {
   getDashboard,
   listAvailableStudents,
   listEvaluations,
+  listPracticalCandidates,
   listStudents,
 } from "./evaluations";
 import {
@@ -215,6 +216,9 @@ async function handleAuthenticatedRoute(
   }
   if (url.pathname === "/api/students/available" && request.method === "GET") {
     return listAvailableStudents(request, env);
+  }
+  if (url.pathname === "/api/practical-candidates" && request.method === "GET") {
+    return listPracticalCandidates(request, env);
   }
   if (url.pathname === "/api/students" && request.method === "GET") {
     return listStudents(request, env, user, url);
