@@ -1,6 +1,6 @@
 # ADR 008 — Revisões imutáveis, exclusão lógica e auditoria
 
-- Estado: aceita; implementação incremental
+- Estado: aceita; revisões e exclusão lógica implementadas
 - Data: 2026-10-21
 
 ## Contexto
@@ -15,6 +15,12 @@ alunos, eventos, restaurações e mudanças administrativas.
 Tratar a avaliação original como imutável. Correções criam revisões ordenadas,
 com valores anteriores e novos, autor, data e motivo. Consultas comuns retornam
 a revisão vigente; Super Admins podem consultar a linha do tempo completa.
+
+Cada revisão recebe um novo identificador, aponta para a versão imediatamente
+anterior por `supersedes_id` e compartilha a raiz em `revision_root_id`. O
+registro preserva a data original do exame; `corrected_at` identifica quando a
+correção ocorreu. Painéis, perfil do judoca e métricas consideram somente a
+revisão vigente não excluída.
 
 Excluir pela interface passa a arquivar o registro. Restaurar e remover
 fisicamente são ações distintas. `audit_events` registra ações relevantes com

@@ -1,5 +1,6 @@
 import type {
   AuthUser,
+  EvaluationCorrectionInput,
   EvaluationInput,
   EvaluationRow,
   EvaluationType,
@@ -62,6 +63,40 @@ export function normalizeEvaluationDeletionReason(value: unknown) {
   if (typeof value !== "string") return null;
   const reason = value.trim().replace(/\s+/g, " ");
   return reason.length >= 5 && reason.length <= 300 ? reason : null;
+}
+
+export function normalizeEvaluationCorrectionReason(value: unknown) {
+  if (typeof value !== "string") return null;
+  const reason = value.trim().replace(/\s+/g, " ");
+  return reason.length >= 5 && reason.length <= 500 ? reason : null;
+}
+
+export function isEvaluationCorrection(
+  value: unknown,
+): value is EvaluationCorrectionInput {
+  if (!value || typeof value !== "object") return false;
+  const input = value as Partial<EvaluationCorrectionInput>;
+  if (!normalizeEvaluationCorrectionReason(input.reason)) return false;
+  if (!Array.isArray(input.categories) || !Array.isArray(input.items)) return false;
+  if (
+    input.result !== undefined &&
+    input.result !== null &&
+    (typeof input.result !== "string" || input.result.trim().length > 120)
+  ) return false;
+  if (
+    input.detail !== undefined &&
+    input.detail !== null &&
+    (typeof input.detail !== "string" || input.detail.trim().length > 2000)
+  ) return false;
+
+  return isEvaluation({
+    studentId: "revision",
+    belt: "revision",
+    type: "técnica",
+    score: input.score as number,
+    categories: input.categories,
+    items: input.items,
+  });
 }
 
 export function isEvaluation(value: unknown): value is EvaluationInput {
@@ -162,6 +197,13 @@ export function formatEvaluation(row: EvaluationRow) {
     deletedAt: row.deleted_at ?? null,
     deletedBy: row.deleted_by ?? null,
     deleteReason: row.delete_reason ?? null,
+    revisionRootId: row.revision_root_id ?? row.id,
+    supersedesId: row.supersedes_id ?? null,
+    revisionNumber: row.revision_number ?? 1,
+    correctionReason: row.correction_reason ?? null,
+    correctedBy: row.corrected_by ?? null,
+    correctedByName: row.corrected_by_name ?? null,
+    correctedAt: row.corrected_at ?? null,
     categories: (row.categories ?? [])
       .sort((left, right) => left.position - right.position)
       .map((category) => ({

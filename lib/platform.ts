@@ -33,8 +33,30 @@ export type EvaluationRecord = {
   deletedAt: string | null;
   deletedBy: string | null;
   deleteReason: string | null;
+  revisionRootId: string;
+  supersedesId: string | null;
+  revisionNumber: number;
+  correctionReason: string | null;
+  correctedBy: string | null;
+  correctedByName: string | null;
+  correctedAt: string | null;
   categories: EvaluationCategoryRecord[];
   items: EvaluationItemRecord[];
+};
+
+export type EvaluationCorrectionSubmission = {
+  reason: string;
+  score: number;
+  result: string | null;
+  detail: string | null;
+  categories: { name: string; score: number }[];
+  items: {
+    category: string;
+    name: string;
+    score: number;
+    detail?: string;
+    parts?: { name: string; score: number }[];
+  }[];
 };
 
 export type EvaluationCategoryRecord = {

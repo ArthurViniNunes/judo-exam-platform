@@ -23,6 +23,7 @@ Aplicação web da Associação Judô Rogério Cruz para aplicar, registrar e ac
 - registra a nota final, a média de cada categoria, cada técnica, eventuais execuções múltiplas, observações, graduação, data e avaliador;
 - mostra histórico, média e evolução por aluno, separando provas incompatíveis e comparando notas, categorias e dificuldades recorrentes;
 - exclui avaliações de forma reversível, exigindo motivo, registrando auditoria e permitindo restauração pelo Super Admin;
+- corrige avaliações por revisões imutáveis: a versão anterior, o motivo, o autor e a data permanecem consultáveis pelo Super Admin;
 - oferece um painel com volume de avaliações, médias, aprovação e registros recentes;
 - permite que o Super Admin escolha, com modelos prontos ou seletores de cor, a identidade visual global dos temas claro e escuro;
 - cria elegibilidade sem expiração quando o aluno é aprovado e permite nova tentativa imediata quando ele reprova.
@@ -375,6 +376,8 @@ Todas as rotas abaixo, exceto `/`, `/health`, login/registro e a leitura públic
 | `GET` | `/api/evaluations` | autenticado | Lista avaliações permitidas ao usuário |
 | `POST` | `/api/evaluations` | autenticado | Registra uma avaliação |
 | `POST` | `/api/evaluations/sync` | autenticado | Sincroniza uma avaliação local de forma idempotente |
+| `GET` | `/api/evaluations/:id/revisions` | Super Admin | Consulta todas as versões imutáveis da avaliação |
+| `POST` | `/api/evaluations/:id/revisions` | Super Admin | Cria uma correção com motivo, autor e auditoria |
 | `DELETE` | `/api/evaluations/:id` | autenticado | Arquiva uma avaliação permitida, com motivo obrigatório e auditoria |
 | `GET` | `/api/evaluations/deleted` | Super Admin | Lista avaliações excluídas logicamente |
 | `POST` | `/api/evaluations/:id/restore` | Super Admin | Restaura uma avaliação excluída e registra auditoria |

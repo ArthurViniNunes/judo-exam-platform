@@ -6,8 +6,10 @@ import {
   canDeleteEvaluation,
   formatEvaluation,
   isEvaluation,
+  isEvaluationCorrection,
   isValidEmail,
   normalizeEmail,
+  normalizeEvaluationCorrectionReason,
   normalizeEvaluationDeletionReason,
   normalizeName,
   rolesFromCsv,
@@ -604,6 +606,23 @@ describe("domínio administrativo", () => {
     expect(normalizeEvaluationDeletionReason("erro")).toBeNull();
     expect(normalizeEvaluationDeletionReason("x".repeat(301))).toBeNull();
     expect(normalizeEvaluationDeletionReason(null)).toBeNull();
+  });
+
+  it("valida uma correção completa sem aceitar motivo vazio", () => {
+    const correction = {
+      reason: "  Nota lançada   para a técnica errada ",
+      score: 80,
+      result: "Aprovado",
+      detail: "Registro revisado.",
+      categories: [{ name: "Nage Waza", score: 80 }],
+      items: [{ category: "Nage Waza", name: "O-soto-gari", score: 80 }],
+    };
+
+    expect(normalizeEvaluationCorrectionReason(correction.reason))
+      .toBe("Nota lançada para a técnica errada");
+    expect(isEvaluationCorrection(correction)).toBe(true);
+    expect(isEvaluationCorrection({ ...correction, reason: "erro" })).toBe(false);
+    expect(isEvaluationCorrection({ ...correction, score: 101 })).toBe(false);
   });
 
   it("valida e formata as notas individuais de uma avaliação", () => {

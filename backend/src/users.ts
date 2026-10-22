@@ -38,6 +38,12 @@ export async function listUsers(request: Request, env: Env) {
        LEFT JOIN evaluations
          ON evaluations.evaluator_id = users.id
         AND evaluations.deleted_at IS NULL
+        AND NOT EXISTS (
+          SELECT 1 FROM evaluations AS newer
+           WHERE newer.revision_root_id = COALESCE(evaluations.revision_root_id, evaluations.id)
+             AND newer.revision_number > evaluations.revision_number
+             AND newer.deleted_at IS NULL
+        )
       WHERE EXISTS (
         SELECT 1 FROM user_roles
          WHERE user_roles.user_id = users.id

@@ -2,12 +2,14 @@ import { login, logout, register, updateProfile } from "./auth";
 import { publicUser } from "./domain";
 import {
   createEvaluation,
+  createEvaluationRevision,
   createStudent,
   deleteEvaluation,
   getDashboard,
   listAvailableStudents,
   listDeletedEvaluations,
   listEvaluations,
+  listEvaluationRevisions,
   listPracticalCandidates,
   listStudents,
   restoreEvaluation,
@@ -314,6 +316,19 @@ async function handleAuthenticatedRoute(
   }
   if (url.pathname === "/api/evaluations/sync" && request.method === "POST") {
     return createEvaluation(request, env, user, "sync");
+  }
+  const evaluationRevisionMatch = url.pathname.match(
+    /^\/api\/evaluations\/([^/]+)\/revisions$/,
+  );
+  if (evaluationRevisionMatch) {
+    const denied = requireSuperAdmin(request, env, user);
+    if (denied) return denied;
+    if (request.method === "GET") {
+      return listEvaluationRevisions(request, env, evaluationRevisionMatch[1]);
+    }
+    if (request.method === "POST") {
+      return createEvaluationRevision(request, env, user, evaluationRevisionMatch[1]);
+    }
   }
   const evaluationRestoreMatch = url.pathname.match(
     /^\/api\/evaluations\/([^/]+)\/restore$/,

@@ -32,6 +32,15 @@ export type EvaluationInput = {
   items?: EvaluationItemInput[];
 };
 
+export type EvaluationCorrectionInput = {
+  reason: string;
+  score: number;
+  result?: string | null;
+  detail?: string | null;
+  categories: EvaluationCategoryInput[];
+  items: EvaluationItemInput[];
+};
+
 export type EvaluationCategoryInput = {
   name: string;
   score: number;
@@ -98,6 +107,13 @@ export type EvaluationRow = {
   deleted_at?: string | null;
   deleted_by?: string | null;
   delete_reason?: string | null;
+  revision_root_id?: string | null;
+  supersedes_id?: string | null;
+  revision_number?: number | null;
+  correction_reason?: string | null;
+  corrected_by?: string | null;
+  corrected_by_name?: string | null;
+  corrected_at?: string | null;
   categories?: EvaluationCategoryRow[];
   items?: EvaluationItemRow[];
 };

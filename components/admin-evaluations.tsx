@@ -1,6 +1,6 @@
 "use client";
 
-import { ArchiveRestore, BarChart3, ChevronDown, ClipboardList, FileText, FilterX, RotateCcw, Search, Trash2, TrendingDown, X } from "lucide-react";
+import { ArchiveRestore, BarChart3, ChevronDown, ClipboardList, FileText, FilterX, History, PencilLine, RotateCcw, Search, Trash2, TrendingDown, X } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import {
   EmptyState,
@@ -11,6 +11,7 @@ import {
 import type { AuthUser, EvaluationRecord, ManagedUser } from "@/lib/platform";
 import { apiRequest } from "@/lib/api";
 import { EvaluationReport } from "@/components/evaluation-report";
+import { EvaluationRevisionDialogs } from "@/components/evaluation-revision-dialogs";
 
 function resultLabel(evaluation: EvaluationRecord) {
   if (evaluation.result) return evaluation.result;
@@ -57,6 +58,8 @@ export function EvaluationsView({
   const [deletedEvaluations, setDeletedEvaluations] = useState<EvaluationRecord[]>([]);
   const [restoringId, setRestoringId] = useState<string | null>(null);
   const [reportId, setReportId] = useState<string | null>(null);
+  const [correctionTarget, setCorrectionTarget] = useState<EvaluationRecord | null>(null);
+  const [historyTarget, setHistoryTarget] = useState<EvaluationRecord | null>(null);
   const [deleteError, setDeleteError] = useState("");
 
   useEffect(() => {
@@ -277,6 +280,7 @@ export function EvaluationsView({
                 <small>Judoca</small>
                 <strong>{evaluation.athlete}</strong>
                 <span>{evaluation.type} · {evaluation.belt}</span>
+                {evaluation.revisionNumber > 1 && <em className="evaluation-revision-badge">Revisão {evaluation.revisionNumber}</em>}
               </div>
               <div className="evaluation-context">
                 <small>Avaliador e graduação</small>
@@ -310,6 +314,22 @@ export function EvaluationsView({
                   <span>Detalhes</span>
                   <ChevronDown size={16} />
                 </button>
+                {user.role === "super_admin" && <button
+                  className="evaluation-revision-action"
+                  onClick={() => setCorrectionTarget(evaluation)}
+                  aria-label={`Corrigir avaliação de ${evaluation.athlete}`}
+                  title="Criar uma correção sem apagar o histórico"
+                >
+                  <PencilLine size={18} />
+                </button>}
+                {user.role === "super_admin" && evaluation.revisionNumber > 1 && <button
+                  className="evaluation-revision-action"
+                  onClick={() => setHistoryTarget(evaluation)}
+                  aria-label={`Ver histórico de correções de ${evaluation.athlete}`}
+                  title="Ver todas as versões"
+                >
+                  <History size={18} />
+                </button>}
                 <button
                   className="evaluation-delete"
                   onClick={() => {
@@ -432,6 +452,14 @@ export function EvaluationsView({
           />}
         </section>
       </div>}
+      <EvaluationRevisionDialogs
+        key={correctionTarget?.id ?? historyTarget?.id ?? "closed"}
+        correctionTarget={correctionTarget}
+        historyTarget={historyTarget}
+        onCloseCorrection={() => setCorrectionTarget(null)}
+        onCloseHistory={() => setHistoryTarget(null)}
+        onSaved={reload}
+      />
     </div>
   );
 }

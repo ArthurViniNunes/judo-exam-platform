@@ -119,7 +119,22 @@ export function EvaluationReport({ evaluation }: { evaluation: EvaluationRecord 
           <dt>Referência do registro</dt>
           <dd>{evaluation.id}</dd>
         </div>
+        <div>
+          <dt>Versão do registro</dt>
+          <dd>Revisão {evaluation.revisionNumber}</dd>
+        </div>
       </dl>
+
+      {evaluation.revisionNumber > 1 && (
+        <div className="report-revision-note">
+          <strong>Registro corrigido</strong>
+          <p>{evaluation.correctionReason}</p>
+          <small>
+            {evaluation.correctedByName || "Responsável não informado"}
+            {evaluation.correctedAt ? ` · ${formatDate(evaluation.correctedAt, true)}` : ""}
+          </small>
+        </div>
+      )}
 
       {evaluation.detail && (
         <div className="report-observation">

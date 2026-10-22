@@ -12,6 +12,8 @@ import {
   dashboardFromRows,
   formatEvaluation,
   isEvaluation,
+  isEvaluationCorrection,
+  normalizeEvaluationCorrectionReason,
   normalizeEvaluationDeletionReason,
   normalizeName,
   studentsFromCatalog,
@@ -28,16 +30,24 @@ async function evaluationRows(
   const conditions = [
     visibility === "deleted"
       ? "evaluations.deleted_at IS NOT NULL"
-      : "evaluations.deleted_at IS NULL",
+      : `evaluations.deleted_at IS NULL
+         AND NOT EXISTS (
+           SELECT 1 FROM evaluations AS newer
+            WHERE newer.revision_root_id = COALESCE(evaluations.revision_root_id, evaluations.id)
+              AND newer.revision_number > evaluations.revision_number
+              AND newer.deleted_at IS NULL
+         )`,
     ...(filterId ? ["evaluations.evaluator_id = ?"] : []),
   ];
   const where = `WHERE ${conditions.join(" AND ")}`;
   const statement = env.DB.prepare(
     `SELECT evaluations.*, users.name AS evaluator_name,
             users.evaluator_rank AS evaluator_rank,
+            correctors.name AS corrected_by_name,
             events.name AS event_name
      FROM evaluations
      LEFT JOIN users ON users.id = evaluations.evaluator_id
+     LEFT JOIN users AS correctors ON correctors.id = evaluations.corrected_by
      LEFT JOIN exam_event_tasks AS event_tasks
        ON event_tasks.id = evaluations.event_task_id
      LEFT JOIN exam_event_entries AS event_entries
@@ -148,6 +158,30 @@ async function evaluationCategories(env: Env, evaluationId: string) {
     .bind(evaluationId)
     .all<EvaluationCategoryRow>();
   return result.results;
+}
+
+async function completeEvaluationRow(env: Env, evaluationId: string) {
+  const [row, categories, items] = await Promise.all([
+    env.DB.prepare(
+      `SELECT evaluations.*, users.name AS evaluator_name,
+              users.evaluator_rank AS evaluator_rank,
+              correctors.name AS corrected_by_name,
+              events.name AS event_name
+         FROM evaluations
+         LEFT JOIN users ON users.id = evaluations.evaluator_id
+         LEFT JOIN users AS correctors ON correctors.id = evaluations.corrected_by
+         LEFT JOIN exam_event_tasks AS event_tasks
+           ON event_tasks.id = evaluations.event_task_id
+         LEFT JOIN exam_event_entries AS event_entries
+           ON event_entries.id = event_tasks.entry_id
+         LEFT JOIN exam_events AS events
+           ON events.id = event_entries.event_id
+        WHERE evaluations.id = ?`,
+    ).bind(evaluationId).first<EvaluationRow>(),
+    evaluationCategories(env, evaluationId),
+    evaluationItems(env, evaluationId),
+  ]);
+  return row ? { ...row, categories, items } : null;
 }
 
 export async function getDashboard(
@@ -285,6 +319,173 @@ export async function listDeletedEvaluations(
 ) {
   const rows = await evaluationRows(env, user, null, "deleted");
   return json(request, env, rows.map(formatEvaluation));
+}
+
+export async function listEvaluationRevisions(
+  request: Request,
+  env: Env,
+  evaluationId: string,
+) {
+  const target = await env.DB.prepare(
+    "SELECT id, revision_root_id FROM evaluations WHERE id = ?",
+  ).bind(evaluationId).first<{ id: string; revision_root_id: string | null }>();
+  if (!target) {
+    return json(request, env, { error: "Avaliação não encontrada." }, 404);
+  }
+
+  const rootId = target.revision_root_id ?? target.id;
+  const ids = await env.DB.prepare(
+    `SELECT id FROM evaluations
+      WHERE id = ? OR revision_root_id = ?
+      ORDER BY revision_number DESC`,
+  ).bind(rootId, rootId).all<{ id: string }>();
+  const rows = await Promise.all(
+    ids.results.map((entry) => completeEvaluationRow(env, entry.id)),
+  );
+  return json(
+    request,
+    env,
+    rows.filter((row): row is NonNullable<typeof row> => Boolean(row)).map(formatEvaluation),
+  );
+}
+
+export async function createEvaluationRevision(
+  request: Request,
+  env: Env,
+  user: AuthUser,
+  evaluationId: string,
+) {
+  const body: unknown = await request.json().catch(() => null);
+  if (!isEvaluationCorrection(body)) {
+    return json(
+      request,
+      env,
+      { error: "Revise o motivo, as notas e os dados da correção." },
+      400,
+    );
+  }
+  const reason = normalizeEvaluationCorrectionReason(body.reason)!;
+  const current = await completeEvaluationRow(env, evaluationId);
+  if (!current) {
+    return json(request, env, { error: "Avaliação não encontrada." }, 404);
+  }
+  if (current.deleted_at) {
+    return json(request, env, { error: "Restaure a avaliação antes de corrigi-la." }, 409);
+  }
+
+  const rootId = current.revision_root_id ?? current.id;
+  const newer = await env.DB.prepare(
+    `SELECT id FROM evaluations
+      WHERE revision_root_id = ?
+        AND revision_number > ?
+        AND deleted_at IS NULL
+      LIMIT 1`,
+  ).bind(rootId, current.revision_number ?? 1).first<{ id: string }>();
+  if (newer) {
+    return json(
+      request,
+      env,
+      { error: "Esta versão já foi corrigida. Reabra a revisão mais recente." },
+      409,
+    );
+  }
+
+  const id = crypto.randomUUID();
+  const revisionNumber = (current.revision_number ?? 1) + 1;
+  const itemStatements = body.items.flatMap((item, position) => {
+    const itemId = crypto.randomUUID();
+    return [
+      env.DB.prepare(
+        "INSERT INTO evaluation_items (id, evaluation_id, category, name, score, detail, position) VALUES (?, ?, ?, ?, ?, ?, ?)",
+      ).bind(
+        itemId,
+        id,
+        item.category.trim(),
+        item.name.trim(),
+        Math.round(item.score * 10) / 10,
+        item.detail?.trim() || null,
+        position,
+      ),
+      ...(item.parts ?? []).map((part, partPosition) =>
+        env.DB.prepare(
+          "INSERT INTO evaluation_item_parts (id, evaluation_item_id, name, score, position) VALUES (?, ?, ?, ?, ?)",
+        ).bind(
+          crypto.randomUUID(),
+          itemId,
+          part.name.trim(),
+          Math.round(part.score * 10) / 10,
+          partPosition,
+        ),
+      ),
+    ];
+  });
+
+  await env.DB.batch([
+    env.DB.prepare(
+      `INSERT INTO evaluations (
+         id, athlete, student_id, evaluator_id, professor, belt, type, score,
+         result, matrix_id, eligibility_id, event_task_id, detail, created_at,
+         revision_root_id, supersedes_id, revision_number, correction_reason,
+         corrected_by, corrected_at
+       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)`,
+    ).bind(
+      id,
+      current.athlete,
+      current.student_id,
+      current.evaluator_id,
+      current.professor,
+      current.belt,
+      current.type,
+      Math.round(body.score),
+      body.result?.trim() || null,
+      current.matrix_id,
+      current.eligibility_id,
+      current.event_task_id,
+      body.detail?.trim() || null,
+      current.created_at,
+      rootId,
+      current.id,
+      revisionNumber,
+      reason,
+      user.id,
+    ),
+    ...body.categories.map((category, position) =>
+      env.DB.prepare(
+        "INSERT INTO evaluation_categories (id, evaluation_id, name, score, position) VALUES (?, ?, ?, ?, ?)",
+      ).bind(
+        crypto.randomUUID(),
+        id,
+        category.name.trim(),
+        Math.round(category.score * 10) / 10,
+        position,
+      ),
+    ),
+    ...itemStatements,
+    ...(current.event_task_id
+      ? [env.DB.prepare(
+          "UPDATE exam_event_tasks SET evaluation_id = ? WHERE id = ? AND evaluation_id = ?",
+        ).bind(id, current.event_task_id, current.id)]
+      : []),
+    env.DB.prepare(
+      "INSERT INTO audit_events (id, actor_user_id, action, entity_type, entity_id, request_id, metadata_json) VALUES (?, ?, 'evaluation.corrected', 'evaluation', ?, ?, ?)",
+    ).bind(
+      crypto.randomUUID(),
+      user.id,
+      id,
+      request.headers.get("X-Request-Id") || crypto.randomUUID(),
+      JSON.stringify({
+        reason,
+        rootId,
+        supersedesId: current.id,
+        revisionNumber,
+        previousScore: current.score,
+        score: Math.round(body.score),
+      }),
+    ),
+  ]);
+
+  const created = await completeEvaluationRow(env, id);
+  return json(request, env, formatEvaluation(created!), 201);
 }
 
 export async function createEvaluation(
