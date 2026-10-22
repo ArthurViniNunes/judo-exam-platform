@@ -153,11 +153,12 @@ export function AdminPortalShell({
         )}
       </section>
       <nav className="management-bottom-nav" aria-label="Administração">
-        {navigation.map((item) => (
+        {navigation.slice(0, 5).map((item) => (
           <button
             key={item.id}
             className={section === item.id ? "active" : ""}
             onClick={() => chooseSection(item.id)}
+            aria-current={section === item.id ? "page" : undefined}
           >
             {item.icon}
             <span>{item.label}</span>

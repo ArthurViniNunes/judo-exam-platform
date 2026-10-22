@@ -1,6 +1,6 @@
 "use client";
 
-import { ClipboardList, FileQuestion, LayoutDashboard, Palette, ShieldCheck, Users } from "lucide-react";
+import { CalendarDays, ClipboardList, FileQuestion, LayoutDashboard, Palette, ShieldCheck, Users } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Overview, StudentsView } from "@/components/admin-overview";
 import { EvaluationsView } from "@/components/admin-evaluations";
@@ -12,6 +12,7 @@ import { AdminPortalShell } from "@/components/admin-portal-shell";
 import { TeamView } from "@/components/admin-portal-team";
 import { ThemeSettingsView } from "@/components/admin-theme-settings";
 import { TheoryExamsView } from "@/components/admin-theory-exams";
+import { ExamEventsView } from "@/components/admin-exam-events";
 import { apiRequest } from "@/lib/api";
 import type {
   AuthUser,
@@ -98,6 +99,7 @@ export function AdminPortal({
   const navigation = useMemo(
     () => [
       { id: "overview" as const, label: "Resumo", icon: <LayoutDashboard size={19} /> },
+      { id: "events" as const, label: "Eventos", icon: <CalendarDays size={19} /> },
       { id: "evaluations" as const, label: "Notas", icon: <ClipboardList size={19} /> },
       { id: "students" as const, label: "Alunos", icon: <Users size={19} /> },
       ...(user.role === "super_admin"
@@ -162,6 +164,9 @@ export function AdminPortal({
               loading={loading}
               reload={loadData}
             />
+          )}
+          {section === "events" && (
+            <ExamEventsView user={user} users={users} />
           )}
           {section === "team" && user.role === "super_admin" && (
             <TeamView

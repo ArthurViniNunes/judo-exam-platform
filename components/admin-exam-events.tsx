@@ -1,0 +1,277 @@
+"use client";
+
+import {
+  ArrowLeft,
+  CalendarDays,
+  CheckCircle2,
+  ChevronRight,
+  CircleDot,
+  MapPin,
+  Plus,
+  ShieldCheck,
+  Trash2,
+  UserRoundCheck,
+  Users,
+} from "lucide-react";
+import { type FormEvent, useCallback, useEffect, useMemo, useState } from "react";
+import { EmptyState, initials, LoadingBlock } from "@/components/admin-portal-shared";
+import { apiRequest } from "@/lib/api";
+import type {
+  AuthUser,
+  EventKataType,
+  ExamEventDetail,
+  ExamEventStatus,
+  ExamEventSummary,
+  ManagedUser,
+  PracticalCandidate,
+} from "@/lib/platform";
+
+const EVENT_STATUS: Record<ExamEventStatus, { label: string; action: string | null }> = {
+  draft: { label: "Rascunho", action: "Abrir inscrições" },
+  open: { label: "Inscrições abertas", action: "Iniciar evento" },
+  in_progress: { label: "Em andamento", action: "Encerrar evento" },
+  closed: { label: "Encerrado", action: "Arquivar" },
+  archived: { label: "Arquivado", action: null },
+};
+
+const NEXT_STATUS: Partial<Record<ExamEventStatus, ExamEventStatus>> = {
+  draft: "open",
+  open: "in_progress",
+  in_progress: "closed",
+  closed: "archived",
+};
+
+const KATA_LABELS: Record<EventKataType, string> = {
+  "nage-no-kata-partial": "Nage-no-Kata parcial",
+  "nage-no-kata-complete": "Nage-no-Kata completo",
+  "katame-no-kata": "Katame-no-Kata",
+};
+
+function eventDate(value: string) {
+  return new Intl.DateTimeFormat("pt-BR", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+  }).format(new Date(`${value}T12:00:00`));
+}
+
+function CreateEventForm({ onCreated, onCancel }: {
+  onCreated: (event: ExamEventDetail) => void;
+  onCancel: () => void;
+}) {
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+  const [form, setForm] = useState({ name: "", eventDate: "", location: "", notes: "" });
+
+  const submit = async (submitEvent: FormEvent) => {
+    submitEvent.preventDefault();
+    setBusy(true);
+    setError("");
+    try {
+      onCreated(await apiRequest<ExamEventDetail>("/api/exam-events", {
+        method: "POST",
+        body: JSON.stringify(form),
+      }));
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : "Não foi possível criar o evento.");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <form className="event-create-panel" onSubmit={submit}>
+      <header><div><span>Novo dia de exame</span><h2>Organize a operação antes de abrir a fila</h2></div></header>
+      <div className="event-form-grid">
+        <label>Nome do evento<input required minLength={3} maxLength={100} value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="Exame de graduação · Novembro" /></label>
+        <label>Data<input required type="date" value={form.eventDate} onChange={(e) => setForm({ ...form, eventDate: e.target.value })} /></label>
+        <label>Local<input maxLength={120} value={form.location} onChange={(e) => setForm({ ...form, location: e.target.value })} placeholder="Dojo principal" /></label>
+        <label className="event-notes-field">Observações<textarea maxLength={1000} value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} placeholder="Orientações para a equipe" /></label>
+      </div>
+      {error && <p className="management-error" role="alert">{error}</p>}
+      <footer><button type="button" className="management-secondary" onClick={onCancel}>Cancelar</button><button className="management-primary" disabled={busy}>{busy ? "Criando…" : "Criar evento"}</button></footer>
+    </form>
+  );
+}
+
+function EventDetail({ event, user, users, candidates, onBack, onChanged }: {
+  event: ExamEventDetail;
+  user: AuthUser;
+  users: ManagedUser[];
+  candidates: PracticalCandidate[];
+  onBack: () => void;
+  onChanged: (event: ExamEventDetail) => void;
+}) {
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+  const [evaluatorId, setEvaluatorId] = useState("");
+  const [station, setStation] = useState("");
+  const [studentId, setStudentId] = useState("");
+  const [technical, setTechnical] = useState(true);
+  const [kataType, setKataType] = useState<"" | EventKataType>("");
+  const editable = user.role === "super_admin" && (event.status === "draft" || event.status === "open");
+  const assignedEvaluatorIds = new Set(event.evaluators.map((item) => item.id));
+  const registeredStudentIds = new Set(event.entries.map((item) => item.studentId));
+  const availableEvaluators = users.filter((item) => item.status === "active" && !assignedEvaluatorIds.has(item.id));
+  const availableCandidates = candidates.filter((item) => item.eligibility && !registeredStudentIds.has(item.id));
+
+  const mutate = async (path: string, init: RequestInit) => {
+    setBusy(true);
+    setError("");
+    try {
+      const next = await apiRequest<ExamEventDetail>(path, init);
+      onChanged(next);
+      return true;
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : "Não foi possível atualizar o evento.");
+      return false;
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const refreshAfterDelete = async (path: string) => {
+    setBusy(true);
+    setError("");
+    try {
+      await apiRequest(path, { method: "DELETE" });
+      onChanged(await apiRequest<ExamEventDetail>(`/api/exam-events/${event.id}`));
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : "Não foi possível remover o registro.");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const addEvaluator = async (submitEvent: FormEvent) => {
+    submitEvent.preventDefault();
+    const changed = await mutate(`/api/exam-events/${event.id}/evaluators`, {
+      method: "POST",
+      body: JSON.stringify({ evaluatorId, station }),
+    });
+    if (changed) { setEvaluatorId(""); setStation(""); }
+  };
+
+  const addStudent = async (submitEvent: FormEvent) => {
+    submitEvent.preventDefault();
+    const changed = await mutate(`/api/exam-events/${event.id}/entries`, {
+      method: "POST",
+      body: JSON.stringify({ studentId, technical, kataType: kataType || null }),
+    });
+    if (changed) { setStudentId(""); setTechnical(true); setKataType(""); }
+  };
+
+  const transition = async () => {
+    const next = NEXT_STATUS[event.status];
+    if (!next) return;
+    await mutate(`/api/exam-events/${event.id}/status`, {
+      method: "POST",
+      body: JSON.stringify({ status: next }),
+    });
+  };
+
+  return (
+    <div className="management-page event-detail-page">
+      <button className="event-back" onClick={onBack}><ArrowLeft size={18} /> Todos os eventos</button>
+      <header className="event-detail-hero">
+        <div>
+          <span className={`event-status ${event.status}`}><CircleDot size={14} /> {EVENT_STATUS[event.status].label}</span>
+          <h1>{event.name}</h1>
+          <p><CalendarDays size={16} /> {eventDate(event.eventDate)} {event.location && <><MapPin size={16} /> {event.location}</>}</p>
+        </div>
+        {user.role === "super_admin" && EVENT_STATUS[event.status].action && (
+          <button className="management-primary" disabled={busy} onClick={() => void transition()}>{EVENT_STATUS[event.status].action}<ChevronRight size={17} /></button>
+        )}
+      </header>
+      {error && <p className="management-error event-feedback" role="alert">{error}</p>}
+      <div className="event-progress" aria-label={`${event.counts.completed} de ${event.counts.tasks} avaliações concluídas`}>
+        <span><strong>{event.counts.completed ? "Operação em progresso" : "Preparação do evento"}</strong><small>{event.counts.students} judocas · {event.counts.evaluators} avaliadores</small></span>
+        <div><i style={{ width: `${event.counts.tasks ? (event.counts.completed / event.counts.tasks) * 100 : 0}%` }} /></div>
+      </div>
+      {event.notes && <p className="event-notes">{event.notes}</p>}
+      <div className="event-operations">
+        <section className="event-operation-panel">
+          <header><span><ShieldCheck size={18} /></span><div><h2>Equipe do evento</h2><p>Quem pode acessar e assumir avaliações.</p></div></header>
+          {editable && (
+            <form className="event-inline-form" onSubmit={addEvaluator}>
+              <label>Avaliador<select required value={evaluatorId} onChange={(e) => setEvaluatorId(e.target.value)}><option value="">Selecione</option>{availableEvaluators.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label>
+              <label>Estação (opcional)<input maxLength={80} value={station} onChange={(e) => setStation(e.target.value)} placeholder="Tatame 1" /></label>
+              <button className="management-secondary" disabled={busy || !evaluatorId}><Plus size={17} /> Adicionar</button>
+            </form>
+          )}
+          <div className="event-person-list">
+            {event.evaluators.length ? event.evaluators.map((evaluator) => (
+              <article key={evaluator.id}><span>{initials(evaluator.name)}</span><div><strong>{evaluator.name}</strong><small>{evaluator.evaluatorRank || "Graduação não informada"}{evaluator.station ? ` · ${evaluator.station}` : ""}</small></div>{editable && <button disabled={busy} aria-label={`Remover ${evaluator.name}`} onClick={() => void refreshAfterDelete(`/api/exam-events/${event.id}/evaluators/${evaluator.id}`)}><Trash2 size={16} /></button>}</article>
+            )) : <p className="event-list-empty">Adicione os avaliadores que trabalharão neste exame.</p>}
+          </div>
+        </section>
+        <section className="event-operation-panel event-students-panel">
+          <header><span><Users size={18} /></span><div><h2>Judocas e modalidades</h2><p>A faixa vem da aprovação teórica registrada.</p></div></header>
+          {editable && (
+            <form className="event-entry-form" onSubmit={addStudent}>
+              <label>Judoca<select required value={studentId} onChange={(e) => setStudentId(e.target.value)}><option value="">Selecione um aluno apto</option>{availableCandidates.map((item) => <option key={item.id} value={item.id}>{item.name} · {item.eligibility?.beltName}</option>)}</select></label>
+              <fieldset><legend>Modalidades</legend><label><input type="checkbox" checked={technical} onChange={(e) => setTechnical(e.target.checked)} /> Avaliação técnica</label><label>Kata<select value={kataType} onChange={(e) => setKataType(e.target.value as "" | EventKataType)}><option value="">Sem kata</option>{Object.entries(KATA_LABELS).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label></fieldset>
+              <button className="management-secondary" disabled={busy || !studentId || (!technical && !kataType)}><Plus size={17} /> Inscrever judoca</button>
+            </form>
+          )}
+          <div className="event-entry-list">
+            {event.entries.length ? event.entries.map((entry) => {
+              const tasks = event.tasks.filter((task) => task.entryId === entry.id);
+              return <article key={entry.id}><span className="student-avatar">{initials(entry.studentName)}</span><div><strong>{entry.studentName}</strong><small>{entry.beltName}</small><ul>{tasks.map((task) => <li key={task.id} className={task.status}><CheckCircle2 size={14} /> {task.modality === "technical" ? "Técnica" : task.kataType ? KATA_LABELS[task.kataType] : "Kata"} · {task.status === "completed" ? "concluída" : "aguardando"}</li>)}</ul></div>{editable && <button disabled={busy} aria-label={`Remover ${entry.studentName}`} onClick={() => void refreshAfterDelete(`/api/exam-events/${event.id}/entries/${entry.id}`)}><Trash2 size={16} /></button>}</article>;
+            }) : <p className="event-list-empty">Inscreva os judocas aprovados no teórico e escolha suas modalidades.</p>}
+          </div>
+        </section>
+      </div>
+    </div>
+  );
+}
+
+export function ExamEventsView({ user, users }: { user: AuthUser; users: ManagedUser[] }) {
+  const [events, setEvents] = useState<ExamEventSummary[]>([]);
+  const [candidates, setCandidates] = useState<PracticalCandidate[]>([]);
+  const [selected, setSelected] = useState<ExamEventDetail | null>(null);
+  const [creating, setCreating] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    setError("");
+    try {
+      const [nextEvents, nextCandidates] = await Promise.all([
+        apiRequest<ExamEventSummary[]>("/api/exam-events"),
+        user.role === "super_admin" ? apiRequest<PracticalCandidate[]>("/api/practical-candidates") : Promise.resolve([]),
+      ]);
+      setEvents(nextEvents);
+      setCandidates(nextCandidates);
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : "Não foi possível carregar os eventos.");
+    } finally {
+      setLoading(false);
+    }
+  }, [user.role]);
+
+  useEffect(() => { const timer = window.setTimeout(() => void load(), 0); return () => window.clearTimeout(timer); }, [load]);
+
+  const open = async (eventId: string) => {
+    setLoading(true);
+    setError("");
+    try { setSelected(await apiRequest<ExamEventDetail>(`/api/exam-events/${eventId}`)); }
+    catch (caught) { setError(caught instanceof Error ? caught.message : "Não foi possível abrir o evento."); }
+    finally { setLoading(false); }
+  };
+
+  const sortedEvents = useMemo(() => [...events].sort((a, b) => b.eventDate.localeCompare(a.eventDate)), [events]);
+  if (loading && !selected) return <LoadingBlock label="Organizando os eventos…" />;
+  if (selected) return <EventDetail event={selected} user={user} users={users} candidates={candidates} onBack={() => { setSelected(null); void load(); }} onChanged={(next) => { setSelected(next); setEvents((current) => current.map((item) => item.id === next.id ? next : item)); }} />;
+  return (
+    <div className="management-page events-page">
+      <header className="management-page-heading"><div><h1>Dia de exame</h1><p>Prepare equipe e judocas, acompanhe o andamento e encerre sem deixar avaliações pendentes.</p></div>{user.role === "super_admin" && <button className="management-primary" onClick={() => setCreating((value) => !value)}><Plus size={18} /> {creating ? "Fechar" : "Novo evento"}</button>}</header>
+      {error && <p className="management-error" role="alert">{error}</p>}
+      {creating && <CreateEventForm onCancel={() => setCreating(false)} onCreated={(event) => { setCreating(false); setSelected(event); setEvents((current) => [event, ...current]); }} />}
+      {!sortedEvents.length && !creating ? <EmptyState icon={<CalendarDays size={29} />} title="Nenhum evento planejado" detail={user.role === "super_admin" ? "Crie o próximo dia de exame e organize a operação com antecedência." : "Você verá aqui os eventos para os quais foi escalado."} /> : (
+        <div className="event-list">{sortedEvents.map((event) => <button key={event.id} onClick={() => void open(event.id)}><span className="event-date-block"><b>{new Date(`${event.eventDate}T12:00:00`).getDate()}</b><small>{new Intl.DateTimeFormat("pt-BR", { month: "short" }).format(new Date(`${event.eventDate}T12:00:00`))}</small></span><span className="event-list-main"><i className={`event-status ${event.status}`}>{EVENT_STATUS[event.status].label}</i><strong>{event.name}</strong><small>{event.location || "Local a definir"}</small></span><span className="event-list-count"><UserRoundCheck size={16} /><b>{event.counts.students}</b><small>judocas</small></span><ChevronRight size={19} /></button>)}</div>
+      )}
+    </div>
+  );
+}

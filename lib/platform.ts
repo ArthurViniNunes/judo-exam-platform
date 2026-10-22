@@ -145,3 +145,60 @@ export type ManagedUser = {
   student_count: number;
   average_score: number;
 };
+
+export type ExamEventStatus = "draft" | "open" | "in_progress" | "closed" | "archived";
+export type ExamEventTaskStatus = "waiting" | "called" | "in_progress" | "pending_sync" | "completed";
+export type EventKataType = "nage-no-kata-partial" | "nage-no-kata-complete" | "katame-no-kata";
+
+export type ExamEventSummary = {
+  id: string;
+  name: string;
+  eventDate: string;
+  location: string | null;
+  notes: string | null;
+  status: ExamEventStatus;
+  createdAt: string;
+  updatedAt: string;
+  startedAt: string | null;
+  closedAt: string | null;
+  archivedAt: string | null;
+  counts: { evaluators: number; students: number; tasks: number; completed: number };
+};
+
+export type ExamEventEvaluator = {
+  id: string;
+  name: string;
+  email: string;
+  evaluatorRank: string | null;
+  station: string | null;
+};
+
+export type ExamEventEntry = {
+  id: string;
+  studentId: string;
+  studentName: string;
+  beltId: string;
+  beltName: string;
+  eligibilityId: string;
+  createdAt: string;
+};
+
+export type ExamEventTask = {
+  id: string;
+  entryId: string;
+  modality: "technical" | "kata";
+  kataType: EventKataType | null;
+  status: ExamEventTaskStatus;
+  evaluatorId: string | null;
+  evaluatorName: string | null;
+  station: string | null;
+  claimedAt: string | null;
+  completedAt: string | null;
+  evaluationId: string | null;
+};
+
+export type ExamEventDetail = ExamEventSummary & {
+  evaluators: ExamEventEvaluator[];
+  entries: ExamEventEntry[];
+  tasks: ExamEventTask[];
+};

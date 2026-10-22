@@ -3,6 +3,7 @@ import type { DashboardData } from "@/lib/platform";
 
 export type AdminSection =
   | "overview"
+  | "events"
   | "evaluations"
   | "students"
   | "theory"
