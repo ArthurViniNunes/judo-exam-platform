@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   buildStudentEvolution,
   evaluationSeriesKey,
+  filterStudentHistory,
   latestComparableTrend,
 } from "../lib/evaluation-evolution";
 import type { EvaluationRecord } from "../lib/platform";
@@ -92,5 +93,19 @@ describe("evolução individual", () => {
     expect(result.recurringTechniques).toEqual([
       { name: "O-soto-gari", category: "Nage Waza", total: 120, count: 2 },
     ]);
+  });
+
+  it("combina filtros de modalidade, graduação e período", () => {
+    const oldTechnical = evaluation("old", "2025-01-10 12:00:00", 70);
+    const currentTechnical = evaluation("current", "2026-03-15 12:00:00", 80);
+    const currentKata = evaluation("kata", "2026-03-20 12:00:00", 90, {
+      type: "kata",
+      belt: "Nage-no-Kata",
+    });
+
+    expect(filterStudentHistory(
+      [currentKata, currentTechnical, oldTechnical],
+      { type: "técnica", belt: "Cinza", dateFrom: "2026-01-01", dateTo: "2026-12-31" },
+    ).map((item) => item.id)).toEqual(["current"]);
   });
 });

@@ -21,6 +21,7 @@ import { apiRequest } from "@/lib/api";
 import { EvaluationReport } from "@/components/evaluation-report";
 import {
   buildStudentEvolution,
+  filterStudentHistory,
   latestComparableTrend,
 } from "@/lib/evaluation-evolution";
 import {
@@ -252,6 +253,10 @@ export function StudentsView({
   const [search, setSearch] = useState("");
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [selectedSeriesKey, setSelectedSeriesKey] = useState("");
+  const [historyType, setHistoryType] = useState("");
+  const [historyBelt, setHistoryBelt] = useState("");
+  const [historyDateFrom, setHistoryDateFrom] = useState("");
+  const [historyDateTo, setHistoryDateTo] = useState("");
   const [reportEvaluationId, setReportEvaluationId] = useState<string | null>(null);
   const [registering, setRegistering] = useState(false);
   const [studentName, setStudentName] = useState("");
@@ -278,6 +283,21 @@ export function StudentsView({
     categories: categoryComparisons,
     recurringTechniques,
   } = evolution;
+  const historyTypeOptions = [...new Set(
+    (selected?.evaluations ?? []).map((evaluation) => evaluation.type),
+  )].sort((left, right) => left.localeCompare(right, "pt-BR"));
+  const historyBeltOptions = [...new Set(
+    (selected?.evaluations ?? []).map((evaluation) => evaluation.belt),
+  )].sort((left, right) => left.localeCompare(right, "pt-BR"));
+  const filteredHistory = filterStudentHistory(selected?.evaluations ?? [], {
+    type: historyType,
+    belt: historyBelt,
+    dateFrom: historyDateFrom,
+    dateTo: historyDateTo,
+  });
+  const historyHasFilters = Boolean(
+    historyType || historyBelt || historyDateFrom || historyDateTo,
+  );
 
   const registerStudent = async () => {
     setSavingStudent(true);
@@ -405,6 +425,10 @@ export function StudentsView({
                 onClick={() => {
                   setSelectedId(student.id);
                   setSelectedSeriesKey("");
+                  setHistoryType("");
+                  setHistoryBelt("");
+                  setHistoryDateFrom("");
+                  setHistoryDateTo("");
                   setReportEvaluationId(null);
                 }}
               >
@@ -566,8 +590,69 @@ export function StudentsView({
                     A comparação será exibida após uma segunda avaliação da mesma modalidade, graduação e matriz.
                   </p>}
                 </section> : <EmptyState icon={<ClipboardCheck size={27} />} title="Ainda sem avaliações" detail="O histórico será iniciado quando este judoca concluir um exame." />}
-                {selected.evaluations.length > 0 && <div className="student-history">
-                  {[...selected.evaluations].reverse().map((evaluation) => {
+                {selected.evaluations.length > 0 && <section
+                  className="student-history-section"
+                  aria-labelledby="student-history-title"
+                >
+                  <header>
+                    <div>
+                      <h3 id="student-history-title">Histórico completo</h3>
+                      <p>{filteredHistory.length} de {selected.evaluations.length} registros exibidos</p>
+                    </div>
+                    {historyHasFilters && <button
+                      type="button"
+                      onClick={() => {
+                        setHistoryType("");
+                        setHistoryBelt("");
+                        setHistoryDateFrom("");
+                        setHistoryDateTo("");
+                      }}
+                    >
+                      Limpar filtros
+                    </button>}
+                  </header>
+                  <div className="student-history-filters" aria-label="Filtros do histórico">
+                    <label>
+                      Modalidade
+                      <span>
+                        <select value={historyType} onChange={(event) => setHistoryType(event.target.value)}>
+                          <option value="">Todas</option>
+                          {historyTypeOptions.map((type) => <option key={type} value={type}>{type}</option>)}
+                        </select>
+                        <ChevronDown size={15} />
+                      </span>
+                    </label>
+                    <label>
+                      Graduação
+                      <span>
+                        <select value={historyBelt} onChange={(event) => setHistoryBelt(event.target.value)}>
+                          <option value="">Todas</option>
+                          {historyBeltOptions.map((belt) => <option key={belt} value={belt}>{belt}</option>)}
+                        </select>
+                        <ChevronDown size={15} />
+                      </span>
+                    </label>
+                    <label>
+                      De
+                      <input
+                        type="date"
+                        value={historyDateFrom}
+                        max={historyDateTo || undefined}
+                        onChange={(event) => setHistoryDateFrom(event.target.value)}
+                      />
+                    </label>
+                    <label>
+                      Até
+                      <input
+                        type="date"
+                        value={historyDateTo}
+                        min={historyDateFrom || undefined}
+                        onChange={(event) => setHistoryDateTo(event.target.value)}
+                      />
+                    </label>
+                  </div>
+                  {filteredHistory.length ? <div className="student-history">
+                  {[...filteredHistory].reverse().map((evaluation) => {
                     const reportOpen = reportEvaluationId === evaluation.id;
                     return <article key={evaluation.id} className={reportOpen ? "report-open" : ""}>
                       <i />
@@ -589,7 +674,10 @@ export function StudentsView({
                       {reportOpen && <EvaluationReport evaluation={evaluation} />}
                     </article>;
                   })}
-                </div>}
+                  </div> : <p className="student-history-empty">
+                    Nenhuma avaliação corresponde aos filtros escolhidos.
+                  </p>}
+                </section>}
               </>
             ) : (
               <EmptyState

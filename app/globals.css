@@ -4684,6 +4684,19 @@ td:first-child {
 .student-recurring-techniques li > b { color: var(--mg-accent-strong); }
 .student-comparison-empty { margin: 0; padding: 13px; border: 1px dashed var(--mg-line); border-radius: 10px; color: var(--mg-muted); background: var(--mg-surface); font-size: 9px; line-height: 1.55; }
 .student-comparison-empty.standalone { margin-top: 4px; }
+.student-history-section { margin-top: 22px; }
+.student-history-section > header { margin-bottom: 11px; display: flex; align-items: end; justify-content: space-between; gap: 12px; }
+.student-history-section > header h3 { margin: 0; font-family: Oswald, "Arial Narrow", sans-serif; font-size: 20px; font-weight: 550; }
+.student-history-section > header p { margin: 3px 0 0; color: var(--mg-muted); font-size: 9px; }
+.student-history-section > header button { min-height: 44px; padding: 0 10px; border: 1px solid var(--mg-line); border-radius: 9px; background: var(--mg-surface); color: var(--mg-accent-strong); font-size: 9px; font-weight: 800; }
+.student-history-filters { margin-bottom: 11px; padding: 11px; border: 1px solid var(--mg-line); border-radius: 11px; background: var(--mg-surface-soft); display: grid; grid-template-columns: 1fr 1fr; gap: 9px; }
+.student-history-filters label { min-width: 0; color: var(--mg-muted); display: grid; gap: 5px; font-size: 8px; font-weight: 800; }
+.student-history-filters label > span { position: relative; display: block; }
+.student-history-filters select,
+.student-history-filters input { width: 100%; min-width: 0; min-height: 44px; padding: 0 9px; border: 1px solid var(--mg-line); border-radius: 9px; background: var(--mg-surface); color: var(--mg-ink); font-size: 9px; }
+.student-history-filters select { padding-right: 30px; appearance: none; }
+.student-history-filters label svg { position: absolute; right: 9px; top: 50%; color: var(--mg-muted); pointer-events: none; transform: translateY(-50%); }
+.student-history-empty { margin: 0; padding: 20px 14px; border: 1px dashed var(--mg-line); border-radius: 11px; color: var(--mg-muted); background: var(--mg-surface-soft); font-size: 10px; line-height: 1.5; text-align: center; }
 .student-history { display: grid; }
 .student-history article { position: relative; min-height: 72px; padding: 10px 0 10px 25px; }
 .student-history article > i { position: absolute; left: 4px; top: 30px; width: 9px; height: 9px; border: 2px solid var(--mg-surface); border-radius: 50%; background: var(--mg-gold); box-shadow: 0 0 0 1px var(--mg-gold); }
@@ -5262,6 +5275,7 @@ td:first-child {
   .students-layout { grid-template-columns: minmax(300px, 0.85fr) minmax(340px, 1.15fr); align-items: start; }
   .student-detail-close { display: none; }
   .student-evolution > header { grid-template-columns: minmax(0, 1fr) minmax(180px, 0.9fr); align-items: end; }
+  .student-history-filters { grid-template-columns: repeat(4, minmax(0, 1fr)); }
   .team-grid { grid-template-columns: minmax(280px, 0.7fr) minmax(380px, 1.3fr); align-items: start; }
   .team-list article { grid-template-columns: 40px minmax(0, 1fr) auto; }
   .team-member-actions { grid-column: 2 / -1; justify-self: end; display: flex; }

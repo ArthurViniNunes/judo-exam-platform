@@ -13,6 +13,13 @@ export type RecurringTechnique = {
   count: number;
 };
 
+export type StudentHistoryFilters = {
+  type: string;
+  belt: string;
+  dateFrom: string;
+  dateTo: string;
+};
+
 export function evaluationSeriesKey(evaluation: EvaluationRecord) {
   return [
     evaluation.type,
@@ -48,6 +55,27 @@ export function latestComparableTrend(evaluations: EvaluationRecord[]) {
     score: latest.score,
     difference: previous ? latest.score - previous.score : null,
   };
+}
+
+function evaluationDateKey(createdAt: string) {
+  const normalized = createdAt.endsWith("Z") ? createdAt : `${createdAt}Z`;
+  const timestamp = new Date(normalized);
+  return Number.isNaN(timestamp.getTime()) ? createdAt.slice(0, 10) : timestamp.toISOString().slice(0, 10);
+}
+
+export function filterStudentHistory(
+  evaluations: EvaluationRecord[],
+  filters: StudentHistoryFilters,
+) {
+  return chronologicalEvaluations(evaluations).filter((evaluation) => {
+    const date = evaluationDateKey(evaluation.createdAt);
+    return (
+      (!filters.type || evaluation.type === filters.type) &&
+      (!filters.belt || evaluation.belt === filters.belt) &&
+      (!filters.dateFrom || date >= filters.dateFrom) &&
+      (!filters.dateTo || date <= filters.dateTo)
+    );
+  });
 }
 
 export function buildStudentEvolution(

@@ -254,8 +254,8 @@ critérios, técnicas com menor média e aviso para amostras pequenas. O perfil 
 judoca já separa séries pela modalidade, graduação e matriz e compara nota
 geral, categorias e dificuldades recorrentes entre exames compatíveis. A
 impressão/PDF sob demanda já está disponível no relatório detalhado do histórico
-e não aparece ao concluir a prova. Filtros de período no histórico individual
-seguem como incremento independente.
+e não aparece ao concluir a prova. O histórico individual também possui filtros
+combináveis de modalidade, graduação e período.
 
 #### 3.1 Evolução individual
 
