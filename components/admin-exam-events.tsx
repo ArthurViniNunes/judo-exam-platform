@@ -26,6 +26,7 @@ import type {
   ExamEventDetail,
   ExamEventStatus,
   ExamEventSummary,
+  ExamEventTaskStatus,
   ManagedUser,
   PracticalCandidate,
 } from "@/lib/platform";
@@ -49,6 +50,14 @@ const KATA_LABELS: Record<EventKataType, string> = {
   "nage-no-kata-partial": "Nage-no-Kata parcial",
   "nage-no-kata-complete": "Nage-no-Kata completo",
   "katame-no-kata": "Katame-no-Kata",
+};
+
+const TASK_STATUS_LABELS: Record<ExamEventTaskStatus, string> = {
+  waiting: "Aguardando",
+  called: "Chamado",
+  in_progress: "Em avaliação",
+  pending_sync: "Aguardando envio",
+  completed: "Concluída",
 };
 
 function eventDate(value: string) {
@@ -114,11 +123,21 @@ function EventDetail({ event, user, users, candidates, onBack, onChanged, onStar
   const [studentId, setStudentId] = useState("");
   const [technical, setTechnical] = useState(true);
   const [kataType, setKataType] = useState<"" | EventKataType>("");
+  const [taskStatusFilter, setTaskStatusFilter] = useState<"all" | ExamEventTaskStatus>("all");
+  const [taskModalityFilter, setTaskModalityFilter] = useState<"all" | "technical" | "kata">("all");
+  const [taskEvaluatorFilter, setTaskEvaluatorFilter] = useState("all");
   const editable = user.role === "super_admin" && (event.status === "draft" || event.status === "open");
   const assignedEvaluatorIds = new Set(event.evaluators.map((item) => item.id));
   const registeredStudentIds = new Set(event.entries.map((item) => item.studentId));
   const availableEvaluators = users.filter((item) => item.status === "active" && !assignedEvaluatorIds.has(item.id));
   const availableCandidates = candidates.filter((item) => item.eligibility && !registeredStudentIds.has(item.id));
+  const filteredTasks = event.tasks.filter((task) => {
+    const matchesStatus = taskStatusFilter === "all" || task.status === taskStatusFilter;
+    const matchesModality = taskModalityFilter === "all" || task.modality === taskModalityFilter;
+    const matchesEvaluator = taskEvaluatorFilter === "all"
+      || (taskEvaluatorFilter === "unassigned" ? !task.evaluatorId : task.evaluatorId === taskEvaluatorFilter);
+    return matchesStatus && matchesModality && matchesEvaluator;
+  });
 
   const mutate = async (path: string, init: RequestInit) => {
     setBusy(true);
@@ -217,22 +236,27 @@ function EventDetail({ event, user, users, candidates, onBack, onChanged, onStar
       </header>
       {error && <p className="management-error event-feedback" role="alert">{error}</p>}
       <div className="event-progress" aria-label={`${event.counts.completed} de ${event.counts.tasks} avaliações concluídas`}>
-        <span><strong>{event.counts.completed ? "Operação em progresso" : "Preparação do evento"}</strong><small>{event.counts.students} judocas · {event.counts.evaluators} avaliadores</small></span>
+        <span><strong>{event.status === "in_progress" ? "Operação em progresso" : event.status === "closed" || event.status === "archived" ? "Evento encerrado" : "Preparação do evento"}</strong><small>{event.counts.students} judocas · {event.counts.evaluators} avaliadores</small></span>
         <div><i style={{ width: `${event.counts.tasks ? (event.counts.completed / event.counts.tasks) * 100 : 0}%` }} /></div>
       </div>
       {event.notes && <p className="event-notes">{event.notes}</p>}
       {event.status === "in_progress" && (
         <section className="event-task-board" aria-labelledby="event-queue-title">
-          <header><div><span>Fila operacional</span><h2 id="event-queue-title">Avaliações do evento</h2></div><strong>Ao vivo</strong></header>
-          <div>
-            {event.tasks.map((task) => {
+          <header><div><span>Fila operacional</span><h2 id="event-queue-title">Avaliações do evento</h2></div><strong><i /> Ao vivo</strong></header>
+          <div className="event-queue-filters" aria-label="Filtros da fila operacional">
+            <label>Situação<select value={taskStatusFilter} onChange={(e) => setTaskStatusFilter(e.target.value as "all" | ExamEventTaskStatus)}><option value="all">Todas</option><option value="waiting">Aguardando</option><option value="called">Chamadas</option><option value="in_progress">Em avaliação</option><option value="pending_sync">Aguardando envio</option><option value="completed">Concluídas</option></select></label>
+            <label>Modalidade<select value={taskModalityFilter} onChange={(e) => setTaskModalityFilter(e.target.value as "all" | "technical" | "kata")}><option value="all">Todas</option><option value="technical">Técnica</option><option value="kata">Kata</option></select></label>
+            <label>Responsável<select value={taskEvaluatorFilter} onChange={(e) => setTaskEvaluatorFilter(e.target.value)}><option value="all">Todos</option><option value={user.id}>Minhas avaliações</option><option value="unassigned">Sem responsável</option>{event.evaluators.filter((item) => item.id !== user.id).map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label>
+          </div>
+          <div className="event-task-list">
+            {filteredTasks.map((task) => {
               const entry = event.entries.find((item) => item.id === task.entryId);
               const mine = task.evaluatorId === user.id;
               const canRelease = task.status === "in_progress" && (mine || user.role === "super_admin");
               const launch = taskLaunch(task.id);
               return (
                 <article key={task.id} className={mine ? "mine" : ""}>
-                  <span className={`event-task-state ${task.status}`}>{task.status === "completed" ? <CheckCircle2 size={15} /> : <CircleDot size={15} />}{task.status === "completed" ? "Concluída" : task.status === "in_progress" ? "Em avaliação" : "Aguardando"}</span>
+                  <span className={`event-task-state ${task.status}`}>{task.status === "completed" ? <CheckCircle2 size={15} /> : <CircleDot size={15} />}{TASK_STATUS_LABELS[task.status]}</span>
                   <div className="event-task-person"><strong>{entry?.studentName || "Judoca"}</strong><small>{entry?.beltName}</small></div>
                   <div className="event-task-kind"><ClipboardCheck size={17} /><span>{task.modality === "technical" ? "Técnica" : task.kataType ? KATA_LABELS[task.kataType] : "Kata"}</span></div>
                   {task.evaluatorName && <p>Responsável: <strong>{task.evaluatorName}</strong></p>}
@@ -250,6 +274,7 @@ function EventDetail({ event, user, users, candidates, onBack, onChanged, onStar
                 </article>
               );
             })}
+            {!filteredTasks.length && <p className="event-queue-empty">Nenhuma avaliação corresponde aos filtros escolhidos.</p>}
           </div>
         </section>
       )}
@@ -281,7 +306,7 @@ function EventDetail({ event, user, users, candidates, onBack, onChanged, onStar
           <div className="event-entry-list">
             {event.entries.length ? event.entries.map((entry) => {
               const tasks = event.tasks.filter((task) => task.entryId === entry.id);
-              return <article key={entry.id}><span className="student-avatar">{initials(entry.studentName)}</span><div><strong>{entry.studentName}</strong><small>{entry.beltName}</small><ul>{tasks.map((task) => <li key={task.id} className={task.status}><CheckCircle2 size={14} /> {task.modality === "technical" ? "Técnica" : task.kataType ? KATA_LABELS[task.kataType] : "Kata"} · {task.status === "completed" ? "concluída" : "aguardando"}</li>)}</ul></div>{editable && <button disabled={busy} aria-label={`Remover ${entry.studentName}`} onClick={() => void refreshAfterDelete(`/api/exam-events/${event.id}/entries/${entry.id}`)}><Trash2 size={16} /></button>}</article>;
+              return <article key={entry.id}><span className="student-avatar">{initials(entry.studentName)}</span><div><strong>{entry.studentName}</strong><small>{entry.beltName}</small><ul>{tasks.map((task) => <li key={task.id} className={task.status}>{task.status === "completed" ? <CheckCircle2 size={14} /> : <CircleDot size={14} />} {task.modality === "technical" ? "Técnica" : task.kataType ? KATA_LABELS[task.kataType] : "Kata"} · {TASK_STATUS_LABELS[task.status].toLocaleLowerCase("pt-BR")}</li>)}</ul></div>{editable && <button disabled={busy} aria-label={`Remover ${entry.studentName}`} onClick={() => void refreshAfterDelete(`/api/exam-events/${event.id}/entries/${entry.id}`)}><Trash2 size={16} /></button>}</article>;
             }) : <p className="event-list-empty">Inscreva os judocas aprovados no teórico e escolha suas modalidades.</p>}
           </div>
         </section>
@@ -297,6 +322,8 @@ export function ExamEventsView({ user, users, onStartTask }: { user: AuthUser; u
   const [creating, setCreating] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const selectedEventId = selected?.id;
+  const selectedEventStatus = selected?.status;
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -316,6 +343,22 @@ export function ExamEventsView({ user, users, onStartTask }: { user: AuthUser; u
   }, [user.role]);
 
   useEffect(() => { const timer = window.setTimeout(() => void load(), 0); return () => window.clearTimeout(timer); }, [load]);
+
+  useEffect(() => {
+    if (!selectedEventId || selectedEventStatus !== "in_progress") return;
+    const eventId = selectedEventId;
+    const refresh = async () => {
+      try {
+        const next = await apiRequest<ExamEventDetail>(`/api/exam-events/${eventId}`);
+        setSelected((current) => current?.id === eventId ? next : current);
+        setEvents((current) => current.map((item) => item.id === eventId ? next : item));
+      } catch {
+        // A fila permanece utilizável com os últimos dados enquanto a conexão oscila.
+      }
+    };
+    const interval = window.setInterval(() => void refresh(), 10_000);
+    return () => window.clearInterval(interval);
+  }, [selectedEventId, selectedEventStatus]);
 
   const open = async (eventId: string) => {
     setLoading(true);

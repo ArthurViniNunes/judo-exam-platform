@@ -147,7 +147,9 @@ permite assumir uma tarefa de forma atômica, abrir a prova técnica ou de kata
 diretamente e preservar o vínculo no rascunho offline e na avaliação
 sincronizada. O primeiro incremento do modo rápido também já oferece avanço
 automático para a próxima técnica e desfazer o último lançamento. Os
-indicadores avançados do painel seguem como marco independente.
+fila ao vivo recebe atualização periódica e filtros por situação, modalidade e
+responsável. Indicadores de duração e pendências por dispositivo seguem como
+marco independente.
 
 #### 2.1 Evento de exame com vários avaliadores
 

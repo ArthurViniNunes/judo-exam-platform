@@ -286,7 +286,7 @@ No celular, conectado à mesma rede Wi-Fi, abra `http://192.168.0.50:3000`, subs
 8. Ao iniciar uma avaliação técnica, o avaliador escolhe um judoca aprovado no teórico. A faixa e a data da aprovação aparecem automaticamente e não podem ser alteradas. Kata continua disponível para os judocas cadastrados.
 9. Ao salvar a primeira avaliação, o sistema associa automaticamente o judoca ao usuário logado. O avaliador consulta apenas quem já avaliou e seus próprios registros, enquanto o Super Admin mantém a visão completa.
 10. O nome exibido pode ser alterado em **Ver e editar perfil**.
-11. Em **Administração → Eventos**, o Super Admin organiza o dia do exame. Durante o evento, cada avaliador assume uma tarefa livre e abre a prova diretamente pela fila; o vínculo é preservado no rascunho local e na avaliação sincronizada.
+11. Em **Administração → Eventos**, o Super Admin organiza o dia do exame. Durante o evento, cada avaliador assume uma tarefa livre e abre a prova diretamente pela fila; o vínculo é preservado no rascunho local e na avaliação sincronizada. A fila se atualiza a cada 10 segundos e pode ser filtrada por situação, modalidade e responsável.
 
 O Super Admin pode carregar o caderno fornecido para 1º Kyu em **Administração → Provas teóricas → Importar exame marrom**. Ele entra como rascunho: revise o gabarito provisório e inclua as 14 mídias pendentes antes de publicar. O inventário está em [`docs/product/brown-theory-exam.md`](docs/product/brown-theory-exam.md).
 
