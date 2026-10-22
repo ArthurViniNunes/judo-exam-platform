@@ -67,3 +67,73 @@ export type TheoryExamVersionSummary = {
 export type TheoryExamVersion = TheoryExamVersionSummary & {
   questions: TheoryQuestion[];
 };
+
+export type StudentTheoryMedia = {
+  kind: TheoryMediaKind;
+  sourceUrl: string;
+  altText: string;
+};
+
+export type StudentTheoryOption = {
+  id: string;
+  text: string;
+};
+
+export type StudentTheoryAttemptQuestion = {
+  id: string;
+  category: string;
+  prompt: string;
+  points: number;
+  position: number;
+  options: StudentTheoryOption[];
+  media: StudentTheoryMedia | null;
+  selectedOptionId: string | null;
+};
+
+export type StudentTheoryAttempt = {
+  id: string;
+  status: "in_progress" | "submitted";
+  beltId: string;
+  beltName: string;
+  minimumScore: number;
+  startedAt: string;
+  updatedAt: string;
+  questions: StudentTheoryAttemptQuestion[];
+  answeredCount: number;
+};
+
+export type StudentTheoryResultQuestion = StudentTheoryAttemptQuestion & {
+  explanation: string;
+  correctOptionId: string;
+  awardedPoints: number;
+  correct: boolean;
+};
+
+export type StudentTheoryResult = {
+  id: string;
+  beltId: string;
+  beltName: string;
+  score: number;
+  minimumScore: number;
+  passed: boolean;
+  startedAt: string;
+  submittedAt: string;
+  questions: StudentTheoryResultQuestion[];
+};
+
+export type StudentTheoryAvailability =
+  | { status: "needs_target_belt" }
+  | { status: "unavailable"; beltId: string; beltName: string }
+  | {
+      status: "available";
+      exam: {
+        beltId: string;
+        beltName: string;
+        versionNumber: number;
+        minimumScore: number;
+        questionCount: number;
+        totalPoints: number;
+      };
+    }
+  | { status: "in_progress"; attempt: StudentTheoryAttempt | null }
+  | { status: "eligible"; beltId: string; beltName: string; validFrom: string };

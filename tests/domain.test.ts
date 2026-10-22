@@ -39,6 +39,10 @@ import {
   validateTheoryVersionInput,
 } from "../backend/src/theory-domain";
 import { eligibilityStatus } from "../backend/src/student-profile";
+import {
+  scoreTheoryAttempt,
+  shuffleTheoryItems,
+} from "../backend/src/theory-attempt-domain";
 
 describe("contexto de autenticação", () => {
   it("seleciona o papel permitido para cada porta de entrada", () => {
@@ -168,6 +172,37 @@ describe("provas teóricas versionadas", () => {
       "Defina a ordem das questões.",
       "Questão 1: informe a explicação do gabarito.",
     ]);
+  });
+});
+
+describe("tentativas da prova teórica", () => {
+  it("embaralha sem perder nem repetir itens", () => {
+    const indexes = [1, 0, 0];
+    const shuffled = shuffleTheoryItems(
+      ["A", "B", "C", "D"],
+      () => indexes.shift() ?? 0,
+    );
+    expect(shuffled).not.toEqual(["A", "B", "C", "D"]);
+    expect([...shuffled].sort()).toEqual(["A", "B", "C", "D"]);
+  });
+
+  it("calcula o percentual ponderado e a aprovação no servidor", () => {
+    const result = scoreTheoryAttempt(
+      [
+        { id: "q1", points: 10, correctOptionId: "a" },
+        { id: "q2", points: 30, correctOptionId: "b" },
+      ],
+      new Map([
+        ["q1", "a"],
+        ["q2", "incorreta"],
+      ]),
+      70,
+    );
+    expect(result).toEqual({
+      score: 25,
+      passed: false,
+      awardedByQuestion: { q1: 10, q2: 0 },
+    });
   });
 });
 

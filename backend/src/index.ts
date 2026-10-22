@@ -33,6 +33,14 @@ import {
   updateTheoryVersion,
 } from "./theory-admin";
 import {
+  getAvailableTheoryExam,
+  getCurrentTheoryAttempt,
+  getTheoryResult,
+  saveTheoryAnswer,
+  startTheoryAttempt,
+  submitTheoryAttempt,
+} from "./theory-attempts";
+import {
   cancelInvitation,
   inviteUser,
   listUsers,
@@ -116,6 +124,39 @@ async function handleAuthenticatedRoute(
   if (url.pathname === "/api/student/me/target-belt" && request.method === "PATCH") {
     const denied = requireStudentContext(request, env, user);
     return denied || updateStudentTargetBelt(request, env, user);
+  }
+  if (url.pathname === "/api/theory-exams/available" && request.method === "GET") {
+    const denied = requireStudentContext(request, env, user);
+    return denied || getAvailableTheoryExam(request, env, user);
+  }
+  if (url.pathname === "/api/theory-attempts/current" && request.method === "GET") {
+    const denied = requireStudentContext(request, env, user);
+    return denied || getCurrentTheoryAttempt(request, env, user);
+  }
+  if (url.pathname === "/api/theory-attempts" && request.method === "POST") {
+    const denied = requireStudentContext(request, env, user);
+    return denied || startTheoryAttempt(request, env, user);
+  }
+  const theoryAttemptAnswerMatch = url.pathname.match(
+    /^\/api\/theory-attempts\/([^/]+)\/answers$/,
+  );
+  if (theoryAttemptAnswerMatch && request.method === "PATCH") {
+    const denied = requireStudentContext(request, env, user);
+    return denied || saveTheoryAnswer(request, env, user, theoryAttemptAnswerMatch[1]);
+  }
+  const theoryAttemptSubmitMatch = url.pathname.match(
+    /^\/api\/theory-attempts\/([^/]+)\/submit$/,
+  );
+  if (theoryAttemptSubmitMatch && request.method === "POST") {
+    const denied = requireStudentContext(request, env, user);
+    return denied || submitTheoryAttempt(request, env, user, theoryAttemptSubmitMatch[1]);
+  }
+  const theoryAttemptResultMatch = url.pathname.match(
+    /^\/api\/theory-attempts\/([^/]+)\/result$/,
+  );
+  if (theoryAttemptResultMatch && request.method === "GET") {
+    const denied = requireStudentContext(request, env, user);
+    return denied || getTheoryResult(request, env, user, theoryAttemptResultMatch[1]);
   }
   const professionalOnly = requireProfessionalContext(request, env, user);
   if (professionalOnly) return professionalOnly;

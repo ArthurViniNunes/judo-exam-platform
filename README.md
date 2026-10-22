@@ -342,6 +342,12 @@ Todas as rotas abaixo, exceto `/`, `/health`, login/registro e a leitura públic
 | `PATCH/DELETE` | `/api/theory/admin/questions/:id` | Super Admin | Edita ou remove uma questão do rascunho |
 | `POST` | `/api/theory/admin/versions/:id/publish` | Super Admin | Valida e congela uma versão oficial |
 | `POST` | `/api/theory/admin/versions/:id/close` | Super Admin | Encerra uma versão publicada |
+| `GET` | `/api/theory-exams/available` | Aluno | Informa prova disponível, tentativa em andamento ou elegibilidade |
+| `GET` | `/api/theory-attempts/current` | Aluno | Retoma a tentativa ativa sem expor o gabarito |
+| `POST` | `/api/theory-attempts` | Aluno | Inicia ou retoma a prova publicada da graduação escolhida |
+| `PATCH` | `/api/theory-attempts/:id/answers` | Aluno | Salva uma resposta de forma idempotente |
+| `POST` | `/api/theory-attempts/:id/submit` | Aluno | Entrega, corrige e cria elegibilidade quando aprovado |
+| `GET` | `/api/theory-attempts/:id/result` | Aluno | Mostra nota, resposta dada, gabarito e explicação após a entrega |
 | `GET` | `/api/dashboard` | autenticado | Retorna indicadores e registros recentes |
 | `GET` | `/api/students` | autenticado | Lista alunos e seus históricos |
 | `GET` | `/api/students/available` | autenticado | Lista o catálogo global para iniciar exames |

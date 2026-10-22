@@ -275,10 +275,13 @@ existe, mas ainda não é exposto ao aluno.
 
 ### 0.3 — Aplicação e correção
 
-**Estado: fundação iniciada; aplicação depende das decisões da seção 12.** A
-área do aluno já consulta o próprio cadastro e suas elegibilidades diretamente
-no backend, sem confiar apenas nos dados da sessão. Início de tentativa,
-respostas, entrega e correção ainda não foram habilitados.
+**Estado: motor de aplicação e correção concluído; interface em andamento.** A
+área do aluno consulta o próprio cadastro e suas elegibilidades diretamente no
+backend. A API já inicia ou retoma uma tentativa, embaralha todas as questões e
+alternativas, salva cada resposta, exige a prova completa para entrega, corrige
+no servidor, libera o gabarito comentado somente depois da entrega e cria a
+elegibilidade quando há aprovação. Mídias são congeladas junto da tentativa e
+entregues com descrição neutra, sem expor campos do gabarito.
 
 - salvar cada resposta;
 - permitir retomada segura;

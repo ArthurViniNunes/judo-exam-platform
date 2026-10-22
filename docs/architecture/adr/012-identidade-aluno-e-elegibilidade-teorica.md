@@ -94,11 +94,15 @@ versionado, as validações do domínio, a API administrativa e a interface de
 gestão exclusiva do Super Admin. Versões publicadas e encerradas são imutáveis,
 e somente uma versão por graduação pode permanecer publicada.
 
-A área estudantil permanece no estado "prova não liberada". O schema já prevê
-tentativas, fotografias das questões, respostas e elegibilidades, mas a
-aplicação da prova, a correção comentada e a integração com a avaliação prática
-seguem como próximos marcos. Faixa pretendida, nova tentativa, validade,
-duração e composição da prova já foram decididas: escolha do aluno no cadastro,
-retentativa imediata, aprovação sem expiração, prova sem cronômetro e todas as
-questões em ordem aleatória. A consulta autenticada do perfil estudantil e do
-histórico de elegibilidades já está ativa e rejeita sessões profissionais.
+A consulta autenticada do perfil estudantil e do histórico de elegibilidades já
+está ativa e rejeita sessões profissionais. Faixa pretendida, nova tentativa,
+validade, duração e composição da prova foram decididas: escolha do aluno no
+cadastro, retentativa imediata, aprovação sem expiração, prova sem cronômetro e
+todas as questões em ordem aleatória.
+
+O motor de tentativas também está entregue. Ele cria uma fotografia imutável de
+todas as questões, alternativas embaralhadas e mídias da versão publicada. A
+API anterior à entrega omite resposta correta e explicação; a entrega completa
+calcula a nota no Worker, registra cada pontuação, libera a correção comentada e
+cria a elegibilidade sem expiração. Uma reprovação permite iniciar outra
+tentativa imediatamente.
