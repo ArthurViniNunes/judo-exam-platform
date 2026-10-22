@@ -1648,6 +1648,24 @@ label small {
 .mobile-score-dock {
   display: none;
 }
+.mobile-score-dock .quick-undo {
+  min-width: 100px;
+  min-height: 44px;
+  padding: 8px 11px;
+  border: 1px solid #cbd7dc;
+  border-radius: 10px;
+  background: #f4f6f6;
+  color: var(--dojo-blue);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  font-size: 11px;
+  font-weight: 800;
+}
+.mobile-score-dock .quick-undo:disabled {
+  opacity: 0.45;
+}
 
 .result-icon.kata-complete {
   background: #ece7f4;
@@ -1958,6 +1976,11 @@ label small {
 }
 .dark .mobile-score-dock strong {
   color: var(--theme-dark-accent);
+}
+.dark .mobile-score-dock .quick-undo {
+  border-color: color-mix(in srgb, var(--theme-dark-bg) 58%, var(--theme-dark-accent));
+  background: color-mix(in srgb, var(--theme-dark-bg) 88%, #ffffff);
+  color: #fff4f2;
 }
 .dark .result-icon.pass {
   background: #294634;
@@ -2887,15 +2910,16 @@ td:first-child {
     right: 10px;
     bottom: max(10px, env(safe-area-inset-bottom));
     left: 10px;
-    min-height: 58px;
-    padding: 9px 15px;
+    min-height: 76px;
+    padding: 8px 10px;
     border: 1px solid #cbd7dc;
     border-radius: 13px;
     background: rgba(255, 255, 255, 0.97);
     box-shadow: 0 12px 35px rgba(25, 44, 55, 0.2);
-    display: flex;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
     align-items: center;
-    justify-content: space-between;
+    gap: 7px 10px;
   }
   .mobile-score-dock span {
     color: #68767d;
@@ -2904,11 +2928,11 @@ td:first-child {
   .mobile-score-dock strong {
     color: var(--dojo-blue);
     font-size: 12px;
+    justify-self: end;
   }
   .mobile-score-dock .exam-progress {
-    width: auto;
-    flex: 1;
-    margin-right: 14px;
+    width: 100%;
+    grid-column: 1 / -1;
   }
   .kata-group-section {
     scroll-margin-top: 82px;

@@ -302,6 +302,8 @@ O início do exame exige a seleção de um judoca com aprovação teórica ativa
 
 Cada item de `Renraku-Henka Waza` recebe uma única avaliação, mesmo quando o nome contém `→`. Avaliações múltiplas no mesmo card são criadas somente quando o texto pede explicitamente mais de uma execução, como `2 Fugas de Yoko-shiho-gatame`; nesse caso, a média das execuções compõe a nota do item.
 
+No celular, depois da primeira técnica aberta, escolher uma nota abre automaticamente a próxima técnica pendente da categoria. O botão fixo **Desfazer** restaura o último lançamento; itens com várias execuções só avançam depois que todas as notas do bloco forem informadas.
+
 Os links de apoio ficam no objeto `TECHNIQUE_VIDEOS`, no mesmo arquivo. A chave precisa ser exatamente igual ao nome da técnica:
 
 ```ts

@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import {
-  ArrowLeft, Check, ChevronDown, ChevronRight, CircleHelp, Dices,
+  ArrowLeft, Check, ChevronDown, ChevronRight, CircleHelp, Dices, Undo2,
 } from "lucide-react";
 import {
   PRACTICAL_BELTS, SCORE_OPTIONS, TECHNIQUE_VIDEOS, calculateSequenceScore,
@@ -20,6 +20,10 @@ import { Brand, TechniqueVideoDialog } from "./exam-public";
 import { PracticalCandidateSelect } from "./exam-student-select";
 import { DraftResumeList, DraftSaveIndicator } from "./exam-persistence";
 import type { PracticalResult } from "./exam-public";
+
+type ScoreAction =
+  | { kind: "standard"; techniqueId: string; previous?: number; groupIndex: number }
+  | { kind: "sequence"; techniqueId: string; partIndex: number; previous?: number; groupIndex: number };
 
 export function TechnicalSetup({
   onBack,
@@ -103,6 +107,7 @@ export function TechnicalForm({
   const [notes, setNotes] = useState(draft.data.notes);
   const [openTechnique, setOpenTechnique] = useState<string | null>(null);
   const [videoTechnique, setVideoTechnique] = useState<string | null>(null);
+  const [lastScoreAction, setLastScoreAction] = useState<ScoreAction | null>(null);
   const [draftSaveState, setDraftSaveState] = useState<DraftSaveState>("saved");
   const saveDraftRef = useRef(onSaveDraft);
   const saveRevisionRef = useRef(0);
@@ -158,18 +163,85 @@ export function TechnicalForm({
   const progress = totalTechniques ? (scoredCount / totalTechniques) * 100 : 0;
   const liveAverage = scoredCount ? Object.values(scores).reduce((sum, value) => sum + value, 0) / scoredCount : 0;
 
+  const focusTechnique = (techniqueId: string | null) => {
+    setOpenTechnique(techniqueId);
+    if (!techniqueId) return;
+    window.requestAnimationFrame(() => {
+      document.getElementById(`technique-${techniqueId}`)?.scrollIntoView({
+        block: "center",
+        behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth",
+      });
+    });
+  };
+
+  const advanceFrom = (techniqueId: string, resolvedScores: Record<string, number>) => {
+    const currentIndex = group?.techniques.findIndex((technique) => technique.id === techniqueId) ?? -1;
+    const nextTechnique = group?.techniques
+      .slice(currentIndex + 1)
+      .find((technique) => resolvedScores[technique.id] === undefined);
+    focusTechnique(nextTechnique?.id ?? null);
+  };
+
+  const updateStandardScore = (techniqueId: string, value: number) => {
+    setLastScoreAction({
+      kind: "standard",
+      techniqueId,
+      previous: standardScores[techniqueId],
+      groupIndex,
+    });
+    setStandardScores((current) => ({ ...current, [techniqueId]: value }));
+    advanceFrom(techniqueId, { ...scores, [techniqueId]: value });
+  };
+
   const updateSequenceScore = (
     techniqueId: string,
     partIndex: number,
     value: number,
   ) => {
-    setSequenceScores((current) => {
-      const techniqueScores = {
-        ...(current[techniqueId] ?? {}),
-        [partIndex]: value,
-      };
-      return { ...current, [techniqueId]: techniqueScores };
+    const techniqueScores = {
+      ...(sequenceScores[techniqueId] ?? {}),
+      [partIndex]: value,
+    };
+    setLastScoreAction({
+      kind: "sequence",
+      techniqueId,
+      partIndex,
+      previous: sequenceScores[techniqueId]?.[partIndex],
+      groupIndex,
     });
+    setSequenceScores((current) => ({ ...current, [techniqueId]: techniqueScores }));
+    const average = calculateSequenceScore(
+      techniqueScores,
+      getTechniqueEvaluationParts(
+        group?.techniques.find((technique) => technique.id === techniqueId)?.name ?? "",
+      ).length,
+    );
+    if (average !== undefined) advanceFrom(techniqueId, { ...scores, [techniqueId]: average });
+  };
+
+  const undoLastScore = () => {
+    if (!lastScoreAction) return;
+    const action = lastScoreAction;
+    if (action.kind === "standard") {
+      setStandardScores((current) => {
+        const nextScores = { ...current };
+        if (action.previous === undefined) delete nextScores[action.techniqueId];
+        else nextScores[action.techniqueId] = action.previous;
+        return nextScores;
+      });
+    } else {
+      setSequenceScores((current) => {
+        const nextScores = { ...current };
+        const techniqueScores = { ...(nextScores[action.techniqueId] ?? {}) };
+        if (action.previous === undefined) delete techniqueScores[action.partIndex];
+        else techniqueScores[action.partIndex] = action.previous;
+        nextScores[action.techniqueId] = techniqueScores;
+        return nextScores;
+      });
+    }
+    setGroupIndex(action.groupIndex);
+    focusTechnique(action.techniqueId);
+    setLastScoreAction(null);
   };
 
   const next = async () => {
@@ -250,7 +322,7 @@ export function TechnicalForm({
               const isOpen = openTechnique === technique.id;
               const hasVideo = Boolean(toYouTubeEmbedUrl(TECHNIQUE_VIDEOS[technique.name] ?? ""));
               return (
-                <article key={technique.id} className={`technique-card ${techniqueComplete ? "scored" : ""} ${isOpen ? "open" : ""}`}>
+                <article id={`technique-${technique.id}`} key={technique.id} className={`technique-card ${techniqueComplete ? "scored" : ""} ${isOpen ? "open" : ""}`}>
                   <div className="technique-card-head">
                     <button className="technique-card-trigger" onClick={() => setOpenTechnique(isOpen ? null : technique.id)} aria-expanded={isOpen} aria-controls={`score-menu-${technique.id}`}>
                       <span className="technique-number">{String(itemIndex + 1).padStart(2, "0")}</span>
@@ -308,8 +380,7 @@ export function TechnicalForm({
                             key={option.value}
                             className={`rating-option score-${option.value} ${scores[technique.id] === option.value ? "selected" : ""}`}
                             onClick={() => {
-                              setStandardScores((current) => ({ ...current, [technique.id]: option.value }));
-                              setOpenTechnique(null);
+                              updateStandardScore(technique.id, option.value);
                             }}
                             aria-pressed={scores[technique.id] === option.value}
                           >
@@ -336,6 +407,7 @@ export function TechnicalForm({
       </div>
       <div className="mobile-score-dock">
         <div className="exam-progress" role="progressbar" aria-label="Progresso da avaliação" aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(progress)}><i style={{ width: `${progress}%` }} /></div>
+        <button className="quick-undo" disabled={!lastScoreAction} onClick={undoLastScore}><Undo2 size={16} /> Desfazer</button>
         <strong>Nota parcial {liveAverage.toFixed(1)}</strong>
       </div>
       {videoTechnique && <TechniqueVideoDialog technique={videoTechnique} onClose={() => setVideoTechnique(null)} />}
