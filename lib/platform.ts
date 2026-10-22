@@ -71,6 +71,26 @@ export type StudentRecord = {
 
 export type ExamStudent = Pick<StudentRecord, "id" | "name">;
 
+export type StudentEligibility = {
+  id: string;
+  beltId: string;
+  beltName: string;
+  validFrom: string;
+  validUntil: string | null;
+  revokedAt: string | null;
+  status: "active" | "expired" | "revoked";
+};
+
+export type StudentProfile = {
+  student: {
+    id: string;
+    name: string;
+    createdAt: string;
+  };
+  currentEligibility: StudentEligibility | null;
+  eligibilityHistory: StudentEligibility[];
+};
+
 export type EvaluationSubmission = {
   id: string;
   studentId: string;

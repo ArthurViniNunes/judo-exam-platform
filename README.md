@@ -328,6 +328,7 @@ Todas as rotas abaixo, exceto `/`, `/health`, login/registro e a leitura públic
 | `POST` | `/api/auth/register` | público | Ativa um e-mail previamente autorizado |
 | `POST` | `/api/student-auth/register` | público | Cria a identidade e o cadastro vinculados do aluno |
 | `POST` | `/api/student-auth/login` | público | Inicia uma sessão no contexto de aluno |
+| `GET` | `/api/student/me` | Aluno | Retorna o cadastro próprio e o histórico de elegibilidades |
 | `GET` | `/api/auth/me` | autenticado | Retorna o usuário atual |
 | `PATCH` | `/api/auth/profile` | autenticado | Atualiza o nome do usuário |
 | `POST` | `/api/auth/logout` | autenticado | Encerra a sessão atual |

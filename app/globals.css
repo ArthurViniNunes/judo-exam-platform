@@ -3607,6 +3607,33 @@ td:first-child {
 }
 .theory-admission li:first-child svg { color: var(--mg-accent-strong); }
 .theory-admission li:last-child svg { color: var(--mg-gold); }
+.theory-admission-loading svg { animation: spin 0.9s linear infinite; }
+.theory-admission-error .theory-status {
+  background: color-mix(in srgb, #c63d31 14%, var(--mg-surface));
+  color: color-mix(in srgb, #c63d31 72%, var(--mg-ink));
+}
+.theory-admission-error .theory-admission-icon { color: #b2362d; }
+.dark .theory-admission-error .theory-status,
+.dark .theory-admission-error .theory-admission-icon { color: #ffaaa2; }
+.theory-admission-approved .theory-status {
+  background: color-mix(in srgb, var(--mg-accent) 15%, var(--mg-surface));
+  color: var(--mg-accent-strong);
+}
+.theory-admission-approved li:last-child svg { color: var(--mg-accent-strong); }
+.student-profile-retry {
+  grid-column: 1 / -1;
+  min-height: 44px;
+  padding: 9px 14px;
+  border: 1px solid var(--mg-line);
+  border-radius: 10px;
+  background: var(--mg-surface-soft);
+  color: var(--mg-ink);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  font-weight: 800;
+}
 .student-professional-switch {
   padding: 16px;
   border: 1px solid var(--mg-line);

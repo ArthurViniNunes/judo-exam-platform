@@ -38,6 +38,7 @@ import {
   validateTheoryQuestionInput,
   validateTheoryVersionInput,
 } from "../backend/src/theory-domain";
+import { eligibilityStatus } from "../backend/src/student-profile";
 
 describe("contexto de autenticação", () => {
   it("seleciona o papel permitido para cada porta de entrada", () => {
@@ -66,6 +67,34 @@ describe("contexto de autenticação", () => {
       "evaluator",
     ]);
     expect(rolesFromCsv(null)).toEqual([]);
+  });
+});
+
+describe("perfil do aluno", () => {
+  const now = new Date("2026-10-22T12:00:00Z");
+
+  it("mantém ativa a elegibilidade sem revogação ou vencimento", () => {
+    expect(
+      eligibilityStatus({ valid_until: null, revoked_at: null }, now),
+    ).toBe("active");
+  });
+
+  it("distingue vencimento e revogação", () => {
+    expect(
+      eligibilityStatus(
+        { valid_until: "2026-10-22 11:59:59", revoked_at: null },
+        now,
+      ),
+    ).toBe("expired");
+    expect(
+      eligibilityStatus(
+        {
+          valid_until: "2027-01-01 00:00:00",
+          revoked_at: "2026-10-20 10:00:00",
+        },
+        now,
+      ),
+    ).toBe("revoked");
   });
 });
 

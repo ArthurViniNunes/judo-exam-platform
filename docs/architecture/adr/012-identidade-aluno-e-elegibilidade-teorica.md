@@ -94,4 +94,5 @@ A área estudantil permanece no estado "prova não liberada". O schema já prev�
 tentativas, fotografias das questões, respostas e elegibilidades, mas a
 aplicação da prova, a correção comentada e a integração com a avaliação prática
 serão implementadas depois da aprovação das regras de faixa pretendida, nova
-tentativa, validade e duração.
+tentativa, validade e duração. A consulta autenticada do perfil estudantil e do
+histórico de elegibilidades já está ativa e rejeita sessões profissionais.

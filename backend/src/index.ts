@@ -13,11 +13,13 @@ import {
   corsHeaders,
   json,
   requireProfessionalContext,
+  requireStudentContext,
   requireSuperAdmin,
 } from "./http";
 import { authenticate } from "./security";
 import { getThemeSettings, updateThemeSettings } from "./settings";
 import { loginStudent, registerStudent } from "./student-auth";
+import { getStudentProfile } from "./student-profile";
 import {
   closeTheoryVersion,
   createTheoryQuestion,
@@ -106,6 +108,10 @@ async function handleAuthenticatedRoute(
   }
   if (url.pathname === "/api/auth/logout" && request.method === "POST") {
     return logout(request, env);
+  }
+  if (url.pathname === "/api/student/me" && request.method === "GET") {
+    const denied = requireStudentContext(request, env, user);
+    return denied || getStudentProfile(request, env, user);
   }
   const professionalOnly = requireProfessionalContext(request, env, user);
   if (professionalOnly) return professionalOnly;

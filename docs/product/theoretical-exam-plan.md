@@ -275,7 +275,10 @@ existe, mas ainda não é exposto ao aluno.
 
 ### 0.3 — Aplicação e correção
 
-**Estado: não iniciada; depende das decisões da seção 12.**
+**Estado: fundação iniciada; aplicação depende das decisões da seção 12.** A
+área do aluno já consulta o próprio cadastro e suas elegibilidades diretamente
+no backend, sem confiar apenas nos dados da sessão. Início de tentativa,
+respostas, entrega e correção ainda não foram habilitados.
 
 - salvar cada resposta;
 - permitir retomada segura;

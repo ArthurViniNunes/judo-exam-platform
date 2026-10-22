@@ -73,3 +73,18 @@ export function requireProfessionalContext(
         403,
       );
 }
+
+export function requireStudentContext(
+  request: Request,
+  env: Env,
+  user: AuthUser,
+): Response | null {
+  return user.context === "student"
+    ? null
+    : json(
+        request,
+        env,
+        { error: "Entre pela área do aluno para realizar esta ação." },
+        403,
+      );
+}
