@@ -45,6 +45,142 @@ function actionError(caught: unknown, fallback: string) {
   return { message: fallback, details: [] as string[] };
 }
 
+function ImportTemplatesDialog({
+  templates,
+  versions,
+  busy,
+  onClose,
+  onImport,
+}: {
+  templates: TheoryTemplateSummary[];
+  versions: TheoryExamVersionSummary[];
+  busy: boolean;
+  onClose: () => void;
+  onImport: (templateIds: string[]) => void;
+}) {
+  const availableTemplates = templates.filter(
+    (template) => !versions.some((version) => version.beltId === template.beltId),
+  );
+  const [selectedIds, setSelectedIds] = useState<string[] | null>(null);
+  const effectiveSelectedIds = selectedIds ?? availableTemplates.map((template) => template.beltId);
+
+  useEffect(() => {
+    const escape = (event: KeyboardEvent) => {
+      if (event.key === "Escape" && !busy) onClose();
+    };
+    window.addEventListener("keydown", escape);
+    return () => window.removeEventListener("keydown", escape);
+  }, [busy, onClose]);
+
+  const toggleTemplate = (beltId: string) => {
+    setSelectedIds((current) => {
+      const currentIds = current ?? availableTemplates.map((template) => template.beltId);
+      return currentIds.includes(beltId)
+        ? currentIds.filter((item) => item !== beltId)
+        : [...currentIds, beltId];
+    });
+  };
+
+  return (
+    <div className="theory-editor-layer" onMouseDown={() => !busy && onClose()}>
+      <section
+        className="theory-editor-dialog theory-create-dialog theory-import-dialog"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="import-templates-title"
+        onMouseDown={(event) => event.stopPropagation()}
+      >
+        <button
+          className="theory-dialog-close"
+          onClick={onClose}
+          disabled={busy}
+          aria-label="Fechar"
+        >
+          <X size={19} />
+        </button>
+        <span className="theory-dialog-symbol"><BookCopy size={23} /></span>
+        <h2 id="import-templates-title">Importar exame teórico padrão</h2>
+        <p>
+          Escolha uma ou mais faixas. Cada importação cria um rascunho para você
+          revisar antes da publicação.
+        </p>
+
+        {templates.length === 0 ? (
+          <div className="theory-import-empty">
+            <FileQuestion size={21} />
+            <strong>Nenhum template cadastrado</strong>
+            <span>Cadastre o conteúdo de uma faixa para disponibilizá-lo aqui.</span>
+          </div>
+        ) : (
+          <div className="theory-template-options">
+            {templates.map((template) => {
+              const existingVersion = versions.find(
+                (version) => version.beltId === template.beltId,
+              );
+              const selected = effectiveSelectedIds.includes(template.beltId);
+
+              return (
+                <label
+                  key={template.beltId}
+                  className={`theory-template-option${existingVersion ? " unavailable" : ""}${selected ? " selected" : ""}`}
+                >
+                  <input
+                    type="checkbox"
+                    checked={selected}
+                    disabled={busy || Boolean(existingVersion)}
+                    onChange={() => toggleTemplate(template.beltId)}
+                  />
+                  <span className="theory-template-check" aria-hidden="true">
+                    <Check size={16} />
+                  </span>
+                  <span className="theory-template-copy">
+                    <strong>{template.beltName}</strong>
+                    <small>
+                      {existingVersion
+                        ? `Já possui ${statusLabel[existingVersion.status].toLocaleLowerCase("pt-BR")}.`
+                        : `${template.questionCount} questões · ${template.totalPoints} pontos`}
+                    </small>
+                  </span>
+                  {existingVersion ? (
+                    <span className={`theory-template-status ${existingVersion.status}`}>
+                      {statusLabel[existingVersion.status]}
+                    </span>
+                  ) : (
+                    <span className="theory-template-status ready">Disponível</span>
+                  )}
+                </label>
+              );
+            })}
+          </div>
+        )}
+
+        {templates.length > 0 && versions.some((version) =>
+          templates.some((template) => template.beltId === version.beltId),
+        ) && (
+          <p className="theory-import-note">
+            Faixas que já possuem exame ficam bloqueadas para evitar duplicidade.
+          </p>
+        )}
+
+        <div className="theory-dialog-actions">
+          <button type="button" className="management-secondary" onClick={onClose} disabled={busy}>
+            Cancelar
+          </button>
+          <button
+            type="button"
+            className="management-primary"
+            disabled={busy || effectiveSelectedIds.length === 0}
+            onClick={() => onImport(effectiveSelectedIds)}
+          >
+            <BookCopy size={18} />
+            {busy ? "Importando…" : `Importar ${effectiveSelectedIds.length || ""} exame${effectiveSelectedIds.length === 1 ? "" : "s"}`}
+          </button>
+        </div>
+      </section>
+    </div>
+  );
+}
+
 function CreateVersionDialog({
   onClose,
   onCreated,
@@ -135,6 +271,15 @@ type QuestionDraft = {
   sourceUrl: string;
   altText: string;
   metadataSensitive: boolean;
+};
+
+type TheoryTemplateSummary = {
+  beltId: (typeof THEORY_BELTS)[number]["id"];
+  beltName: string;
+  questionCount: number;
+  totalPoints: number;
+  gridQuestionCount: number;
+  pendingMediaCount: number;
 };
 
 function questionDraft(question?: TheoryQuestion): QuestionDraft {
@@ -590,11 +735,13 @@ function QuestionEditor({
 
 export function TheoryExamsView() {
   const [versions, setVersions] = useState<TheoryExamVersionSummary[]>([]);
+  const [templates, setTemplates] = useState<TheoryTemplateSummary[]>([]);
   const [selectedId, setSelectedId] = useState("");
   const [version, setVersion] = useState<TheoryExamVersion | null>(null);
   const [loading, setLoading] = useState(true);
   const [detailLoading, setDetailLoading] = useState(false);
   const [createOpen, setCreateOpen] = useState(false);
+  const [importOpen, setImportOpen] = useState(false);
   const [editingQuestion, setEditingQuestion] = useState<TheoryQuestion | "new" | null>(null);
   const [minimumScore, setMinimumScore] = useState("");
   const [busy, setBusy] = useState(false);
@@ -612,7 +759,12 @@ export function TheoryExamsView() {
     setLoading(true);
     setError("");
     try {
-      setVersions(await apiRequest<TheoryExamVersionSummary[]>("/api/theory/admin/versions"));
+      const [nextVersions, nextTemplates] = await Promise.all([
+        apiRequest<TheoryExamVersionSummary[]>("/api/theory/admin/versions"),
+        apiRequest<TheoryTemplateSummary[]>("/api/theory/admin/templates"),
+      ]);
+      setVersions(nextVersions);
+      setTemplates(nextTemplates);
     } catch (caught) {
       setError(actionError(caught, "Não foi possível carregar as provas.").message);
     } finally {
@@ -645,23 +797,44 @@ export function TheoryExamsView() {
     setErrorDetails(next.details);
   };
 
-  const importBrownTemplate = async () => {
-    if (!window.confirm("Importar o exame marrom com 52 questões e gabarito provisório? O resultado será criado como rascunho.")) return;
+  const importTemplates = async (templateIds: string[]) => {
+    const selectedTemplates = templates.filter((template) => templateIds.includes(template.beltId));
     setBusy(true);
     setError("");
     setErrorDetails([]);
     setMessage("");
     try {
-      const imported = await apiRequest<TheoryExamVersion>(
-        "/api/theory/admin/templates/brown/import",
-        { method: "POST" },
-      );
-      setVersions((current) => [imported, ...current]);
-      setSelectedId(imported.id);
-      mergeVersion(imported);
-      setMessage("Exame marrom importado: revise o gabarito provisório e inclua as 14 mídias antes de publicar.");
+      const importedVersions: TheoryExamVersion[] = [];
+      const failures: string[] = [];
+      for (const template of selectedTemplates) {
+        try {
+          const imported = await apiRequest<TheoryExamVersion>(
+            `/api/theory/admin/templates/${template.beltId}/import`,
+            { method: "POST" },
+          );
+          importedVersions.push(imported);
+        } catch (caught) {
+          const failure = actionError(caught, `Não foi possível importar ${template.beltName}.`);
+          failures.push(`${template.beltName}: ${failure.message}`);
+        }
+      }
+      if (importedVersions.length > 0) {
+        setVersions((current) => [...importedVersions, ...current]);
+        const lastImported = importedVersions[importedVersions.length - 1];
+        setSelectedId(lastImported.id);
+        mergeVersion(lastImported);
+        setImportOpen(false);
+      }
+      if (failures.length > 0) {
+        setError("Alguns exames não puderam ser importados.");
+        setErrorDetails(failures);
+      } else {
+        setMessage(
+          `${importedVersions.length} exame${importedVersions.length === 1 ? "" : "s"} importado${importedVersions.length === 1 ? "" : "s"} como rascunho. Revise o conteúdo antes de publicar.`,
+        );
+      }
     } catch (caught) {
-      handleError(caught, "Não foi possível importar o exame marrom.");
+      handleError(caught, "Não foi possível importar os exames selecionados.");
     } finally {
       setBusy(false);
     }
@@ -782,8 +955,8 @@ export function TheoryExamsView() {
           <p>Prepare o conteúdo em rascunho e publique uma versão imutável por graduação.</p>
         </div>
         <div className="theory-heading-actions">
-          <button className="management-secondary" disabled={busy} onClick={() => void importBrownTemplate()}>
-            <BookCopy size={18} /> Importar exame marrom
+          <button className="management-secondary" disabled={busy} onClick={() => setImportOpen(true)}>
+            <BookCopy size={18} /> Importar exame teórico padrão
           </button>
           <button className="management-primary" onClick={() => setCreateOpen(true)}>
             <Plus size={18} /> Novo rascunho
@@ -988,6 +1161,15 @@ export function TheoryExamsView() {
             setVersions((current) => [created, ...current]);
             void openVersion(created.id);
           }}
+        />
+      )}
+      {importOpen && (
+        <ImportTemplatesDialog
+          templates={templates}
+          versions={versions}
+          busy={busy}
+          onClose={() => setImportOpen(false)}
+          onImport={(templateIds) => void importTemplates(templateIds)}
         />
       )}
       {version && editingQuestion && (
