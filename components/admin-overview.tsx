@@ -20,6 +20,10 @@ import { useState } from "react";
 import { apiRequest } from "@/lib/api";
 import { EvaluationReport } from "@/components/evaluation-report";
 import {
+  buildStudentEvolution,
+  latestComparableTrend,
+} from "@/lib/evaluation-evolution";
+import {
   EmptyState,
   formatDate,
   initials,
@@ -231,6 +235,11 @@ type StudentsViewProps = {
   reload: () => Promise<void>;
 };
 
+function signedScoreLabel(score: number) {
+  if (score === 0) return "0,0";
+  return `${score > 0 ? "+" : "−"}${scoreLabel(Math.abs(score))}`;
+}
+
 export function StudentsView({
   students,
   loading,
@@ -242,6 +251,7 @@ export function StudentsView({
 }: StudentsViewProps) {
   const [search, setSearch] = useState("");
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [selectedSeriesKey, setSelectedSeriesKey] = useState("");
   const [reportEvaluationId, setReportEvaluationId] = useState<string | null>(null);
   const [registering, setRegistering] = useState(false);
   const [studentName, setStudentName] = useState("");
@@ -254,6 +264,20 @@ export function StudentsView({
       .includes(search.toLocaleLowerCase("pt-BR")),
   );
   const selected = students.find((student) => student.id === selectedId);
+  const evolution = buildStudentEvolution(
+    selected?.evaluations ?? [],
+    selectedSeriesKey,
+  );
+  const {
+    options: seriesOptions,
+    activeKey: activeSeriesKey,
+    series: comparisonSeries,
+    latest: latestComparable,
+    previous: previousComparable,
+    overallDifference,
+    categories: categoryComparisons,
+    recurringTechniques,
+  } = evolution;
 
   const registerStudent = async () => {
     setSavingStudent(true);
@@ -373,12 +397,14 @@ export function StudentsView({
       ) : (
         <div className="students-layout">
           <div className="student-list">
-            {filtered.map((student) => (
-              <button
+            {filtered.map((student) => {
+              const trend = latestComparableTrend(student.evaluations);
+              return <button
                 key={student.id}
                 className={selectedId === student.id ? "selected" : ""}
                 onClick={() => {
                   setSelectedId(student.id);
+                  setSelectedSeriesKey("");
                   setReportEvaluationId(null);
                 }}
               >
@@ -393,29 +419,26 @@ export function StudentsView({
                 </div>
                 {student.evaluations.length ? (
                   <span
-                    className={`evolution-chip ${student.evolution > 0 ? "up" : student.evolution < 0 ? "down" : "stable"}`}
+                    className={`evolution-chip ${trend.difference !== null && trend.difference > 0 ? "up" : trend.difference !== null && trend.difference < 0 ? "down" : "stable"}`}
                     aria-label={
-                      student.evaluations.length > 1
-                        ? `Evolução de ${scoreLabel(student.evolution)}`
-                        : `Nota ${scoreLabel(student.latestScore)}`
+                      trend.difference !== null
+                        ? `Evolução comparável de ${signedScoreLabel(trend.difference)}`
+                        : `Nota ${scoreLabel(trend.score)}`
                     }
                   >
-                    {student.evaluations.length > 1 && student.evolution > 0 ? (
+                    {trend.difference !== null && trend.difference > 0 ? (
                       <ArrowUpRight size={15} />
-                    ) : student.evaluations.length > 1 && student.evolution < 0 ? (
+                    ) : trend.difference !== null && trend.difference < 0 ? (
                       <ArrowDownRight size={15} />
                     ) : null}
-                    {student.evaluations.length > 1 && student.evolution > 0 ? "+" : ""}
-                    {scoreLabel(
-                      student.evaluations.length > 1
-                        ? Math.abs(student.evolution)
-                        : student.latestScore,
-                    )}
+                    {trend.difference !== null
+                      ? signedScoreLabel(trend.difference)
+                      : scoreLabel(trend.score)}
                   </span>
                 ) : <span className="student-unscored">Sem nota</span>}
                 <ChevronRight size={18} />
-              </button>
-            ))}
+              </button>;
+            })}
           </div>
           <aside
             className={`student-detail${selected ? " open" : ""}`}
@@ -443,18 +466,106 @@ export function StudentsView({
                     </p>
                   </div>
                 </div>
-                {selected.evaluations.length ? <div
-                  className="student-progress"
-                  aria-label="Evolução das notas"
+                {selected.evaluations.length ? <section
+                  className="student-evolution"
+                  aria-labelledby="student-evolution-title"
                 >
-                  {selected.evaluations.map((evaluation, index) => (
-                    <div key={evaluation.id}>
-                      <span style={{ height: `${Math.max(8, evaluation.score)}%` }} />
-                      <b>{scoreLabel(evaluation.score)}</b>
-                      <small>{index + 1}º</small>
+                  <header>
+                    <div>
+                      <span>Evolução comparável</span>
+                      <h3 id="student-evolution-title">Histórico da mesma prova</h3>
                     </div>
-                  ))}
-                </div> : <EmptyState icon={<ClipboardCheck size={27} />} title="Ainda sem avaliações" detail="O histórico será iniciado quando este judoca concluir um exame." />}
+                    <label>
+                      Série analisada
+                      <span>
+                        <select
+                          value={activeSeriesKey}
+                          onChange={(event) => setSelectedSeriesKey(event.target.value)}
+                        >
+                          {seriesOptions.map((option) => (
+                            <option key={option.key} value={option.key}>
+                              {option.label}
+                            </option>
+                          ))}
+                        </select>
+                        <ChevronDown size={16} />
+                      </span>
+                    </label>
+                  </header>
+                  <p className="student-evolution-context">
+                    Modalidades, graduações ou matrizes diferentes ficam em séries separadas.
+                  </p>
+                  <div className="student-progress-summary">
+                    <div>
+                      <small>Última nota</small>
+                      <strong>{scoreLabel(latestComparable?.score ?? 0)}</strong>
+                    </div>
+                    <div className={overallDifference > 0 ? "up" : overallDifference < 0 ? "down" : "stable"}>
+                      <small>Desde a anterior</small>
+                      <strong>{previousComparable ? signedScoreLabel(overallDifference) : "—"}</strong>
+                    </div>
+                    <div>
+                      <small>Avaliações comparáveis</small>
+                      <strong>{comparisonSeries.length}</strong>
+                    </div>
+                  </div>
+                  <div
+                    className="student-progress"
+                    aria-label={`Evolução das notas em ${comparisonSeries.length} avaliações comparáveis`}
+                  >
+                    {comparisonSeries.map((evaluation, index) => (
+                      <div key={evaluation.id}>
+                        <span style={{ height: `${Math.max(8, evaluation.score)}%` }} />
+                        <b>{scoreLabel(evaluation.score)}</b>
+                        <small>{index + 1}º</small>
+                      </div>
+                    ))}
+                  </div>
+                  {previousComparable ? <div className="student-evolution-details">
+                    <section aria-labelledby="category-comparison-title">
+                      <h4 id="category-comparison-title">Mudança por categoria</h4>
+                      <ul className="student-category-comparison">
+                        {categoryComparisons.map((category) => {
+                          const difference = category.previous === undefined
+                            ? null
+                            : category.current - category.previous;
+                          return <li key={category.name}>
+                            <span>
+                              <strong>{category.name}</strong>
+                              <small>
+                                Atual {scoreLabel(category.current)}
+                                {category.previous === undefined
+                                  ? " · sem equivalente anterior"
+                                  : ` · anterior ${scoreLabel(category.previous)}`}
+                              </small>
+                            </span>
+                            <b className={difference === null || difference === 0 ? "stable" : difference > 0 ? "up" : "down"}>
+                              {difference === null ? "—" : signedScoreLabel(difference)}
+                            </b>
+                          </li>;
+                        })}
+                      </ul>
+                    </section>
+                    <section aria-labelledby="recurring-techniques-title">
+                      <h4 id="recurring-techniques-title">Pontos recorrentes de atenção</h4>
+                      {recurringTechniques.length ? <ul className="student-recurring-techniques">
+                        {recurringTechniques.map((technique) => (
+                          <li key={`${technique.category}::${technique.name}`}>
+                            <span>
+                              <strong>{technique.name}</strong>
+                              <small>{technique.category} · {technique.count} avaliações</small>
+                            </span>
+                            <b>{scoreLabel(technique.total / technique.count)}</b>
+                          </li>
+                        ))}
+                      </ul> : <p className="student-comparison-empty">
+                        Nenhuma técnica ficou abaixo de 7,0 em pelo menos duas avaliações desta série.
+                      </p>}
+                    </section>
+                  </div> : <p className="student-comparison-empty standalone">
+                    A comparação será exibida após uma segunda avaliação da mesma modalidade, graduação e matriz.
+                  </p>}
+                </section> : <EmptyState icon={<ClipboardCheck size={27} />} title="Ainda sem avaliações" detail="O histórico será iniciado quando este judoca concluir um exame." />}
                 {selected.evaluations.length > 0 && <div className="student-history">
                   {[...selected.evaluations].reverse().map((evaluation) => {
                     const reportOpen = reportEvaluationId === evaluation.id;

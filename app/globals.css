@@ -4635,11 +4635,55 @@ td:first-child {
 .student-detail-head { margin-top: 12px; display: flex; align-items: center; gap: 13px; }
 .student-detail-head h2 { margin: 0; font-family: Oswald, "Arial Narrow", sans-serif; font-size: 25px; font-weight: 550; }
 .student-detail-head p { margin: 4px 0 0; color: var(--mg-muted); font-size: 11px; }
-.student-progress { height: 190px; margin: 28px 0 18px; padding: 22px 12px 0; border-bottom: 1px solid var(--mg-line); background: linear-gradient(to top, color-mix(in srgb, var(--mg-line) 70%, transparent) 1px, transparent 1px); background-size: 100% 25%; display: flex; align-items: flex-end; gap: 8px; overflow-x: auto; }
+.student-evolution { margin: 22px 0 17px; padding: 15px; border: 1px solid var(--mg-line); border-radius: 14px; background: var(--mg-surface-soft); }
+.student-evolution > header { display: grid; gap: 13px; }
+.student-evolution > header > div { min-width: 0; }
+.student-evolution > header > div > span { color: var(--mg-accent-strong); font-size: 9px; font-weight: 850; text-transform: uppercase; letter-spacing: 0.07em; }
+.student-evolution h3 { margin: 3px 0 0; font-family: Oswald, "Arial Narrow", sans-serif; font-size: 20px; font-weight: 550; }
+.student-evolution > header label { color: var(--mg-muted); display: grid; gap: 5px; font-size: 9px; font-weight: 800; }
+.student-evolution > header label > span { position: relative; display: block; }
+.student-evolution select { width: 100%; min-height: 46px; padding: 0 37px 0 11px; border: 1px solid var(--mg-line); border-radius: 10px; appearance: none; background: var(--mg-surface); color: var(--mg-ink); font-size: 10px; font-weight: 750; }
+.student-evolution label svg { position: absolute; right: 11px; top: 50%; color: var(--mg-muted); pointer-events: none; transform: translateY(-50%); }
+.student-evolution-context { margin: 10px 0 0; color: var(--mg-muted); font-size: 9px; line-height: 1.5; }
+.student-progress-summary { margin-top: 14px; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 7px; }
+.student-progress-summary > div { min-width: 0; padding: 10px 8px; border: 1px solid var(--mg-line); border-radius: 10px; background: var(--mg-surface); display: grid; align-content: start; gap: 4px; }
+.student-progress-summary small { color: var(--mg-muted); font-size: 8px; line-height: 1.3; }
+.student-progress-summary strong { overflow-wrap: anywhere; font-family: Oswald, "Arial Narrow", sans-serif; font-size: 19px; font-weight: 600; }
+.student-progress-summary .up strong,
+.student-category-comparison .up { color: #387033; }
+.student-progress-summary .down strong,
+.student-category-comparison .down { color: #a14430; }
+.student-progress-summary .stable strong,
+.student-category-comparison .stable { color: var(--mg-muted); }
+.dark .student-progress-summary .up strong,
+.dark .student-category-comparison .up { color: #bfe3b6; }
+.dark .student-progress-summary .down strong,
+.dark .student-category-comparison .down { color: #ffc9bd; }
+.student-progress { height: 175px; margin: 18px 0; padding: 22px 4px 0; border-bottom: 1px solid var(--mg-line); background: linear-gradient(to top, color-mix(in srgb, var(--mg-line) 70%, transparent) 1px, transparent 1px); background-size: 100% 25%; display: flex; align-items: flex-end; gap: 8px; overflow-x: auto; }
 .student-progress > div { min-width: 38px; height: 100%; display: grid; grid-template-rows: 1fr 20px 18px; align-items: end; text-align: center; }
 .student-progress > div span { width: 100%; min-height: 8px; border-radius: 6px 6px 0 0; background: var(--mg-accent); }
 .student-progress b { font-size: 10px; }
 .student-progress small { color: var(--mg-muted); font-size: 9px; }
+.student-evolution-details { display: grid; gap: 16px; }
+.student-evolution-details > section { min-width: 0; }
+.student-evolution-details h4 { margin: 0 0 8px; font-size: 10px; font-weight: 850; }
+.student-category-comparison,
+.student-recurring-techniques { margin: 0; padding: 0; border: 1px solid var(--mg-line); border-radius: 10px; list-style: none; background: var(--mg-surface); }
+.student-category-comparison li,
+.student-recurring-techniques li { min-height: 53px; padding: 9px 10px; border-bottom: 1px solid var(--mg-line); display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 10px; }
+.student-category-comparison li:last-child,
+.student-recurring-techniques li:last-child { border-bottom: 0; }
+.student-category-comparison li > span,
+.student-recurring-techniques li > span { min-width: 0; display: grid; gap: 3px; }
+.student-category-comparison strong,
+.student-recurring-techniques strong { overflow-wrap: anywhere; font-size: 9px; }
+.student-category-comparison small,
+.student-recurring-techniques small { color: var(--mg-muted); font-size: 8px; line-height: 1.4; }
+.student-category-comparison li > b,
+.student-recurring-techniques li > b { font-family: Oswald, "Arial Narrow", sans-serif; font-size: 17px; }
+.student-recurring-techniques li > b { color: var(--mg-accent-strong); }
+.student-comparison-empty { margin: 0; padding: 13px; border: 1px dashed var(--mg-line); border-radius: 10px; color: var(--mg-muted); background: var(--mg-surface); font-size: 9px; line-height: 1.55; }
+.student-comparison-empty.standalone { margin-top: 4px; }
 .student-history { display: grid; }
 .student-history article { position: relative; min-height: 72px; padding: 10px 0 10px 25px; }
 .student-history article > i { position: absolute; left: 4px; top: 30px; width: 9px; height: 9px; border: 2px solid var(--mg-surface); border-radius: 50%; background: var(--mg-gold); box-shadow: 0 0 0 1px var(--mg-gold); }
@@ -5217,6 +5261,7 @@ td:first-child {
   .student-detail:not(.open) { display: grid; place-items: center; }
   .students-layout { grid-template-columns: minmax(300px, 0.85fr) minmax(340px, 1.15fr); align-items: start; }
   .student-detail-close { display: none; }
+  .student-evolution > header { grid-template-columns: minmax(0, 1fr) minmax(180px, 0.9fr); align-items: end; }
   .team-grid { grid-template-columns: minmax(280px, 0.7fr) minmax(380px, 1.3fr); align-items: start; }
   .team-list article { grid-template-columns: 40px minmax(0, 1fr) auto; }
   .team-member-actions { grid-column: 2 / -1; justify-self: end; display: flex; }
@@ -5235,6 +5280,7 @@ td:first-child {
 }
 
 @media (min-width: 1080px) {
+  .student-evolution-details { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); align-items: start; }
   .theory-admin-layout { min-height: 680px; display: grid; grid-template-columns: 300px minmax(0, 1fr); }
   .theory-admin-layout.detail-open .theory-version-rail { display: block; }
   .theory-version-workspace,

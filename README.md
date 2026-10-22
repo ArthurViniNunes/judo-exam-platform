@@ -21,7 +21,7 @@ Aplicação web da Associação Judô Rogério Cruz para aplicar, registrar e ac
 - aplica `Nage-no-Kata` parcial ou completo e `Katame-no-Kata`;
 - salva rascunhos no aparelho e sincroniza avaliações concluídas quando a conexão retorna;
 - registra a nota final, a média de cada categoria, cada técnica, eventuais execuções múltiplas, observações, graduação, data e avaliador;
-- mostra histórico, média e evolução por aluno;
+- mostra histórico, média e evolução por aluno, separando provas incompatíveis e comparando notas, categorias e dificuldades recorrentes;
 - oferece um painel com volume de avaliações, médias, aprovação e registros recentes;
 - permite que o Super Admin escolha, com modelos prontos ou seletores de cor, a identidade visual global dos temas claro e escuro;
 - cria elegibilidade sem expiração quando o aluno é aprovado e permite nova tentativa imediata quando ele reprova.
@@ -289,6 +289,7 @@ No celular, conectado à mesma rede Wi-Fi, abra `http://192.168.0.50:3000`, subs
 11. Em **Administração → Eventos**, o Super Admin organiza o dia do exame. Durante o evento, cada avaliador assume uma tarefa livre e abre a prova diretamente pela fila; o vínculo é preservado no rascunho local e na avaliação sincronizada. A fila se atualiza a cada 10 segundos e pode ser filtrada por situação, modalidade e responsável.
 12. Em **Administração → Notas**, os registros podem ser combinados por avaliador, modalidade, graduação, resultado, categoria, técnica e período. O painel de dificuldades sempre informa o tamanho da amostra e destaca quando ainda há poucos exames para uma conclusão segura.
 13. Abra **Detalhes → Imprimir ou salvar PDF** para gerar um relatório somente quando necessário. A versão de impressão inclui identidade visual, judoca, graduação, avaliador, evento, data, resultado, categorias, técnicas, execuções e a referência imutável do registro.
+14. Em **Administração → Alunos**, escolha um judoca e a série de exames. A plataforma compara somente avaliações da mesma modalidade, graduação e matriz, mostrando a mudança da nota geral, cada categoria e técnicas que ficaram abaixo de 7,0 de forma recorrente.
 
 O Super Admin pode carregar o caderno fornecido para 1º Kyu em **Administração → Provas teóricas → Importar exame marrom**. Ele entra como rascunho: revise o gabarito provisório e inclua as 14 mídias pendentes antes de publicar. O inventário está em [`docs/product/brown-theory-exam.md`](docs/product/brown-theory-exam.md).
 

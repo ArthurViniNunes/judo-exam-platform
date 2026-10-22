@@ -250,9 +250,12 @@ Inclui os pontos 2, 3, 6 e 7.
 
 **Estado: em execução.** A área de notas já possui filtros combináveis e um
 primeiro painel de dificuldades com média por categoria, distribuição dos
-critérios, técnicas com menor média e aviso para amostras pequenas. Comparações
-longitudinais seguem como próximo marco. A impressão/PDF sob demanda já está
-disponível no relatório detalhado do histórico e não aparece ao concluir a prova.
+critérios, técnicas com menor média e aviso para amostras pequenas. O perfil do
+judoca já separa séries pela modalidade, graduação e matriz e compara nota
+geral, categorias e dificuldades recorrentes entre exames compatíveis. A
+impressão/PDF sob demanda já está disponível no relatório detalhado do histórico
+e não aparece ao concluir a prova. Filtros de período no histórico individual
+seguem como incremento independente.
 
 #### 3.1 Evolução individual
 
