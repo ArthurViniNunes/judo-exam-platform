@@ -320,6 +320,12 @@ custo baixo. PDF assinado e arquivado no R2 fica fora do escopo inicial.
 
 Inclui os pontos 9, 16, 17 e 18.
 
+**Estado: em execução.** A exclusão de avaliações já é lógica, exige motivo,
+remove o registro das consultas operacionais, preserva todo o detalhamento e
+gera eventos de auditoria. O Super Admin possui uma área própria para consultar
+e restaurar esses registros. Revisões de nota, backup e recuperação de senha
+seguem como marcos independentes.
+
 #### 4.1 Correção auditável
 
 - avaliações deixam de ser sobrescritas;

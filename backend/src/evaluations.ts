@@ -12,6 +12,7 @@ import {
   dashboardFromRows,
   formatEvaluation,
   isEvaluation,
+  normalizeEvaluationDeletionReason,
   normalizeName,
   studentsFromCatalog,
 } from "./domain";
@@ -21,9 +22,16 @@ async function evaluationRows(
   env: Env,
   user: AuthUser,
   evaluatorId?: string | null,
+  visibility: "active" | "deleted" = "active",
 ) {
   const filterId = user.role === "super_admin" ? evaluatorId : user.id;
-  const where = filterId ? "WHERE evaluations.evaluator_id = ?" : "";
+  const conditions = [
+    visibility === "deleted"
+      ? "evaluations.deleted_at IS NOT NULL"
+      : "evaluations.deleted_at IS NULL",
+    ...(filterId ? ["evaluations.evaluator_id = ?"] : []),
+  ];
+  const where = `WHERE ${conditions.join(" AND ")}`;
   const statement = env.DB.prepare(
     `SELECT evaluations.*, users.name AS evaluator_name,
             users.evaluator_rank AS evaluator_rank,
@@ -270,6 +278,15 @@ export async function listEvaluations(
   return json(request, env, rows.map(formatEvaluation));
 }
 
+export async function listDeletedEvaluations(
+  request: Request,
+  env: Env,
+  user: AuthUser,
+) {
+  const rows = await evaluationRows(env, user, null, "deleted");
+  return json(request, env, rows.map(formatEvaluation));
+}
+
 export async function createEvaluation(
   request: Request,
   env: Env,
@@ -298,6 +315,14 @@ export async function createEvaluation(
         request,
         env,
         { error: "Este identificador de avaliação já está em uso." },
+        409,
+      );
+    }
+    if (duplicate.deleted_at) {
+      return json(
+        request,
+        env,
+        { error: "Esta avaliação foi excluída e precisa ser restaurada pelo Super Admin." },
         409,
       );
     }
@@ -535,6 +560,19 @@ export async function deleteEvaluation(
   user: AuthUser,
   evaluationId: string,
 ) {
+  const body: { reason?: string } = await request
+    .json<{ reason?: string }>()
+    .catch(() => ({}));
+  const reason = normalizeEvaluationDeletionReason(body.reason);
+  if (!reason) {
+    return json(
+      request,
+      env,
+      { error: "Informe um motivo entre 5 e 300 caracteres." },
+      400,
+    );
+  }
+
   const evaluation = await env.DB.prepare(
     "SELECT * FROM evaluations WHERE id = ?",
   )
@@ -543,6 +581,9 @@ export async function deleteEvaluation(
 
   if (!evaluation) {
     return json(request, env, { error: "Avaliação não encontrada." }, 404);
+  }
+  if (evaluation.deleted_at) {
+    return json(request, env, { error: "Esta avaliação já está excluída." }, 409);
   }
   if (!canDeleteEvaluation(user, evaluation)) {
     return json(
@@ -553,8 +594,64 @@ export async function deleteEvaluation(
     );
   }
 
-  await env.DB.prepare("DELETE FROM evaluations WHERE id = ?")
-    .bind(evaluationId)
-    .run();
+  await env.DB.batch([
+    env.DB.prepare(
+      "UPDATE evaluations SET deleted_at = CURRENT_TIMESTAMP, deleted_by = ?, delete_reason = ? WHERE id = ? AND deleted_at IS NULL",
+    ).bind(user.id, reason, evaluationId),
+    env.DB.prepare(
+      "INSERT INTO audit_events (id, actor_user_id, action, entity_type, entity_id, request_id, metadata_json) VALUES (?, ?, 'evaluation.deleted', 'evaluation', ?, ?, ?)",
+    ).bind(
+      crypto.randomUUID(),
+      user.id,
+      evaluationId,
+      request.headers.get("X-Request-Id") || crypto.randomUUID(),
+      JSON.stringify({
+        reason,
+        studentId: evaluation.student_id,
+        evaluatorId: evaluation.evaluator_id,
+        type: evaluation.type,
+      }),
+    ),
+  ]);
   return empty(request, env);
+}
+
+export async function restoreEvaluation(
+  request: Request,
+  env: Env,
+  user: AuthUser,
+  evaluationId: string,
+) {
+  const evaluation = await env.DB.prepare(
+    "SELECT * FROM evaluations WHERE id = ?",
+  )
+    .bind(evaluationId)
+    .first<EvaluationRow>();
+
+  if (!evaluation) {
+    return json(request, env, { error: "Avaliação não encontrada." }, 404);
+  }
+  if (!evaluation.deleted_at) {
+    return json(request, env, { error: "Esta avaliação não está excluída." }, 409);
+  }
+
+  await env.DB.batch([
+    env.DB.prepare(
+      "UPDATE evaluations SET deleted_at = NULL, deleted_by = NULL, delete_reason = NULL WHERE id = ? AND deleted_at IS NOT NULL",
+    ).bind(evaluationId),
+    env.DB.prepare(
+      "INSERT INTO audit_events (id, actor_user_id, action, entity_type, entity_id, request_id, metadata_json) VALUES (?, ?, 'evaluation.restored', 'evaluation', ?, ?, ?)",
+    ).bind(
+      crypto.randomUUID(),
+      user.id,
+      evaluationId,
+      request.headers.get("X-Request-Id") || crypto.randomUUID(),
+      JSON.stringify({
+        deletedAt: evaluation.deleted_at,
+        deleteReason: evaluation.delete_reason,
+      }),
+    ),
+  ]);
+
+  return json(request, env, { restored: true });
 }

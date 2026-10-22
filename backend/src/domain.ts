@@ -58,6 +58,12 @@ export function canDeleteEvaluation(user: AuthUser, row: EvaluationRow) {
   return user.role === "super_admin" || row.evaluator_id === user.id;
 }
 
+export function normalizeEvaluationDeletionReason(value: unknown) {
+  if (typeof value !== "string") return null;
+  const reason = value.trim().replace(/\s+/g, " ");
+  return reason.length >= 5 && reason.length <= 300 ? reason : null;
+}
+
 export function isEvaluation(value: unknown): value is EvaluationInput {
   if (!value || typeof value !== "object") return false;
   const item = value as Partial<EvaluationInput>;
@@ -153,6 +159,9 @@ export function formatEvaluation(row: EvaluationRow) {
     matrixId: row.matrix_id,
     detail: row.detail,
     createdAt: row.created_at,
+    deletedAt: row.deleted_at ?? null,
+    deletedBy: row.deleted_by ?? null,
+    deleteReason: row.delete_reason ?? null,
     categories: (row.categories ?? [])
       .sort((left, right) => left.position - right.position)
       .map((category) => ({

@@ -22,6 +22,7 @@ Aplicação web da Associação Judô Rogério Cruz para aplicar, registrar e ac
 - salva rascunhos no aparelho e sincroniza avaliações concluídas quando a conexão retorna;
 - registra a nota final, a média de cada categoria, cada técnica, eventuais execuções múltiplas, observações, graduação, data e avaliador;
 - mostra histórico, média e evolução por aluno, separando provas incompatíveis e comparando notas, categorias e dificuldades recorrentes;
+- exclui avaliações de forma reversível, exigindo motivo, registrando auditoria e permitindo restauração pelo Super Admin;
 - oferece um painel com volume de avaliações, médias, aprovação e registros recentes;
 - permite que o Super Admin escolha, com modelos prontos ou seletores de cor, a identidade visual global dos temas claro e escuro;
 - cria elegibilidade sem expiração quando o aluno é aprovado e permite nova tentativa imediata quando ele reprova.
@@ -374,7 +375,9 @@ Todas as rotas abaixo, exceto `/`, `/health`, login/registro e a leitura públic
 | `GET` | `/api/evaluations` | autenticado | Lista avaliações permitidas ao usuário |
 | `POST` | `/api/evaluations` | autenticado | Registra uma avaliação |
 | `POST` | `/api/evaluations/sync` | autenticado | Sincroniza uma avaliação local de forma idempotente |
-| `DELETE` | `/api/evaluations/:id` | autenticado | Exclui uma avaliação permitida ao usuário |
+| `DELETE` | `/api/evaluations/:id` | autenticado | Arquiva uma avaliação permitida, com motivo obrigatório e auditoria |
+| `GET` | `/api/evaluations/deleted` | Super Admin | Lista avaliações excluídas logicamente |
+| `POST` | `/api/evaluations/:id/restore` | Super Admin | Restaura uma avaliação excluída e registra auditoria |
 | `GET/POST` | `/api/exam-events` | autenticado / Super Admin | Lista eventos acessíveis ou cria um evento |
 | `GET/PATCH` | `/api/exam-events/:id` | participante / Super Admin | Consulta o evento completo ou edita sua preparação |
 | `POST` | `/api/exam-events/:id/status` | Super Admin | Avança o ciclo de vida do evento |

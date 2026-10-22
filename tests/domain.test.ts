@@ -8,6 +8,7 @@ import {
   isEvaluation,
   isValidEmail,
   normalizeEmail,
+  normalizeEvaluationDeletionReason,
   normalizeName,
   rolesFromCsv,
   studentsFromRows,
@@ -577,6 +578,14 @@ describe("domínio administrativo", () => {
     expect(
       canDeleteEvaluation({ ...evaluator, id: "admin", role: "super_admin" }, row),
     ).toBe(true);
+  });
+
+  it("exige um motivo útil e normalizado para excluir uma avaliação", () => {
+    expect(normalizeEvaluationDeletionReason("  Judoca   selecionado incorretamente  "))
+      .toBe("Judoca selecionado incorretamente");
+    expect(normalizeEvaluationDeletionReason("erro")).toBeNull();
+    expect(normalizeEvaluationDeletionReason("x".repeat(301))).toBeNull();
+    expect(normalizeEvaluationDeletionReason(null)).toBeNull();
   });
 
   it("valida e formata as notas individuais de uma avaliação", () => {

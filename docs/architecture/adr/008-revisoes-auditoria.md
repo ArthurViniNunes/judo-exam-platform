@@ -1,6 +1,6 @@
 # ADR 008 — Revisões imutáveis, exclusão lógica e auditoria
 
-- Estado: proposta
+- Estado: aceita; implementação incremental
 - Data: 2026-10-21
 
 ## Contexto
@@ -10,7 +10,7 @@ Para manter confiança no histórico, uma correção precisa informar o que mudo
 quem alterou e por quê. Auditoria também é necessária para convites, vínculos de
 alunos, eventos, restaurações e mudanças administrativas.
 
-## Decisão proposta
+## Decisão
 
 Tratar a avaliação original como imutável. Correções criam revisões ordenadas,
 com valores anteriores e novos, autor, data e motivo. Consultas comuns retornam

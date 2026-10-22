@@ -6,9 +6,11 @@ import {
   deleteEvaluation,
   getDashboard,
   listAvailableStudents,
+  listDeletedEvaluations,
   listEvaluations,
   listPracticalCandidates,
   listStudents,
+  restoreEvaluation,
 } from "./evaluations";
 import {
   addEventEntry,
@@ -295,11 +297,22 @@ async function handleAuthenticatedRoute(
   if (url.pathname === "/api/evaluations" && request.method === "GET") {
     return listEvaluations(request, env, user, url);
   }
+  if (url.pathname === "/api/evaluations/deleted" && request.method === "GET") {
+    const denied = requireSuperAdmin(request, env, user);
+    return denied || listDeletedEvaluations(request, env, user);
+  }
   if (url.pathname === "/api/evaluations" && request.method === "POST") {
     return createEvaluation(request, env, user);
   }
   if (url.pathname === "/api/evaluations/sync" && request.method === "POST") {
     return createEvaluation(request, env, user, "sync");
+  }
+  const evaluationRestoreMatch = url.pathname.match(
+    /^\/api\/evaluations\/([^/]+)\/restore$/,
+  );
+  if (evaluationRestoreMatch && request.method === "POST") {
+    const denied = requireSuperAdmin(request, env, user);
+    return denied || restoreEvaluation(request, env, user, evaluationRestoreMatch[1]);
   }
   const evaluationMatch = url.pathname.match(/^\/api\/evaluations\/([^/]+)$/);
   if (evaluationMatch && request.method === "DELETE") {

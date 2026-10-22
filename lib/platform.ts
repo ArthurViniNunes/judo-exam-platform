@@ -30,6 +30,9 @@ export type EvaluationRecord = {
   matrixId: string | null;
   detail: string | null;
   createdAt: string;
+  deletedAt: string | null;
+  deletedBy: string | null;
+  deleteReason: string | null;
   categories: EvaluationCategoryRecord[];
   items: EvaluationItemRecord[];
 };

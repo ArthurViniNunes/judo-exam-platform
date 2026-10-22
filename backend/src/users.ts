@@ -35,7 +35,9 @@ export async function listUsers(request: Request, env: Env) {
             COUNT(DISTINCT evaluations.student_id) AS student_count,
             COALESCE(ROUND(AVG(evaluations.score)), 0) AS average_score
        FROM users
-       LEFT JOIN evaluations ON evaluations.evaluator_id = users.id
+       LEFT JOIN evaluations
+         ON evaluations.evaluator_id = users.id
+        AND evaluations.deleted_at IS NULL
       WHERE EXISTS (
         SELECT 1 FROM user_roles
          WHERE user_roles.user_id = users.id

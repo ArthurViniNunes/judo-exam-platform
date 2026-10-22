@@ -1,7 +1,7 @@
 "use client";
 
-import { BarChart3, ChevronDown, ClipboardList, FileText, FilterX, Search, Trash2, TrendingDown } from "lucide-react";
-import { useMemo, useState } from "react";
+import { ArchiveRestore, BarChart3, ChevronDown, ClipboardList, FileText, FilterX, RotateCcw, Search, Trash2, TrendingDown, X } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
 import {
   EmptyState,
   formatDate,
@@ -50,8 +50,33 @@ export function EvaluationsView({
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<EvaluationRecord | null>(null);
+  const [deleteReason, setDeleteReason] = useState("");
+  const [archiveOpen, setArchiveOpen] = useState(false);
+  const [archiveLoading, setArchiveLoading] = useState(false);
+  const [deletedEvaluations, setDeletedEvaluations] = useState<EvaluationRecord[]>([]);
+  const [restoringId, setRestoringId] = useState<string | null>(null);
   const [reportId, setReportId] = useState<string | null>(null);
   const [deleteError, setDeleteError] = useState("");
+
+  useEffect(() => {
+    if (!deleteTarget && !archiveOpen) return;
+
+    const previousOverflow = document.body.style.overflow;
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key !== "Escape" || deletingId || restoringId) return;
+      setDeleteTarget(null);
+      setArchiveOpen(false);
+      setDeleteError("");
+    };
+
+    document.body.style.overflow = "hidden";
+    window.addEventListener("keydown", handleKeyDown);
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [archiveOpen, deleteTarget, deletingId, restoringId]);
   const normalizedSearch = search.trim().toLocaleLowerCase("pt-BR");
   const belts = useMemo(() => [...new Set(evaluations.map((item) => item.belt))].sort(), [evaluations]);
   const categories = useMemo(() => [...new Set(evaluations.flatMap((item) => item.items.map((entry) => entry.category)))].sort(), [evaluations]);
@@ -122,18 +147,17 @@ export function EvaluationsView({
 
   if (loading) return <LoadingBlock label="Consolidando notas…" />;
 
-  const deleteEvaluation = async (evaluation: EvaluationRecord) => {
-    const confirmed = window.confirm(
-      `Excluir a avaliação de ${evaluation.athlete}, realizada em ${formatDate(evaluation.createdAt)}? Esta ação não poderá ser desfeita.`,
-    );
-    if (!confirmed) return;
-
-    setDeletingId(evaluation.id);
+  const deleteEvaluation = async () => {
+    if (!deleteTarget) return;
+    setDeletingId(deleteTarget.id);
     setDeleteError("");
     try {
-      await apiRequest<void>(`/api/evaluations/${encodeURIComponent(evaluation.id)}`, {
+      await apiRequest<void>(`/api/evaluations/${encodeURIComponent(deleteTarget.id)}`, {
         method: "DELETE",
+        body: JSON.stringify({ reason: deleteReason }),
       });
+      setDeleteTarget(null);
+      setDeleteReason("");
       await reload();
     } catch (caught) {
       setDeleteError(
@@ -141,6 +165,43 @@ export function EvaluationsView({
       );
     } finally {
       setDeletingId(null);
+    }
+  };
+
+  const openArchive = async () => {
+    setArchiveOpen(true);
+    setArchiveLoading(true);
+    setDeleteError("");
+    try {
+      setDeletedEvaluations(
+        await apiRequest<EvaluationRecord[]>("/api/evaluations/deleted"),
+      );
+    } catch (caught) {
+      setDeleteError(
+        caught instanceof Error ? caught.message : "Não foi possível abrir as avaliações excluídas.",
+      );
+    } finally {
+      setArchiveLoading(false);
+    }
+  };
+
+  const restoreEvaluation = async (evaluation: EvaluationRecord) => {
+    setRestoringId(evaluation.id);
+    setDeleteError("");
+    try {
+      await apiRequest(`/api/evaluations/${encodeURIComponent(evaluation.id)}/restore`, {
+        method: "POST",
+      });
+      setDeletedEvaluations((current) =>
+        current.filter((item) => item.id !== evaluation.id),
+      );
+      await reload();
+    } catch (caught) {
+      setDeleteError(
+        caught instanceof Error ? caught.message : "Não foi possível restaurar a avaliação.",
+      );
+    } finally {
+      setRestoringId(null);
     }
   };
 
@@ -154,6 +215,12 @@ export function EvaluationsView({
             graduação e data da avaliação.
           </p>
         </div>
+        {user.role === "super_admin" && <button
+          className="management-secondary evaluation-archive-button"
+          onClick={() => void openArchive()}
+        >
+          <ArchiveRestore size={18} /> Avaliações excluídas
+        </button>}
       </header>
 
       <section className="evaluation-filter-panel" aria-label="Filtros das avaliações">
@@ -170,7 +237,7 @@ export function EvaluationsView({
         </div>
         <button className="evaluation-filter-clear" disabled={!hasFilters} onClick={clearFilters}><FilterX size={17} /> Limpar filtros</button>
       </section>
-      {deleteError && <p className="management-error evaluation-delete-error">{deleteError}</p>}
+      {deleteError && !deleteTarget && !archiveOpen && <p className="management-error evaluation-delete-error">{deleteError}</p>}
 
       {difficulty.items > 0 && (
         <section className="difficulty-panel" aria-labelledby="difficulty-title">
@@ -245,10 +312,14 @@ export function EvaluationsView({
                 </button>
                 <button
                   className="evaluation-delete"
-                  onClick={() => void deleteEvaluation(evaluation)}
+                  onClick={() => {
+                    setDeleteTarget(evaluation);
+                    setDeleteReason("");
+                    setDeleteError("");
+                  }}
                   disabled={deletingId === evaluation.id}
                   aria-label={`Excluir avaliação de ${evaluation.athlete}`}
-                  title="Excluir avaliação"
+                  title="Mover para avaliações excluídas"
                 >
                   <Trash2 size={18} />
                 </button>
@@ -258,6 +329,109 @@ export function EvaluationsView({
           ))}
         </section>
       )}
+      {deleteTarget && <div className="evaluation-dialog-layer" role="presentation">
+        <section
+          className="evaluation-dialog"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="delete-evaluation-title"
+        >
+          <header>
+            <span><Trash2 size={20} /></span>
+            <div>
+              <h2 id="delete-evaluation-title">Excluir avaliação</h2>
+              <p>O registro sairá dos relatórios, mas poderá ser restaurado pelo Super Admin.</p>
+            </div>
+            <button
+              onClick={() => setDeleteTarget(null)}
+              aria-label="Cancelar exclusão"
+              disabled={deletingId === deleteTarget.id}
+            >
+              <X size={19} />
+            </button>
+          </header>
+          <dl className="evaluation-delete-summary">
+            <div><dt>Judoca</dt><dd>{deleteTarget.athlete}</dd></div>
+            <div><dt>Prova</dt><dd>{deleteTarget.type} · {deleteTarget.belt}</dd></div>
+            <div><dt>Data</dt><dd>{formatDate(deleteTarget.createdAt, true)}</dd></div>
+            <div><dt>Nota</dt><dd>{scoreLabel(deleteTarget.score)}</dd></div>
+          </dl>
+          <label className="evaluation-delete-reason">
+            Motivo da exclusão
+            <textarea
+              autoFocus
+              value={deleteReason}
+              maxLength={300}
+              onChange={(event) => setDeleteReason(event.target.value)}
+              placeholder="Ex.: avaliação cadastrada para o judoca incorreto"
+            />
+            <small>{deleteReason.trim().length}/300 · mínimo de 5 caracteres</small>
+          </label>
+          {deleteError && <p className="management-error">{deleteError}</p>}
+          <footer>
+            <button
+              className="management-secondary"
+              onClick={() => setDeleteTarget(null)}
+              disabled={deletingId === deleteTarget.id}
+            >
+              Cancelar
+            </button>
+            <button
+              className="management-primary danger"
+              onClick={() => void deleteEvaluation()}
+              disabled={deletingId === deleteTarget.id || deleteReason.trim().length < 5}
+            >
+              <Trash2 size={17} />
+              {deletingId === deleteTarget.id ? "Excluindo…" : "Confirmar exclusão"}
+            </button>
+          </footer>
+        </section>
+      </div>}
+      {archiveOpen && <div className="evaluation-dialog-layer" role="presentation">
+        <section
+          className="evaluation-dialog evaluation-archive-dialog"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="evaluation-archive-title"
+        >
+          <header>
+            <span><ArchiveRestore size={20} /></span>
+            <div>
+              <h2 id="evaluation-archive-title">Avaliações excluídas</h2>
+              <p>Registros preservados para auditoria e recuperação.</p>
+            </div>
+            <button onClick={() => setArchiveOpen(false)} aria-label="Fechar avaliações excluídas">
+              <X size={19} />
+            </button>
+          </header>
+          {deleteError && <p className="management-error">{deleteError}</p>}
+          {archiveLoading ? <LoadingBlock label="Carregando avaliações excluídas…" /> : deletedEvaluations.length ? (
+            <div className="evaluation-archive-list">
+              {deletedEvaluations.map((evaluation) => <article key={evaluation.id}>
+                <div>
+                  <strong>{evaluation.athlete}</strong>
+                  <span>{evaluation.type} · {evaluation.belt} · nota {scoreLabel(evaluation.score)}</span>
+                  <small>Avaliada em {formatDate(evaluation.createdAt, true)}</small>
+                  <p><b>Motivo:</b> {evaluation.deleteReason || "Não informado"}</p>
+                  <small>Excluída em {formatDate(evaluation.deletedAt || "", true)}</small>
+                </div>
+                <button
+                  className="management-secondary"
+                  onClick={() => void restoreEvaluation(evaluation)}
+                  disabled={restoringId === evaluation.id}
+                >
+                  <RotateCcw size={17} />
+                  {restoringId === evaluation.id ? "Restaurando…" : "Restaurar"}
+                </button>
+              </article>)}
+            </div>
+          ) : <EmptyState
+            icon={<ArchiveRestore size={28} />}
+            title="Nenhuma avaliação excluída"
+            detail="Quando um registro for excluído, ele ficará preservado aqui."
+          />}
+        </section>
+      </div>}
     </div>
   );
 }
