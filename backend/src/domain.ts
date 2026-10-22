@@ -64,6 +64,11 @@ export function isEvaluation(value: unknown): value is EvaluationInput {
   const validBeltId =
     item.beltId === undefined ||
     ["gray", "blue", "yellow", "orange", "green", "purple", "brown"].includes(item.beltId);
+  const validEventTaskId =
+    item.eventTaskId === undefined ||
+    (typeof item.eventTaskId === "string" &&
+      item.eventTaskId.trim().length > 0 &&
+      item.eventTaskId.trim().length <= 100);
 
   const validCategories =
     item.categories === undefined ||
@@ -117,6 +122,7 @@ export function isEvaluation(value: unknown): value is EvaluationInput {
     item.studentId?.trim() &&
       item.studentId.trim().length <= 100 &&
       validBeltId &&
+      validEventTaskId &&
       item.belt?.trim() &&
       (item.type === "teórica" ||
         item.type === "técnica" ||
@@ -138,6 +144,7 @@ export function formatEvaluation(row: EvaluationRow) {
     evaluatorName: row.evaluator_name || row.professor || "Não informado",
     evaluatorRank: row.evaluator_rank ?? null,
     eligibilityId: row.eligibility_id,
+    eventTaskId: row.event_task_id,
     belt: row.belt,
     type: row.type,
     score: row.score,

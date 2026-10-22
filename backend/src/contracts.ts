@@ -17,6 +17,7 @@ export type AuthUser = {
 
 export type EvaluationInput = {
   id?: string;
+  eventTaskId?: string;
   studentId: string;
   beltId?: string;
   belt: string;
@@ -88,6 +89,7 @@ export type EvaluationRow = {
   result: string | null;
   matrix_id: string | null;
   eligibility_id: string | null;
+  event_task_id: string | null;
   detail: string | null;
   created_at: string;
   categories?: EvaluationCategoryRow[];

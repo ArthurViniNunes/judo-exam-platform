@@ -13,11 +13,13 @@ import {
 import {
   addEventEntry,
   addEventEvaluator,
+  claimEventTask,
   createExamEvent,
   getExamEvent,
   listExamEvents,
   removeEventEntry,
   removeEventEvaluator,
+  releaseEventTask,
   transitionExamEvent,
   updateExamEvent,
 } from "./exam-events";
@@ -241,6 +243,14 @@ async function handleAuthenticatedRoute(
   if (eventStatusMatch && request.method === "POST") {
     const denied = requireSuperAdmin(request, env, user);
     return denied || transitionExamEvent(request, env, user, eventStatusMatch[1]);
+  }
+  const eventTaskClaimMatch = url.pathname.match(/^\/api\/exam-events\/([^/]+)\/tasks\/([^/]+)\/claim$/);
+  if (eventTaskClaimMatch && request.method === "POST") {
+    return claimEventTask(request, env, user, eventTaskClaimMatch[1], eventTaskClaimMatch[2]);
+  }
+  const eventTaskReleaseMatch = url.pathname.match(/^\/api\/exam-events\/([^/]+)\/tasks\/([^/]+)\/release$/);
+  if (eventTaskReleaseMatch && request.method === "POST") {
+    return releaseEventTask(request, env, user, eventTaskReleaseMatch[1], eventTaskReleaseMatch[2]);
   }
   const eventEvaluatorsMatch = url.pathname.match(/^\/api\/exam-events\/([^/]+)\/evaluators$/);
   if (eventEvaluatorsMatch && request.method === "POST") {

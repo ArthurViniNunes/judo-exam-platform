@@ -372,6 +372,8 @@ Todas as rotas abaixo, exceto `/`, `/health`, login/registro e a leitura públic
 | `GET/POST` | `/api/exam-events` | autenticado / Super Admin | Lista eventos acessíveis ou cria um evento |
 | `GET/PATCH` | `/api/exam-events/:id` | participante / Super Admin | Consulta o evento completo ou edita sua preparação |
 | `POST` | `/api/exam-events/:id/status` | Super Admin | Avança o ciclo de vida do evento |
+| `POST` | `/api/exam-events/:id/tasks/:taskId/claim` | participante | Assume atomicamente uma avaliação livre |
+| `POST` | `/api/exam-events/:id/tasks/:taskId/release` | responsável / Super Admin | Libera uma avaliação ainda não concluída |
 | `POST` | `/api/exam-events/:id/evaluators` | Super Admin | Adiciona um avaliador participante |
 | `DELETE` | `/api/exam-events/:id/evaluators/:userId` | Super Admin | Remove um avaliador sem tarefas atribuídas |
 | `POST` | `/api/exam-events/:id/entries` | Super Admin | Inscreve um judoca elegível e cria suas modalidades |

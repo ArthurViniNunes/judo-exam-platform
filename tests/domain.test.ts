@@ -71,6 +71,25 @@ describe("eventos de exame", () => {
     expect(validateExamEventInput({ name: "Exame", eventDate: "2026-02-30" })).toMatch(/data válida/);
   });
 
+  it("aceita o vínculo opcional de uma avaliação com a tarefa assumida", () => {
+    expect(isEvaluation({
+      id: "evaluation-1",
+      eventTaskId: "task-1",
+      studentId: "student-1",
+      belt: "Faixa verde",
+      beltId: "green",
+      type: "técnica",
+      score: 80,
+    })).toBe(true);
+    expect(isEvaluation({
+      eventTaskId: "",
+      studentId: "student-1",
+      belt: "Faixa verde",
+      type: "técnica",
+      score: 80,
+    })).toBe(false);
+  });
+
   it("mantém o ciclo do evento progressivo e auditável", () => {
     expect(canTransitionExamEvent("draft", "open")).toBe(true);
     expect(canTransitionExamEvent("open", "in_progress")).toBe(true);
@@ -362,6 +381,7 @@ function evaluation(overrides: Partial<EvaluationRow> = {}): EvaluationRow {
     result: "Aprovado",
     matrix_id: null,
     eligibility_id: null,
+    event_task_id: null,
     detail: null,
     created_at: "2026-10-10 12:00:00",
     ...overrides,

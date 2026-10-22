@@ -305,6 +305,20 @@ export async function createEvaluation(
     );
   }
 
+  if (body.eventTaskId) {
+    const existingTaskEvaluation = await env.DB.prepare(
+      "SELECT id FROM evaluations WHERE event_task_id = ? LIMIT 1",
+    ).bind(body.eventTaskId.trim()).first<{ id: string }>();
+    if (existingTaskEvaluation) {
+      return json(
+        request,
+        env,
+        { error: "Esta tarefa do evento já possui uma avaliação concluída." },
+        409,
+      );
+    }
+  }
+
   const student = await env.DB.prepare("SELECT * FROM students WHERE id = ?")
     .bind(body.studentId.trim())
     .first<StudentRow>();
@@ -316,6 +330,41 @@ export async function createEvaluation(
       { error: "Selecione um judoca previamente cadastrado." },
       400,
     );
+  }
+
+  const eventTask = body.eventTaskId
+    ? await env.DB.prepare(
+        `SELECT tasks.id, tasks.modality, tasks.status, tasks.evaluator_id,
+                entries.student_id, entries.event_id, events.status AS event_status
+           FROM exam_event_tasks AS tasks
+           JOIN exam_event_entries AS entries ON entries.id = tasks.entry_id
+           JOIN exam_events AS events ON events.id = entries.event_id
+          WHERE tasks.id = ?`,
+      ).bind(body.eventTaskId.trim()).first<{
+        id: string;
+        modality: "technical" | "kata";
+        status: "in_progress" | "pending_sync" | "completed";
+        evaluator_id: string | null;
+        student_id: string;
+        event_id: string;
+        event_status: string;
+      }>()
+    : null;
+
+  if (body.eventTaskId && !eventTask) {
+    return json(request, env, { error: "A tarefa do evento não foi encontrada." }, 404);
+  }
+  if (eventTask) {
+    const expectedType = eventTask.modality === "technical" ? "técnica" : "kata";
+    if (
+      eventTask.evaluator_id !== user.id ||
+      eventTask.student_id !== student.id ||
+      body.type !== expectedType ||
+      eventTask.event_status !== "in_progress" ||
+      !["in_progress", "pending_sync"].includes(eventTask.status)
+    ) {
+      return json(request, env, { error: "Esta avaliação não corresponde à tarefa assumida no evento." }, 409);
+    }
   }
 
   const eligibility = body.type === "técnica"
@@ -397,7 +446,7 @@ export async function createEvaluation(
       "INSERT OR IGNORE INTO student_evaluators (student_id, evaluator_id) VALUES (?, ?)",
     ).bind(student.id, user.id),
     env.DB.prepare(
-      "INSERT INTO evaluations (id, athlete, student_id, evaluator_id, professor, belt, type, score, result, matrix_id, eligibility_id, detail) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+      "INSERT INTO evaluations (id, athlete, student_id, evaluator_id, professor, belt, type, score, result, matrix_id, eligibility_id, event_task_id, detail) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
     ).bind(
       id,
       student.name,
@@ -410,6 +459,7 @@ export async function createEvaluation(
       body.result?.trim() || null,
       body.matrixId || null,
       eligibility?.id ?? null,
+      eventTask?.id ?? null,
       body.detail?.trim() || null,
     ),
     ...(body.categories ?? []).map((category, position) =>
@@ -424,6 +474,11 @@ export async function createEvaluation(
       ),
     ),
     ...itemStatements,
+    ...(eventTask
+      ? [env.DB.prepare(
+          "UPDATE exam_event_tasks SET status = 'completed', completed_at = CURRENT_TIMESTAMP, evaluation_id = ?, lock_version = lock_version + 1 WHERE id = ? AND evaluator_id = ? AND status IN ('in_progress', 'pending_sync')",
+        ).bind(id, eventTask.id, user.id)]
+      : []),
     env.DB.prepare(
       "INSERT INTO audit_events (id, actor_user_id, action, entity_type, entity_id, request_id, metadata_json) VALUES (?, ?, ?, 'evaluation', ?, ?, ?)",
     ).bind(
@@ -440,6 +495,8 @@ export async function createEvaluation(
         itemCount: body.items?.length ?? 0,
         eligibilityId: eligibility?.id ?? null,
         eligibilitySourceAttemptId: eligibility?.source_attempt_id ?? null,
+        eventTaskId: eventTask?.id ?? null,
+        eventId: eventTask?.event_id ?? null,
       }),
     ),
   ];

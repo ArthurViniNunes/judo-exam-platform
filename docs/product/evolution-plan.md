@@ -142,8 +142,9 @@ evento deve evitar senha, token, hash ou cópia desnecessária de dados pessoais
 Inclui os pontos 10 e 11, considerados centrais.
 
 **Estado: em execução.** O modelo de eventos, participantes, inscrições,
-modalidades e ciclo de vida já está disponível na API. A fila operacional,
-tomada atômica de responsabilidade, painel e modo rápido seguem como marcos
+modalidades e ciclo de vida já está disponível na API. A tomada de uma tarefa é
+atômica, sua avaliação só pode ser salva pelo responsável e a conclusão fica
+vinculada ao evento. Painel ao vivo e modo rápido seguem como marcos
 independentes.
 
 #### 2.1 Evento de exame com vários avaliadores

@@ -127,7 +127,7 @@ export async function getExamEvent(
       `SELECT tasks.id, tasks.entry_id AS entryId, tasks.modality, tasks.kata_type AS kataType,
               tasks.status, tasks.evaluator_id AS evaluatorId, users.name AS evaluatorName,
               tasks.station, tasks.claimed_at AS claimedAt, tasks.completed_at AS completedAt,
-              tasks.evaluation_id AS evaluationId
+              tasks.evaluation_id AS evaluationId, tasks.lock_version AS lockVersion
          FROM exam_event_tasks AS tasks
          JOIN exam_event_entries AS entries ON entries.id = tasks.entry_id
          LEFT JOIN users ON users.id = tasks.evaluator_id
@@ -141,6 +141,90 @@ export async function getExamEvent(
     entries: entries.results,
     tasks: tasks.results,
   });
+}
+
+async function eventTask(
+  env: Env,
+  eventId: string,
+  taskId: string,
+) {
+  return env.DB.prepare(
+    `SELECT tasks.id, tasks.status, tasks.evaluator_id, tasks.evaluation_id,
+            entries.event_id, events.status AS event_status
+       FROM exam_event_tasks AS tasks
+       JOIN exam_event_entries AS entries ON entries.id = tasks.entry_id
+       JOIN exam_events AS events ON events.id = entries.event_id
+      WHERE tasks.id = ? AND entries.event_id = ?`,
+  ).bind(taskId, eventId).first<{
+    id: string;
+    status: "waiting" | "called" | "in_progress" | "pending_sync" | "completed";
+    evaluator_id: string | null;
+    evaluation_id: string | null;
+    event_id: string;
+    event_status: ExamEventStatus;
+  }>();
+}
+
+export async function claimEventTask(
+  request: Request,
+  env: Env,
+  user: AuthUser,
+  eventId: string,
+  taskId: string,
+) {
+  if (!(await canViewEvent(env, user, eventId))) {
+    return json(request, env, { error: "Evento não encontrado." }, 404);
+  }
+  const task = await eventTask(env, eventId, taskId);
+  if (!task) return json(request, env, { error: "Avaliação não encontrada." }, 404);
+  if (task.event_status !== "in_progress") {
+    return json(request, env, { error: "O evento precisa estar em andamento para assumir avaliações." }, 409);
+  }
+  if (task.evaluator_id === user.id && task.status === "in_progress") {
+    return getExamEvent(request, env, user, eventId);
+  }
+  const claimed = await env.DB.prepare(
+    `UPDATE exam_event_tasks
+        SET evaluator_id = ?, status = 'in_progress', claimed_at = CURRENT_TIMESTAMP,
+            lock_version = lock_version + 1
+      WHERE id = ? AND evaluator_id IS NULL AND status IN ('waiting', 'called')
+      RETURNING id`,
+  ).bind(user.id, taskId).first<{ id: string }>();
+  if (!claimed) {
+    return json(request, env, { error: "Esta avaliação já foi assumida por outro avaliador." }, 409);
+  }
+  await auditStatement(request, env, user, "exam_event.task_claimed", eventId, { taskId }).run();
+  return getExamEvent(request, env, user, eventId);
+}
+
+export async function releaseEventTask(
+  request: Request,
+  env: Env,
+  user: AuthUser,
+  eventId: string,
+  taskId: string,
+) {
+  if (!(await canViewEvent(env, user, eventId))) {
+    return json(request, env, { error: "Evento não encontrado." }, 404);
+  }
+  const task = await eventTask(env, eventId, taskId);
+  if (!task) return json(request, env, { error: "Avaliação não encontrada." }, 404);
+  if (task.evaluator_id !== user.id && user.role !== "super_admin") {
+    return json(request, env, { error: "Somente o responsável ou o Super Admin pode liberar esta avaliação." }, 403);
+  }
+  if (task.status !== "in_progress" || task.evaluation_id) {
+    return json(request, env, { error: "Somente uma avaliação ainda não concluída pode ser liberada." }, 409);
+  }
+  const released = await env.DB.prepare(
+    `UPDATE exam_event_tasks
+        SET evaluator_id = NULL, status = 'waiting', claimed_at = NULL,
+            station = NULL, lock_version = lock_version + 1
+      WHERE id = ? AND status = 'in_progress' AND evaluation_id IS NULL
+      RETURNING id`,
+  ).bind(taskId).first<{ id: string }>();
+  if (!released) return json(request, env, { error: "A avaliação mudou de estado. Atualize o evento." }, 409);
+  await auditStatement(request, env, user, "exam_event.task_released", eventId, { taskId }).run();
+  return getExamEvent(request, env, user, eventId);
 }
 
 export async function createExamEvent(

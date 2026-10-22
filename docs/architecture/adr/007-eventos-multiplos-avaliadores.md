@@ -18,10 +18,10 @@ avaliadores podem trabalhar no mesmo evento, mas cada sessão possui um único
 responsável ativo.
 
 O primeiro incremento entrega o ciclo de vida do evento, participantes,
-inscrições e tarefas. A tomada atômica de responsabilidade e a ligação da tarefa
-com a avaliação concluída entram no incremento seguinte. Esse corte mantém a
-migração aditiva e permite validar a organização do evento antes de alterar o
-fluxo principal do avaliador.
+inscrições e tarefas. O incremento seguinte implementa a tomada atômica de
+responsabilidade, a liberação controlada e a ligação única da tarefa com a
+avaliação concluída. Esse corte mantém as migrações aditivas e permite validar a
+organização do evento antes de alterar o fluxo principal do avaliador.
 
 Assumir uma sessão é uma atualização condicional no D1: só tem sucesso quando
 ela está livre e na versão esperada. O coordenador pode atribuir, liberar ou

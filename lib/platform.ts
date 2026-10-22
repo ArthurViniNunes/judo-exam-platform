@@ -21,6 +21,7 @@ export type EvaluationRecord = {
   evaluatorName: string;
   evaluatorRank: string | null;
   eligibilityId: string | null;
+  eventTaskId: string | null;
   belt: string;
   type: "teórica" | "técnica" | "kata";
   score: number;
@@ -108,6 +109,7 @@ export type StudentProfile = {
 
 export type EvaluationSubmission = {
   id: string;
+  eventTaskId?: string;
   studentId: string;
   beltId?: string;
   belt: string;
@@ -195,6 +197,7 @@ export type ExamEventTask = {
   claimedAt: string | null;
   completedAt: string | null;
   evaluationId: string | null;
+  lockVersion: number;
 };
 
 export type ExamEventDetail = ExamEventSummary & {
