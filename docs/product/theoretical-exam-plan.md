@@ -104,8 +104,8 @@ do Super Admin, justificativa e auditoria. Elas não fazem parte do fluxo normal
   dependendo de convite do Super Admin;
 - avaliadores continuam dependendo de convite;
 - uma versão publicada da prova e de suas respostas fica imutável;
-- a tentativa guarda uma cópia da ordem, perguntas, alternativas, mídias,
-  respostas corretas e explicações da versão apresentada;
+- a tentativa guarda uma cópia da ordem, perguntas, alternativas, linhas de
+  associação, mídias, respostas corretas e explicações da versão apresentada;
 - a nota é calculada no backend;
 - respostas corretas nunca são enviadas ao navegador antes da entrega;
 - depois da entrega definitiva, o resultado mostra a resposta dada, a correta e
@@ -175,7 +175,8 @@ Cada questão poderá conter:
 - graduação e categoria;
 - enunciado;
 - duas ou mais alternativas ordenadas;
-- exatamente uma resposta correta;
+- formato de escolha única ou associação em grade;
+- nas associações, uma ou várias respostas corretas por item, conforme o tipo;
 - pontuação;
 - explicação do gabarito, obrigatória para publicação;
 - mídia opcional: imagem, áudio, vídeo próprio ou vídeo do YouTube;

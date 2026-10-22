@@ -174,14 +174,62 @@ describe("provas teóricas versionadas", () => {
     ).toMatch(/não podem ser usados/);
   });
 
+  it("aceita associação com uma resposta por item", () => {
+    expect(
+      validateTheoryQuestionInput({
+        type: "grid_single",
+        category: "História",
+        prompt: "Relacione os fatos com as datas.",
+        points: 10,
+        explanation: "Confira cada associação no gabarito.",
+        options: [
+          { text: "1860", isCorrect: false },
+          { text: "1882", isCorrect: false },
+        ],
+        rows: [
+          { text: "Nascimento de Jigoro Kano", correctOptionIndexes: [0] },
+          { text: "Fundação da Kodokan", correctOptionIndexes: [1] },
+        ],
+        media: null,
+      }),
+    ).toMatchObject({
+      type: "grid_single",
+      rows: [
+        { correctOptionIndexes: [0] },
+        { correctOptionIndexes: [1] },
+      ],
+    });
+  });
+
+  it("recusa item da associação sem gabarito", () => {
+    expect(
+      validateTheoryQuestionInput({
+        type: "grid_multiple",
+        category: "Técnicas",
+        prompt: "Relacione as técnicas.",
+        points: 10,
+        explanation: "Confira as classificações.",
+        options: [
+          { text: "Tachi-waza", isCorrect: false },
+          { text: "Sutemi-waza", isCorrect: false },
+        ],
+        rows: [{ text: "Tomoe-nage", correctOptionIndexes: [] }],
+        media: null,
+      }),
+    ).toMatch(/ao menos uma resposta correta/);
+  });
+
   it("bloqueia publicação incompleta e identifica a questão", () => {
     expect(
       validateTheoryPublication(
         { minimumScore: null, questionOrder: null },
         [{
+          type: "single_choice",
           explanation: "",
           optionCount: 2,
           correctOptionCount: 1,
+          rowCount: 0,
+          invalidRowCount: 0,
           mediaKind: null,
           metadataSensitive: false,
         }],
@@ -222,6 +270,20 @@ describe("tentativas da prova teórica", () => {
       passed: false,
       awardedByQuestion: { q1: 10, q2: 0 },
     });
+  });
+
+  it("corrige uma associação sem depender da ordem das marcações", () => {
+    const result = scoreTheoryAttempt(
+      [{
+        id: "grid",
+        points: 20,
+        correctOptionId: "__grid__",
+        correctGridAnswers: { row1: ["b", "a"], row2: ["c"] },
+      }],
+      new Map([["grid", { row2: ["c"], row1: ["a", "b"] }]]),
+      70,
+    );
+    expect(result).toMatchObject({ score: 100, passed: true });
   });
 });
 

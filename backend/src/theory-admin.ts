@@ -14,6 +14,8 @@ import type {
   TheoryQuestionMedia,
   TheoryQuestionOption,
   TheoryQuestionOrder,
+  TheoryQuestionRow,
+  TheoryQuestionType,
 } from "../../lib/theory-exams";
 
 type VersionRow = {
@@ -38,6 +40,15 @@ type QuestionRow = {
   prompt: string;
   points: number;
   explanation: string;
+  position: number;
+  question_type: TheoryQuestionType;
+};
+
+type GridRow = {
+  id: string;
+  question_id: string;
+  text: string;
+  correct_option_ids_json: string;
   position: number;
 };
 
@@ -169,9 +180,9 @@ export async function getTheoryVersion(
     return json(request, env, { error: "Versão de prova não encontrada." }, 404);
   }
 
-  const [questionsResult, optionsResult, mediaResult] = await Promise.all([
+  const [questionsResult, optionsResult, rowsResult, mediaResult] = await Promise.all([
     env.DB.prepare(
-      "SELECT id, category, prompt, points, explanation, position FROM theory_questions WHERE version_id = ? ORDER BY position",
+      "SELECT id, category, prompt, points, explanation, position, question_type FROM theory_questions WHERE version_id = ? ORDER BY position",
     ).bind(versionId).all<QuestionRow>(),
     env.DB.prepare(
       `SELECT options.id, options.question_id, options.text,
@@ -181,6 +192,14 @@ export async function getTheoryVersion(
         WHERE questions.version_id = ?
         ORDER BY questions.position, options.position`,
     ).bind(versionId).all<OptionRow>(),
+    env.DB.prepare(
+      `SELECT rows.id, rows.question_id, rows.text,
+              rows.correct_option_ids_json, rows.position
+         FROM theory_question_rows AS rows
+         JOIN theory_questions AS questions ON questions.id = rows.question_id
+        WHERE questions.version_id = ?
+        ORDER BY questions.position, rows.position`,
+    ).bind(versionId).all<GridRow>(),
     env.DB.prepare(
       `SELECT media.id, media.question_id, media.kind, media.source_url,
               media.alt_text, media.metadata_sensitive
@@ -201,6 +220,20 @@ export async function getTheoryVersion(
     });
     optionsByQuestion.set(row.question_id, options);
   });
+  const rowsByQuestion = new Map<string, TheoryQuestionRow[]>();
+  rowsResult.results.forEach((row) => {
+    const rows = rowsByQuestion.get(row.question_id) ?? [];
+    const parsed = JSON.parse(row.correct_option_ids_json) as unknown;
+    rows.push({
+      id: row.id,
+      text: row.text,
+      position: row.position,
+      correctOptionIds: Array.isArray(parsed)
+        ? parsed.filter((value): value is string => typeof value === "string")
+        : [],
+    });
+    rowsByQuestion.set(row.question_id, rows);
+  });
   const mediaByQuestion = new Map<string, TheoryQuestionMedia>();
   mediaResult.results.forEach((row) => {
     mediaByQuestion.set(row.question_id, {
@@ -218,7 +251,9 @@ export async function getTheoryVersion(
     points: row.points,
     explanation: row.explanation,
     position: row.position,
+    type: row.question_type,
     options: optionsByQuestion.get(row.id) ?? [],
+    rows: rowsByQuestion.get(row.id) ?? [],
     media: mediaByQuestion.get(row.id) ?? null,
   }));
   const result: TheoryExamVersion = { ...version, questions };
@@ -308,11 +343,31 @@ async function saveQuestionStatements(
   questionId: string,
   input: Exclude<ReturnType<typeof validateTheoryQuestionInput>, string>,
 ) {
+  const optionIds = input.options.map(() => crypto.randomUUID());
   const statements: D1PreparedStatement[] = input.options.map((option, position) =>
     env.DB.prepare(
       "INSERT INTO theory_question_options (id, question_id, text, is_correct, position) VALUES (?, ?, ?, ?, ?)",
-    ).bind(crypto.randomUUID(), questionId, option.text, option.isCorrect ? 1 : 0, position),
+    ).bind(
+      optionIds[position],
+      questionId,
+      option.text,
+      input.type === "single_choice" && option.isCorrect ? 1 : 0,
+      position,
+    ),
   );
+  input.rows.forEach((row, position) => {
+    statements.push(
+      env.DB.prepare(
+        "INSERT INTO theory_question_rows (id, question_id, text, correct_option_ids_json, position) VALUES (?, ?, ?, ?, ?)",
+      ).bind(
+        crypto.randomUUID(),
+        questionId,
+        row.text,
+        JSON.stringify(row.correctOptionIndexes.map((index) => optionIds[index])),
+        position,
+      ),
+    );
+  });
   if (input.media) {
     statements.push(
       env.DB.prepare(
@@ -346,7 +401,7 @@ export async function createTheoryQuestion(
   ).bind(versionId).first<{ position: number }>();
   const statements: D1PreparedStatement[] = [
     env.DB.prepare(
-      "INSERT INTO theory_questions (id, version_id, category, prompt, points, explanation, position) VALUES (?, ?, ?, ?, ?, ?, ?)",
+      "INSERT INTO theory_questions (id, version_id, category, prompt, points, explanation, position, question_type) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
     ).bind(
       questionId,
       versionId,
@@ -355,6 +410,7 @@ export async function createTheoryQuestion(
       input.points,
       input.explanation,
       positionRow?.position ?? 0,
+      input.type,
     ),
     ...(await saveQuestionStatements(env, questionId, input)),
     auditStatement(request, env, user, "theory_question.created", "theory_question", questionId, {
@@ -385,8 +441,9 @@ export async function updateTheoryQuestion(
 
   await env.DB.batch([
     env.DB.prepare(
-      "UPDATE theory_questions SET category = ?, prompt = ?, points = ?, explanation = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?",
-    ).bind(input.category, input.prompt, input.points, input.explanation, questionId),
+      "UPDATE theory_questions SET category = ?, prompt = ?, points = ?, explanation = ?, question_type = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?",
+    ).bind(input.category, input.prompt, input.points, input.explanation, input.type, questionId),
+    env.DB.prepare("DELETE FROM theory_question_rows WHERE question_id = ?").bind(questionId),
     env.DB.prepare("DELETE FROM theory_question_options WHERE question_id = ?").bind(questionId),
     env.DB.prepare("DELETE FROM theory_question_media WHERE question_id = ?").bind(questionId),
     ...(await saveQuestionStatements(env, questionId, input)),
@@ -435,30 +492,45 @@ export async function publishTheoryVersion(
   const version = await versionSummary(env, versionId);
   if (!version) return json(request, env, { error: "Versão de prova não encontrada." }, 404);
   const questions = await env.DB.prepare(
-    `SELECT questions.explanation,
-            COUNT(options.id) AS option_count,
-            COALESCE(SUM(CASE WHEN options.is_correct = 1 THEN 1 ELSE 0 END), 0) AS correct_option_count,
+    `SELECT questions.explanation, questions.question_type,
+            (SELECT COUNT(*) FROM theory_question_options AS options
+              WHERE options.question_id = questions.id) AS option_count,
+            (SELECT COUNT(*) FROM theory_question_options AS options
+              WHERE options.question_id = questions.id AND options.is_correct = 1) AS correct_option_count,
+            (SELECT COUNT(*) FROM theory_question_rows AS rows
+              WHERE rows.question_id = questions.id) AS row_count,
+            (SELECT COUNT(*) FROM theory_question_rows AS rows
+              WHERE rows.question_id = questions.id
+                AND CASE questions.question_type
+                  WHEN 'grid_single' THEN json_array_length(rows.correct_option_ids_json) <> 1
+                  WHEN 'grid_multiple' THEN json_array_length(rows.correct_option_ids_json) < 1
+                  ELSE 0
+                END) AS invalid_row_count,
             media.kind AS media_kind,
             COALESCE(media.metadata_sensitive, 0) AS metadata_sensitive
        FROM theory_questions AS questions
-       LEFT JOIN theory_question_options AS options ON options.question_id = questions.id
        LEFT JOIN theory_question_media AS media ON media.question_id = questions.id
       WHERE questions.version_id = ?
-      GROUP BY questions.id
       ORDER BY questions.position`,
   ).bind(versionId).all<{
     explanation: string;
+    question_type: TheoryQuestionType;
     option_count: number;
     correct_option_count: number;
+    row_count: number;
+    invalid_row_count: number;
     media_kind: TheoryMediaKind | null;
     metadata_sensitive: number;
   }>();
   const errors = validateTheoryPublication(
     { minimumScore: version.minimumScore, questionOrder: version.questionOrder },
     questions.results.map((question) => ({
+      type: question.question_type,
       explanation: question.explanation,
       optionCount: Number(question.option_count),
       correctOptionCount: Number(question.correct_option_count),
+      rowCount: Number(question.row_count),
+      invalidRowCount: Number(question.invalid_row_count),
       mediaKind: question.media_kind,
       metadataSensitive: question.metadata_sensitive === 1,
     })),

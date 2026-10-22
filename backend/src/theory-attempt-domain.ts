@@ -2,7 +2,10 @@ export type TheoryScoreQuestion = {
   id: string;
   points: number;
   correctOptionId: string;
+  correctGridAnswers?: Record<string, string[]> | null;
 };
+
+export type TheoryScoreAnswer = string | Record<string, string[]>;
 
 export type TheoryScoreResult = {
   score: number;
@@ -33,7 +36,7 @@ export function shuffleTheoryItems<T>(
 
 export function scoreTheoryAttempt(
   questions: TheoryScoreQuestion[],
-  answers: Map<string, string>,
+  answers: Map<string, TheoryScoreAnswer>,
   minimumScore: number,
 ): TheoryScoreResult {
   const totalPoints = questions.reduce((sum, question) => sum + question.points, 0);
@@ -41,7 +44,16 @@ export function scoreTheoryAttempt(
   let awardedPoints = 0;
 
   for (const question of questions) {
-    const awarded = answers.get(question.id) === question.correctOptionId
+    const answer = answers.get(question.id);
+    const gridCorrect = question.correctGridAnswers
+      ? sameGridAnswers(
+          typeof answer === "object" ? answer : {},
+          question.correctGridAnswers,
+        )
+      : false;
+    const awarded = (question.correctGridAnswers
+      ? gridCorrect
+      : answer === question.correctOptionId)
       ? question.points
       : 0;
     awardedByQuestion[question.id] = awarded;
@@ -52,4 +64,20 @@ export function scoreTheoryAttempt(
     ? Math.round((awardedPoints / totalPoints) * 100)
     : 0;
   return { score, passed: score >= minimumScore, awardedByQuestion };
+}
+
+export function sameGridAnswers(
+  left: Record<string, string[]>,
+  right: Record<string, string[]>,
+) {
+  const leftRows = Object.keys(left).sort();
+  const rightRows = Object.keys(right).sort();
+  if (leftRows.length !== rightRows.length) return false;
+  return rightRows.every((rowId, index) => {
+    if (leftRows[index] !== rowId) return false;
+    const leftOptions = [...(left[rowId] ?? [])].sort();
+    const rightOptions = [...(right[rowId] ?? [])].sort();
+    return leftOptions.length === rightOptions.length &&
+      leftOptions.every((optionId, optionIndex) => optionId === rightOptions[optionIndex]);
+  });
 }

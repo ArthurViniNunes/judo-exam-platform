@@ -12,6 +12,7 @@ export type TheoryBeltId = (typeof THEORY_BELTS)[number]["id"];
 export type TheoryExamStatus = "draft" | "published" | "closed";
 export type TheoryQuestionOrder = "fixed" | "random";
 export type TheoryMediaKind = "image" | "audio" | "video" | "youtube";
+export type TheoryQuestionType = "single_choice" | "grid_single" | "grid_multiple";
 
 export const THEORY_CATEGORIES = [
   "História",
@@ -37,6 +38,13 @@ export type TheoryQuestionMedia = {
   metadataSensitive: boolean;
 };
 
+export type TheoryQuestionRow = {
+  id: string;
+  text: string;
+  position: number;
+  correctOptionIds: string[];
+};
+
 export type TheoryQuestion = {
   id: string;
   category: string;
@@ -44,7 +52,9 @@ export type TheoryQuestion = {
   points: number;
   explanation: string;
   position: number;
+  type: TheoryQuestionType;
   options: TheoryQuestionOption[];
+  rows: TheoryQuestionRow[];
   media: TheoryQuestionMedia | null;
 };
 
@@ -79,15 +89,25 @@ export type StudentTheoryOption = {
   text: string;
 };
 
+export type StudentTheoryRow = {
+  id: string;
+  text: string;
+};
+
+export type StudentTheoryGridAnswers = Record<string, string[]>;
+
 export type StudentTheoryAttemptQuestion = {
   id: string;
   category: string;
   prompt: string;
   points: number;
   position: number;
+  type: TheoryQuestionType;
   options: StudentTheoryOption[];
+  rows: StudentTheoryRow[];
   media: StudentTheoryMedia | null;
   selectedOptionId: string | null;
+  selectedGridAnswers: StudentTheoryGridAnswers | null;
 };
 
 export type StudentTheoryAttempt = {
@@ -105,6 +125,7 @@ export type StudentTheoryAttempt = {
 export type StudentTheoryResultQuestion = StudentTheoryAttemptQuestion & {
   explanation: string;
   correctOptionId: string;
+  correctGridAnswers: StudentTheoryGridAnswers | null;
   awardedPoints: number;
   correct: boolean;
 };

@@ -27,6 +27,7 @@ import {
   type TheoryExamVersionSummary,
   type TheoryMediaKind,
   type TheoryQuestion,
+  type TheoryQuestionType,
 } from "@/lib/theory-exams";
 import { EmptyState, formatDate, LoadingBlock } from "./admin-portal-shared";
 
@@ -121,11 +122,13 @@ function CreateVersionDialog({
 }
 
 type QuestionDraft = {
+  type: TheoryQuestionType;
   category: string;
   prompt: string;
   points: string;
   explanation: string;
   options: { text: string; isCorrect: boolean }[];
+  rows: { text: string; correctOptionIndexes: number[] }[];
   mediaEnabled: boolean;
   mediaKind: TheoryMediaKind;
   sourceUrl: string;
@@ -136,6 +139,7 @@ type QuestionDraft = {
 function questionDraft(question?: TheoryQuestion): QuestionDraft {
   return question
     ? {
+        type: question.type,
         category: question.category,
         prompt: question.prompt,
         points: String(question.points),
@@ -144,6 +148,12 @@ function questionDraft(question?: TheoryQuestion): QuestionDraft {
           text: option.text,
           isCorrect: option.isCorrect,
         })),
+        rows: question.rows.map((row) => ({
+          text: row.text,
+          correctOptionIndexes: row.correctOptionIds
+            .map((optionId) => question.options.findIndex((option) => option.id === optionId))
+            .filter((index) => index >= 0),
+        })),
         mediaEnabled: Boolean(question.media),
         mediaKind: question.media?.kind ?? "image",
         sourceUrl: question.media?.sourceUrl ?? "",
@@ -151,6 +161,7 @@ function questionDraft(question?: TheoryQuestion): QuestionDraft {
         metadataSensitive: question.media?.metadataSensitive ?? false,
       }
     : {
+        type: "single_choice",
         category: THEORY_CATEGORIES[0],
         prompt: "",
         points: "10",
@@ -160,6 +171,10 @@ function questionDraft(question?: TheoryQuestion): QuestionDraft {
           { text: "", isCorrect: false },
           { text: "", isCorrect: false },
           { text: "", isCorrect: false },
+        ],
+        rows: [
+          { text: "", correctOptionIndexes: [0] },
+          { text: "", correctOptionIndexes: [0] },
         ],
         mediaEnabled: false,
         mediaKind: "image",
@@ -223,8 +238,40 @@ function QuestionEditor({
               isCorrect: optionIndex === 0,
             }))
           : options,
+        rows: current.rows.map((row) => ({
+          ...row,
+          correctOptionIndexes: row.correctOptionIndexes
+            .filter((optionIndex) => optionIndex !== index)
+            .map((optionIndex) => optionIndex > index ? optionIndex - 1 : optionIndex),
+        })),
       };
     });
+  };
+
+  const updateGridRow = (index: number, patch: Partial<QuestionDraft["rows"][number]>) => {
+    setDraft((current) => ({
+      ...current,
+      rows: current.rows.map((row, rowIndex) => rowIndex === index ? { ...row, ...patch } : row),
+    }));
+  };
+
+  const toggleGridAnswer = (rowIndex: number, optionIndex: number) => {
+    setDraft((current) => ({
+      ...current,
+      rows: current.rows.map((row, index) => {
+        if (index !== rowIndex) return row;
+        if (current.type === "grid_single") {
+          return { ...row, correctOptionIndexes: [optionIndex] };
+        }
+        const selected = row.correctOptionIndexes.includes(optionIndex);
+        return {
+          ...row,
+          correctOptionIndexes: selected
+            ? row.correctOptionIndexes.filter((value) => value !== optionIndex)
+            : [...row.correctOptionIndexes, optionIndex],
+        };
+      }),
+    }));
   };
 
   const submit = async (event: FormEvent) => {
@@ -242,11 +289,13 @@ function QuestionEditor({
       const version = await apiRequest<TheoryExamVersion>(path, {
         method: question ? "PATCH" : "POST",
         body: JSON.stringify({
+          type: draft.type,
           category: draft.category,
           prompt: draft.prompt,
           points: Number(draft.points),
           explanation: draft.explanation,
           options: draft.options,
+          rows: draft.type === "single_choice" ? [] : draft.rows,
           media: draft.mediaEnabled
             ? {
                 kind: draft.mediaKind,
@@ -284,6 +333,22 @@ function QuestionEditor({
           </button>
         </header>
         <form onSubmit={submit}>
+          <label>
+            Tipo de questão
+            <select
+              value={draft.type}
+              onChange={(event) => setDraft((current) => ({
+                ...current,
+                type: event.target.value as TheoryQuestionType,
+                rows: current.rows.length ? current.rows : [{ text: "", correctOptionIndexes: [0] }],
+              }))}
+            >
+              <option value="single_choice">Escolha única</option>
+              <option value="grid_single">Associação · uma resposta por item</option>
+              <option value="grid_multiple">Associação · várias respostas por item</option>
+            </select>
+            <small>Em associação, cada item é exibido como um bloco vertical no celular.</small>
+          </label>
           <div className="theory-form-row">
             <label>
               Categoria
@@ -324,17 +389,24 @@ function QuestionEditor({
           </label>
 
           <fieldset className="theory-options-editor">
-            <legend>Alternativas <span>marque a resposta correta</span></legend>
+            <legend>
+              {draft.type === "single_choice" ? "Alternativas" : "Respostas possíveis"}
+              <span>{draft.type === "single_choice" ? "marque a resposta correta" : "serão usadas em cada item"}</span>
+            </legend>
             {draft.options.map((option, index) => (
               <div key={index} className="theory-option-row">
                 <button
                   type="button"
-                  className={option.isCorrect ? "correct" : ""}
-                  aria-label={`Marcar alternativa ${String.fromCharCode(65 + index)} como correta`}
-                  aria-pressed={option.isCorrect}
-                  onClick={() => markCorrect(index)}
+                  className={draft.type === "single_choice" && option.isCorrect ? "correct" : ""}
+                  aria-label={draft.type === "single_choice"
+                    ? `Marcar alternativa ${String.fromCharCode(65 + index)} como correta`
+                    : `Resposta ${String.fromCharCode(65 + index)}`}
+                  aria-pressed={draft.type === "single_choice" ? option.isCorrect : undefined}
+                  onClick={() => draft.type === "single_choice" && markCorrect(index)}
                 >
-                  {option.isCorrect ? <Check size={17} /> : String.fromCharCode(65 + index)}
+                  {draft.type === "single_choice" && option.isCorrect
+                    ? <Check size={17} />
+                    : String.fromCharCode(65 + index)}
                 </button>
                 <input
                   required
@@ -356,7 +428,7 @@ function QuestionEditor({
                 )}
               </div>
             ))}
-            {draft.options.length < 6 && (
+            {draft.options.length < (draft.type === "single_choice" ? 6 : 12) && (
               <button
                 type="button"
                 className="theory-add-option"
@@ -369,6 +441,66 @@ function QuestionEditor({
               </button>
             )}
           </fieldset>
+
+          {draft.type !== "single_choice" && (
+            <fieldset className="theory-grid-editor">
+              <legend>Itens para relacionar <span>defina o gabarito de cada um</span></legend>
+              <div className="theory-grid-editor-list">
+                {draft.rows.map((row, rowIndex) => (
+                  <section key={rowIndex} className="theory-grid-editor-row">
+                    <label>
+                      Item {rowIndex + 1}
+                      <input
+                        required
+                        maxLength={300}
+                        value={row.text}
+                        onChange={(event) => updateGridRow(rowIndex, { text: event.target.value })}
+                        placeholder="Ex.: Nascimento de Jigoro Kano"
+                      />
+                    </label>
+                    <fieldset>
+                      <legend>{draft.type === "grid_single" ? "Resposta correta" : "Respostas corretas"}</legend>
+                      {draft.options.map((option, optionIndex) => (
+                        <label key={optionIndex}>
+                          <input
+                            type={draft.type === "grid_single" ? "radio" : "checkbox"}
+                            name={`grid-row-${rowIndex}`}
+                            checked={row.correctOptionIndexes.includes(optionIndex)}
+                            onChange={() => toggleGridAnswer(rowIndex, optionIndex)}
+                          />
+                          <span>{option.text || `Resposta ${String.fromCharCode(65 + optionIndex)}`}</span>
+                        </label>
+                      ))}
+                    </fieldset>
+                    {draft.rows.length > 1 && (
+                      <button
+                        type="button"
+                        className="theory-grid-remove-row"
+                        onClick={() => setDraft((current) => ({
+                          ...current,
+                          rows: current.rows.filter((_, index) => index !== rowIndex),
+                        }))}
+                      >
+                        <Trash2 size={16} /> Remover item
+                      </button>
+                    )}
+                  </section>
+                ))}
+              </div>
+              {draft.rows.length < 20 && (
+                <button
+                  type="button"
+                  className="theory-add-option"
+                  onClick={() => setDraft((current) => ({
+                    ...current,
+                    rows: [...current.rows, { text: "", correctOptionIndexes: [0] }],
+                  }))}
+                >
+                  <Plus size={17} /> Adicionar item
+                </button>
+              )}
+            </fieldset>
+          )}
 
           <label>
             Explicação do gabarito
@@ -758,7 +890,9 @@ export function TheoryExamsView() {
                           <span>{question.category} · {question.points} pontos</span>
                           <strong>{question.prompt}</strong>
                           <small>
-                            {question.options.length} alternativas
+                            {question.type === "single_choice"
+                              ? `${question.options.length} alternativas`
+                              : `${question.rows.length} itens · ${question.options.length} respostas possíveis`}
                             {question.media ? ` · mídia: ${question.media.kind}` : " · sem mídia"}
                             {!question.explanation ? " · explicação pendente" : ""}
                           </small>

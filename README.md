@@ -10,6 +10,7 @@ Aplicação web da Associação Judô Rogério Cruz para aplicar, registrar e ac
 - registra, no primeiro cadastro do aluno, a graduação que ele pretende alcançar;
 - permite que o Super Admin prepare, revise, publique e encerre versões imutáveis das provas teóricas por graduação;
 - apresenta todas as questões em ordem aleatória, salva respostas, corrige no servidor e mostra o gabarito comentado depois da entrega;
+- aceita escolha única e associações em grade com uma ou várias respostas por item, exibidas em blocos verticais no celular;
 - aceita imagem, áudio, vídeo próprio ou YouTube nas questões teóricas;
 - autentica avaliadores e Super Admins com contas individuais;
 - permite que o Super Admin autorize e desative avaliadores;
@@ -270,7 +271,7 @@ No celular, conectado à mesma rede Wi-Fi, abra `http://192.168.0.50:3000`, subs
 ## Fluxo de acesso
 
 1. A página principal abre a **Área do aluno**. No primeiro acesso, o judoca cria sua conta e entra automaticamente no cadastro de alunos da equipe.
-2. Quando existe uma versão publicada para sua graduação, o aluno faz a prova na plataforma, sem limite de tempo. Todas as questões e alternativas são embaralhadas em cada tentativa.
+2. Quando existe uma versão publicada para sua graduação, o aluno faz a prova na plataforma, sem limite de tempo. Todas as questões e alternativas são embaralhadas em cada tentativa; associações aparecem em blocos verticais, sem tabela larga no celular.
 3. Depois da entrega, o aluno vê a nota, os acertos, os erros, a resposta correta e a explicação de cada questão. Se reprovar, pode tentar novamente imediatamente; se passar, a elegibilidade não expira.
 4. Avaliadores usam o botão **Acesso de avaliador**. O Super Admin também pode compartilhar um convite, que já abre essa entrada no modo de criação de conta.
 5. Em **Equipe**, o Super Admin informa nome, e-mail e graduação do avaliador para autorizar o acesso profissional.

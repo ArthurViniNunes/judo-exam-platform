@@ -3902,6 +3902,17 @@ td:first-child {
 .student-theory-option-letter { width: 34px; height: 34px; border-radius: 9px; background: var(--mg-bg); color: var(--mg-muted); display: grid; place-items: center; font-weight: 850; }
 .student-theory-options label.selected .student-theory-option-letter { background: var(--mg-accent); color: var(--mg-accent-text); }
 .student-theory-options label > svg { color: var(--mg-accent-strong); }
+.student-theory-grid { min-width: 0; margin: 0; padding: 0; border: 0; }
+.student-theory-grid > legend { margin-bottom: 10px; color: var(--mg-muted); font-size: 10px; font-weight: 800; line-height: 1.45; }
+.student-theory-grid-row { min-width: 0; padding: 12px; border: 1px solid var(--mg-line); border-radius: 14px; background: var(--mg-surface-soft); }
+.student-theory-grid-row + .student-theory-grid-row { margin-top: 10px; }
+.student-theory-grid-row > strong { color: var(--mg-ink); display: grid; grid-template-columns: 30px minmax(0, 1fr); align-items: center; gap: 8px; font-size: 12px; line-height: 1.4; overflow-wrap: anywhere; }
+.student-theory-grid-row > strong > span { width: 30px; height: 30px; border-radius: 9px; background: var(--mg-bg); color: var(--mg-muted); display: grid; place-items: center; font-size: 10px; }
+.student-theory-grid-row > div { margin-top: 10px; display: grid; gap: 7px; }
+.student-theory-grid-row label { min-height: 48px; padding: 8px 10px; border: 1px solid var(--mg-line); border-radius: 10px; background: var(--mg-surface); color: var(--mg-ink); display: grid; grid-template-columns: 22px minmax(0, 1fr) 18px; align-items: center; gap: 8px; cursor: pointer; font-size: 11px; line-height: 1.4; }
+.student-theory-grid-row label.selected { border-color: var(--mg-accent); background: color-mix(in srgb, var(--mg-accent) 10%, var(--mg-surface)); }
+.student-theory-grid-row input { width: 20px; height: 20px; accent-color: var(--mg-accent); }
+.student-theory-grid-row label > svg { color: var(--mg-accent-strong); }
 .student-theory-save-state { min-height: 25px; margin-top: 12px; color: var(--mg-muted); display: flex; align-items: center; gap: 6px; font-size: 10px; }
 .student-theory-save-state .spin { animation: spin 0.8s linear infinite; }
 .student-theory-error { margin-top: 11px; padding: 11px 12px; border: 1px solid color-mix(in srgb, #c63d31 55%, var(--mg-line)); border-radius: 10px; background: color-mix(in srgb, #c63d31 8%, var(--mg-surface)); color: color-mix(in srgb, #b2362d 75%, var(--mg-ink)); font-size: 11px; line-height: 1.5; }
@@ -3983,6 +3994,10 @@ td:first-child {
 .student-theory-correction dl > div { padding: 10px 11px; border-radius: 10px; background: var(--mg-surface-soft); }
 .student-theory-correction dt { color: var(--mg-muted); font-size: 9px; font-weight: 800; }
 .student-theory-correction dd { margin: 4px 0 0; color: var(--mg-ink); font-size: 11px; line-height: 1.5; overflow-wrap: anywhere; }
+.student-theory-grid-correction dd { display: grid; gap: 8px; }
+.student-theory-grid-correction dd > div { padding: 9px; border: 1px solid var(--mg-line); border-radius: 9px; background: var(--mg-surface); display: grid; gap: 3px; }
+.student-theory-grid-correction dd strong { color: var(--mg-ink); font-size: 10px; }
+.student-theory-grid-correction dd span { color: var(--mg-muted); font-size: 10px; }
 
 @media (min-width: 640px) {
   .student-theory-ready { padding: 25px; grid-template-columns: 58px minmax(0, 1fr) auto; align-items: center; }
@@ -4338,10 +4353,13 @@ td:first-child {
 .theory-question-dialog > header h2 { margin-top: 5px; }
 .theory-form-row { display: grid; grid-template-columns: minmax(0, 1fr) 86px; gap: 10px; }
 .theory-options-editor,
+.theory-grid-editor,
 .theory-media-editor { min-width: 0; margin: 0; padding: 14px; border: 1px solid var(--mg-line); border-radius: 13px; }
 .theory-options-editor legend,
+.theory-grid-editor > legend,
 .theory-media-editor legend { padding: 0 5px; color: var(--mg-ink); font-size: 11px; font-weight: 850; }
 .theory-options-editor legend span,
+.theory-grid-editor > legend span,
 .theory-media-editor legend span { color: var(--mg-muted); font-size: 9px; font-weight: 600; }
 .theory-option-row { min-width: 0; display: grid; grid-template-columns: 44px minmax(0, 1fr) 44px; gap: 7px; align-items: center; }
 .theory-option-row + .theory-option-row { margin-top: 8px; }
@@ -4349,6 +4367,15 @@ td:first-child {
 .theory-option-row > button.correct { border-color: var(--mg-accent); background: color-mix(in srgb, var(--mg-accent) 13%, var(--mg-surface)); color: var(--mg-accent-strong); }
 .theory-option-row > button.remove-option { color: #a83e34; }
 .theory-add-option { min-height: 44px; margin-top: 10px; padding: 8px 10px; border: 1px dashed var(--mg-line); border-radius: 10px; background: transparent; color: var(--mg-accent-strong); display: inline-flex; align-items: center; gap: 7px; font-size: 10px; font-weight: 800; }
+.theory-grid-editor-list { display: grid; gap: 10px; }
+.theory-grid-editor-row { min-width: 0; padding: 11px; border: 1px solid var(--mg-line); border-radius: 11px; background: var(--mg-surface-soft); display: grid; gap: 11px; }
+.theory-grid-editor-row > fieldset { min-width: 0; margin: 0; padding: 0; border: 0; }
+.theory-grid-editor-row > fieldset > legend { margin-bottom: 7px; color: var(--mg-muted); font-size: 9px; font-weight: 800; }
+.theory-grid-editor-row > fieldset > label { min-height: 44px; padding: 7px 8px; border-radius: 9px; color: var(--mg-ink); display: flex; align-items: center; gap: 8px; font-size: 10px; font-weight: 650; }
+.theory-grid-editor-row > fieldset > label:has(input:checked) { background: color-mix(in srgb, var(--mg-accent) 10%, var(--mg-surface)); }
+.theory-grid-editor-row > fieldset input { width: 20px; height: 20px; flex: 0 0 auto; accent-color: var(--mg-accent); }
+.theory-grid-remove-row { min-height: 44px; justify-self: start; border: 0; background: transparent; color: #a83e34; display: inline-flex; align-items: center; gap: 6px; font-size: 10px; font-weight: 800; }
+.dark .theory-grid-remove-row { color: #ffaaa2; }
 .theory-check-row { min-height: 44px; display: flex !important; align-items: center; gap: 10px !important; }
 .theory-check-row input { width: 20px; min-height: 20px; height: 20px; accent-color: var(--mg-accent); }
 .theory-check-row span { color: var(--mg-ink); display: flex; align-items: center; gap: 7px; }

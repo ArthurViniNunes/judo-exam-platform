@@ -5,10 +5,12 @@ import {
   shuffleTheoryItems,
 } from "./theory-attempt-domain";
 import type {
+  StudentTheoryGridAnswers,
   StudentTheoryAttempt,
   StudentTheoryAttemptQuestion,
   StudentTheoryResult,
   TheoryMediaKind,
+  TheoryQuestionType,
 } from "../../lib/theory-exams";
 
 type AttemptRow = {
@@ -35,9 +37,13 @@ type AttemptQuestionRow = {
   explanation: string;
   options_json: string;
   correct_option_id: string;
+  question_type: TheoryQuestionType;
+  rows_json: string;
+  correct_grid_answers_json: string | null;
   media_json: string | null;
   position: number;
   selected_option_id: string | null;
+  selected_grid_answers_json: string | null;
   awarded_points: number | null;
 };
 
@@ -47,6 +53,15 @@ type SourceQuestionRow = {
   prompt: string;
   points: number;
   explanation: string;
+  position: number;
+  question_type: TheoryQuestionType;
+};
+
+type SourceGridRow = {
+  id: string;
+  question_id: string;
+  text: string;
+  correct_option_ids_json: string;
   position: number;
 };
 
@@ -94,6 +109,37 @@ function parseMedia(value: string | null): SafeMedia | null {
   return parsed && typeof parsed.sourceUrl === "string" ? parsed : null;
 }
 
+function parseGridAnswers(value: string | null): StudentTheoryGridAnswers | null {
+  if (!value) return null;
+  const parsed = JSON.parse(value) as unknown;
+  if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) return null;
+  return Object.fromEntries(
+    Object.entries(parsed).filter(
+      (entry): entry is [string, string[]] =>
+        Array.isArray(entry[1]) && entry[1].every((optionId) => typeof optionId === "string"),
+    ),
+  );
+}
+
+function parseRows(value: string) {
+  const parsed = JSON.parse(value) as unknown;
+  return Array.isArray(parsed)
+    ? parsed.filter(
+        (row): row is { id: string; text: string } =>
+          Boolean(row && typeof row === "object" &&
+            typeof (row as { id?: unknown }).id === "string" &&
+            typeof (row as { text?: unknown }).text === "string"),
+      )
+    : [];
+}
+
+function gridQuestionAnswered(row: AttemptQuestionRow) {
+  if (row.question_type === "single_choice") return Boolean(row.selected_option_id);
+  const rows = parseRows(row.rows_json);
+  const selected = parseGridAnswers(row.selected_grid_answers_json) ?? {};
+  return rows.length > 0 && rows.every((item) => (selected[item.id] ?? []).length > 0);
+}
+
 function auditStatement(
   request: Request,
   env: Env,
@@ -133,8 +179,11 @@ async function attemptQuestions(env: Env, attemptId: string) {
     `SELECT questions.id, questions.source_question_id, questions.category,
             questions.prompt, questions.points, questions.explanation,
             questions.options_json, questions.correct_option_id,
+            questions.question_type, questions.rows_json,
+            questions.correct_grid_answers_json,
             questions.media_json, questions.position,
-            answers.selected_option_id, answers.awarded_points
+            answers.selected_option_id, answers.selected_grid_answers_json,
+            answers.awarded_points
        FROM theory_attempt_questions AS questions
        LEFT JOIN theory_answers AS answers
          ON answers.attempt_question_id = questions.id
@@ -153,9 +202,12 @@ function safeQuestion(row: AttemptQuestionRow): StudentTheoryAttemptQuestion {
     prompt: row.prompt,
     points: row.points,
     position: row.position,
+    type: row.question_type,
     options: parseOptions(row.options_json),
+    rows: parseRows(row.rows_json),
     media: parseMedia(row.media_json),
     selectedOptionId: row.selected_option_id,
+    selectedGridAnswers: parseGridAnswers(row.selected_grid_answers_json),
   };
 }
 
@@ -170,7 +222,7 @@ async function formatAttempt(env: Env, attempt: AttemptRow): Promise<StudentTheo
     startedAt: attempt.started_at,
     updatedAt: attempt.updated_at,
     questions: rows.map(safeQuestion),
-    answeredCount: rows.filter((row) => row.selected_option_id).length,
+    answeredCount: rows.filter(gridQuestionAnswered).length,
   };
 }
 
@@ -342,9 +394,9 @@ export async function startTheoryAttempt(
     return json(request, env, { error: "A prova desta graduação ainda não foi liberada." }, 409);
   }
 
-  const [questionsResult, optionsResult, mediaResult] = await Promise.all([
+  const [questionsResult, optionsResult, gridRowsResult, mediaResult] = await Promise.all([
     env.DB.prepare(
-      "SELECT id, category, prompt, points, explanation, position FROM theory_questions WHERE version_id = ? ORDER BY position",
+      "SELECT id, category, prompt, points, explanation, position, question_type FROM theory_questions WHERE version_id = ? ORDER BY position",
     ).bind(version.id).all<SourceQuestionRow>(),
     env.DB.prepare(
       `SELECT options.id, options.question_id, options.text,
@@ -354,6 +406,14 @@ export async function startTheoryAttempt(
         WHERE questions.version_id = ?
         ORDER BY options.position`,
     ).bind(version.id).all<SourceOptionRow>(),
+    env.DB.prepare(
+      `SELECT rows.id, rows.question_id, rows.text,
+              rows.correct_option_ids_json, rows.position
+         FROM theory_question_rows AS rows
+         JOIN theory_questions AS questions ON questions.id = rows.question_id
+        WHERE questions.version_id = ?
+        ORDER BY questions.position, rows.position`,
+    ).bind(version.id).all<SourceGridRow>(),
     env.DB.prepare(
       `SELECT media.id, media.question_id, media.kind,
               media.source_url, media.alt_text
@@ -375,6 +435,12 @@ export async function startTheoryAttempt(
   const mediaByQuestion = new Map(
     mediaResult.results.map((media) => [media.question_id, media]),
   );
+  const gridRowsByQuestion = new Map<string, SourceGridRow[]>();
+  gridRowsResult.results.forEach((row) => {
+    const rows = gridRowsByQuestion.get(row.question_id) ?? [];
+    rows.push(row);
+    gridRowsByQuestion.set(row.question_id, rows);
+  });
   const attemptId = crypto.randomUUID();
   const shuffledQuestions = shuffleTheoryItems(questionsResult.results);
   const statements: D1PreparedStatement[] = [
@@ -386,14 +452,28 @@ export async function startTheoryAttempt(
   shuffledQuestions.forEach((question, position) => {
     const options = shuffleTheoryItems(optionsByQuestion.get(question.id) ?? []);
     const correct = options.find((option) => option.is_correct === 1);
-    if (!correct) throw new Error(`Question ${question.id} has no correct option`);
+    const sourceRows = gridRowsByQuestion.get(question.id) ?? [];
+    if (question.question_type === "single_choice" && !correct) {
+      throw new Error(`Question ${question.id} has no correct option`);
+    }
+    if (question.question_type !== "single_choice" && !sourceRows.length) {
+      throw new Error(`Question ${question.id} has no grid rows`);
+    }
+    const correctGridAnswers = question.question_type === "single_choice"
+      ? null
+      : Object.fromEntries(sourceRows.map((row) => [
+          row.id,
+          (JSON.parse(row.correct_option_ids_json) as unknown[])
+            .filter((optionId): optionId is string => typeof optionId === "string"),
+        ]));
     const media = mediaByQuestion.get(question.id);
     statements.push(
       env.DB.prepare(
         `INSERT INTO theory_attempt_questions (
            id, attempt_id, source_question_id, category, prompt, points,
-           explanation, options_json, correct_option_id, media_json, position
-         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+           explanation, options_json, correct_option_id, media_json, position,
+           question_type, rows_json, correct_grid_answers_json
+         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       ).bind(
         crypto.randomUUID(),
         attemptId,
@@ -403,7 +483,7 @@ export async function startTheoryAttempt(
         question.points,
         question.explanation,
         JSON.stringify(options.map((option) => ({ id: option.id, text: option.text }))),
-        correct.id,
+        correct?.id ?? "__grid__",
         media
           ? JSON.stringify({
               kind: media.kind,
@@ -412,6 +492,9 @@ export async function startTheoryAttempt(
             })
           : null,
         position,
+        question.question_type,
+        JSON.stringify(sourceRows.map((row) => ({ id: row.id, text: row.text }))),
+        correctGridAnswers ? JSON.stringify(correctGridAnswers) : null,
       ),
     );
   });
@@ -455,38 +538,66 @@ export async function saveTheoryAnswer(
   const body = await request.json<{
     attemptQuestionId?: string;
     selectedOptionId?: string | null;
+    selectedGridAnswers?: StudentTheoryGridAnswers | null;
   }>();
   const question = await env.DB.prepare(
-    "SELECT id, options_json FROM theory_attempt_questions WHERE id = ? AND attempt_id = ?",
+    "SELECT id, question_type, options_json, rows_json FROM theory_attempt_questions WHERE id = ? AND attempt_id = ?",
   )
     .bind(body.attemptQuestionId || "", attemptId)
-    .first<{ id: string; options_json: string }>();
+    .first<{ id: string; question_type: TheoryQuestionType; options_json: string; rows_json: string }>();
   if (!question) return json(request, env, { error: "Questão não encontrada." }, 404);
   const selectedOptionId = body.selectedOptionId ?? null;
-  if (
-    selectedOptionId &&
-    !parseOptions(question.options_json).some((option) => option.id === selectedOptionId)
-  ) {
-    return json(request, env, { error: "Selecione uma alternativa válida." }, 400);
+  const options = parseOptions(question.options_json);
+  const validOptionIds = new Set(options.map((option) => option.id));
+  let selectedGridAnswers: StudentTheoryGridAnswers | null = null;
+  if (question.question_type === "single_choice") {
+    if (selectedOptionId && !validOptionIds.has(selectedOptionId)) {
+      return json(request, env, { error: "Selecione uma alternativa válida." }, 400);
+    }
+  } else {
+    const rows = parseRows(question.rows_json);
+    const rowIds = new Set(rows.map((row) => row.id));
+    selectedGridAnswers = body.selectedGridAnswers ?? {};
+    if (
+      Object.entries(selectedGridAnswers).some(([rowId, optionIds]) =>
+        !rowIds.has(rowId) ||
+        !Array.isArray(optionIds) ||
+        optionIds.some((optionId) => !validOptionIds.has(optionId)) ||
+        new Set(optionIds).size !== optionIds.length ||
+        (question.question_type === "grid_single" && optionIds.length > 1)
+      )
+    ) {
+      return json(request, env, { error: "Preencha a associação com respostas válidas." }, 400);
+    }
   }
 
   await env.DB.batch([
     env.DB.prepare(
       `INSERT INTO theory_answers (
-         attempt_question_id, selected_option_id, awarded_points, answered_at
-       ) VALUES (?, ?, NULL, CURRENT_TIMESTAMP)
+         attempt_question_id, selected_option_id, selected_grid_answers_json,
+         awarded_points, answered_at
+       ) VALUES (?, ?, ?, NULL, CURRENT_TIMESTAMP)
        ON CONFLICT(attempt_question_id) DO UPDATE SET
          selected_option_id = excluded.selected_option_id,
+         selected_grid_answers_json = excluded.selected_grid_answers_json,
          awarded_points = NULL,
          answered_at = CURRENT_TIMESTAMP`,
-    ).bind(question.id, selectedOptionId),
+    ).bind(
+      question.id,
+      question.question_type === "single_choice" ? selectedOptionId : null,
+      selectedGridAnswers ? JSON.stringify(selectedGridAnswers) : null,
+    ),
     env.DB.prepare(
       "UPDATE theory_attempts SET updated_at = CURRENT_TIMESTAMP WHERE id = ? AND status = 'in_progress'",
     ).bind(attemptId),
   ]);
   const progress = await env.DB.prepare(
     `SELECT COUNT(questions.id) AS total,
-            SUM(CASE WHEN answers.selected_option_id IS NOT NULL THEN 1 ELSE 0 END) AS answered
+            SUM(CASE
+              WHEN questions.question_type = 'single_choice' AND answers.selected_option_id IS NOT NULL THEN 1
+              WHEN questions.question_type <> 'single_choice' AND answers.selected_grid_answers_json IS NOT NULL THEN 1
+              ELSE 0
+            END) AS answered
        FROM theory_attempt_questions AS questions
        LEFT JOIN theory_answers AS answers ON answers.attempt_question_id = questions.id
       WHERE questions.attempt_id = ?`,
@@ -512,7 +623,7 @@ export async function submitTheoryAttempt(
   if (attempt.status === "submitted") return getTheoryResult(request, env, user, attemptId);
 
   const rows = await attemptQuestions(env, attemptId);
-  const unanswered = rows.filter((row) => !row.selected_option_id);
+  const unanswered = rows.filter((row) => !gridQuestionAnswered(row));
   if (unanswered.length) {
     return json(
       request,
@@ -524,14 +635,18 @@ export async function submitTheoryAttempt(
       409,
     );
   }
-  const answers = new Map(
-    rows.map((row) => [row.id, row.selected_option_id as string]),
-  );
+  const answers = new Map(rows.map((row) => [
+    row.id,
+    row.question_type === "single_choice"
+      ? row.selected_option_id as string
+      : parseGridAnswers(row.selected_grid_answers_json) ?? {},
+  ]));
   const scored = scoreTheoryAttempt(
     rows.map((row) => ({
       id: row.id,
       points: row.points,
       correctOptionId: row.correct_option_id,
+      correctGridAnswers: parseGridAnswers(row.correct_grid_answers_json),
     })),
     answers,
     attempt.minimum_score,
@@ -599,8 +714,9 @@ export async function getTheoryResult(
       ...safeQuestion(row),
       explanation: row.explanation,
       correctOptionId: row.correct_option_id,
+      correctGridAnswers: parseGridAnswers(row.correct_grid_answers_json),
       awardedPoints: row.awarded_points ?? 0,
-      correct: row.selected_option_id === row.correct_option_id,
+      correct: (row.awarded_points ?? 0) === row.points,
     })),
   };
   return json(request, env, result);

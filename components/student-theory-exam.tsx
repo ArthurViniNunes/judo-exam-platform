@@ -23,6 +23,7 @@ import {
   type StudentTheoryAttempt,
   type StudentTheoryAttemptQuestion,
   type StudentTheoryAvailability,
+  type StudentTheoryGridAnswers,
   type StudentTheoryMedia,
   type StudentTheoryResult,
 } from "@/lib/theory-exams";
@@ -88,6 +89,64 @@ function AnswerOptions({
   );
 }
 
+function questionAnswered(question: StudentTheoryAttemptQuestion) {
+  if (question.type === "single_choice") return Boolean(question.selectedOptionId);
+  const answers = question.selectedGridAnswers ?? {};
+  return question.rows.length > 0 && question.rows.every((row) => (answers[row.id] ?? []).length > 0);
+}
+
+function gridAnswerLabel(
+  question: StudentTheoryAttemptQuestion,
+  answers: StudentTheoryGridAnswers | null,
+) {
+  if (!answers) return "Ainda não respondida";
+  const answeredRows = question.rows.filter((row) => (answers[row.id] ?? []).length > 0).length;
+  return `${answeredRows} de ${question.rows.length} itens relacionados`;
+}
+
+function GridAnswerOptions({
+  question,
+  disabled,
+  onSelect,
+}: {
+  question: StudentTheoryAttemptQuestion;
+  disabled: boolean;
+  onSelect: (rowId: string, optionId: string) => void;
+}) {
+  const answers = question.selectedGridAnswers ?? {};
+  return (
+    <fieldset className="student-theory-grid" disabled={disabled}>
+      <legend>
+        {question.type === "grid_single"
+          ? "Relacione cada item a uma resposta"
+          : "Marque todas as respostas correspondentes em cada item"}
+      </legend>
+      {question.rows.map((row, rowIndex) => (
+        <section key={row.id} className="student-theory-grid-row">
+          <strong><span>{rowIndex + 1}</span>{row.text}</strong>
+          <div>
+            {question.options.map((option) => {
+              const selected = (answers[row.id] ?? []).includes(option.id);
+              return (
+                <label key={option.id} className={selected ? "selected" : ""}>
+                  <input
+                    type={question.type === "grid_single" ? "radio" : "checkbox"}
+                    name={`question-${question.id}-row-${row.id}`}
+                    checked={selected}
+                    onChange={() => onSelect(row.id, option.id)}
+                  />
+                  <span>{option.text}</span>
+                  {selected && <Check size={17} aria-hidden="true" />}
+                </label>
+              );
+            })}
+          </div>
+        </section>
+      ))}
+    </fieldset>
+  );
+}
+
 function ExamRunner({
   initialAttempt,
   onResult,
@@ -103,7 +162,7 @@ function ExamRunner({
   const [error, setError] = useState("");
   const [errorDetails, setErrorDetails] = useState<string[]>([]);
   const question = attempt.questions[activeIndex];
-  const answeredCount = attempt.questions.filter((item) => item.selectedOptionId).length;
+  const answeredCount = attempt.questions.filter(questionAnswered).length;
   const progress = attempt.questions.length
     ? Math.round((answeredCount / attempt.questions.length) * 100)
     : 0;
@@ -141,6 +200,45 @@ function ExamRunner({
     }
   };
 
+  const selectGridAnswer = async (rowId: string, optionId: string) => {
+    if (!question || question.type === "single_choice" || savingQuestionId) return;
+    const previous = question.selectedGridAnswers;
+    const currentRow = previous?.[rowId] ?? [];
+    const nextRow = question.type === "grid_single"
+      ? [optionId]
+      : currentRow.includes(optionId)
+        ? currentRow.filter((id) => id !== optionId)
+        : [...currentRow, optionId];
+    const selectedGridAnswers = { ...(previous ?? {}), [rowId]: nextRow };
+    setError("");
+    setSavingQuestionId(question.id);
+    setAttempt((current) => ({
+      ...current,
+      questions: current.questions.map((item) => item.id === question.id
+        ? { ...item, selectedGridAnswers }
+        : item),
+    }));
+    try {
+      await apiRequest(`/api/theory-attempts/${attempt.id}/answers`, {
+        method: "PATCH",
+        body: JSON.stringify({
+          attemptQuestionId: question.id,
+          selectedGridAnswers,
+        }),
+      });
+    } catch (caught) {
+      setAttempt((current) => ({
+        ...current,
+        questions: current.questions.map((item) => item.id === question.id
+          ? { ...item, selectedGridAnswers: previous }
+          : item),
+      }));
+      setError(caught instanceof Error ? caught.message : "Não foi possível salvar a associação.");
+    } finally {
+      setSavingQuestionId("");
+    }
+  };
+
   const submit = async () => {
     if (!complete || !window.confirm("Entregar a prova agora? Depois disso, as respostas não poderão ser alteradas.")) return;
     setSubmitting(true);
@@ -172,17 +270,19 @@ function ExamRunner({
         </header>
         <div className="student-theory-review-list">
           {attempt.questions.map((item, index) => {
-            const answer = item.options.find((option) => option.id === item.selectedOptionId);
+            const answer = item.type === "single_choice"
+              ? item.options.find((option) => option.id === item.selectedOptionId)?.text
+              : gridAnswerLabel(item, item.selectedGridAnswers);
             return (
               <button
                 key={item.id}
-                className={answer ? "answered" : "pending"}
+                className={questionAnswered(item) ? "answered" : "pending"}
                 onClick={() => { setActiveIndex(index); setReviewing(false); }}
               >
-                <span>{answer ? <CheckCircle2 size={19} /> : <CircleAlert size={19} />}</span>
+                <span>{questionAnswered(item) ? <CheckCircle2 size={19} /> : <CircleAlert size={19} />}</span>
                 <div>
                   <strong>Questão {index + 1}</strong>
-                  <small>{answer?.text ?? "Ainda não respondida"}</small>
+                  <small>{answer ?? "Ainda não respondida"}</small>
                 </div>
                 <ArrowRight size={18} />
               </button>
@@ -229,17 +329,27 @@ function ExamRunner({
         </header>
         <h2 id="student-question-title">{question.prompt}</h2>
         {question.media && <TheoryMedia media={question.media} />}
-        <AnswerOptions
-          question={question}
-          disabled={savingQuestionId === question.id}
-          onSelect={(optionId) => void selectAnswer(optionId)}
-        />
+        {question.type === "single_choice" ? (
+          <AnswerOptions
+            question={question}
+            disabled={savingQuestionId === question.id}
+            onSelect={(optionId) => void selectAnswer(optionId)}
+          />
+        ) : (
+          <GridAnswerOptions
+            question={question}
+            disabled={savingQuestionId === question.id}
+            onSelect={(rowId, optionId) => void selectGridAnswer(rowId, optionId)}
+          />
+        )}
         <div className="student-theory-save-state" aria-live="polite">
           {savingQuestionId === question.id
             ? <><LoaderCircle size={16} className="spin" /> Salvando resposta…</>
-            : question.selectedOptionId
+            : questionAnswered(question)
               ? <><Save size={16} /> Resposta salva</>
-              : "Escolha uma alternativa para continuar."}
+              : question.type === "single_choice"
+                ? "Escolha uma alternativa para continuar."
+                : "Relacione todos os itens para continuar."}
         </div>
         {error && <div className="student-theory-error" role="alert">{error}</div>}
       </article>
@@ -254,13 +364,13 @@ function ExamRunner({
         </button>
         {activeIndex < attempt.questions.length - 1 ? (
           <button
-            disabled={!question.selectedOptionId || Boolean(savingQuestionId)}
+            disabled={!questionAnswered(question) || Boolean(savingQuestionId)}
             onClick={() => setActiveIndex((index) => Math.min(attempt.questions.length - 1, index + 1))}
           >
             Próxima <ArrowRight size={18} />
           </button>
         ) : (
-          <button disabled={!question.selectedOptionId || Boolean(savingQuestionId)} onClick={() => setReviewing(true)}>
+          <button disabled={!questionAnswered(question) || Boolean(savingQuestionId)} onClick={() => setReviewing(true)}>
             Revisar prova <FileCheck2 size={18} />
           </button>
         )}
@@ -312,8 +422,33 @@ function TheoryResult({
               </header>
               {question.media && <TheoryMedia media={question.media} />}
               <dl>
-                <div><dt>Sua resposta</dt><dd>{selected?.text ?? "Não respondida"}</dd></div>
-                {!question.correct && <div><dt>Resposta correta</dt><dd>{correct?.text}</dd></div>}
+                {question.type === "single_choice" ? (
+                  <>
+                    <div><dt>Sua resposta</dt><dd>{selected?.text ?? "Não respondida"}</dd></div>
+                    {!question.correct && <div><dt>Resposta correta</dt><dd>{correct?.text}</dd></div>}
+                  </>
+                ) : (
+                  <div className="student-theory-grid-correction">
+                    <dt>Associações</dt>
+                    <dd>
+                      {question.rows.map((row) => {
+                        const selectedLabels = (question.selectedGridAnswers?.[row.id] ?? [])
+                          .map((optionId) => question.options.find((option) => option.id === optionId)?.text)
+                          .filter(Boolean);
+                        const correctLabels = (question.correctGridAnswers?.[row.id] ?? [])
+                          .map((optionId) => question.options.find((option) => option.id === optionId)?.text)
+                          .filter(Boolean);
+                        return (
+                          <div key={row.id}>
+                            <strong>{row.text}</strong>
+                            <span>Sua resposta: {selectedLabels.join(", ") || "Não respondida"}</span>
+                            {!question.correct && <span>Gabarito: {correctLabels.join(", ")}</span>}
+                          </div>
+                        );
+                      })}
+                    </dd>
+                  </div>
+                )}
                 <div><dt>Entenda</dt><dd>{question.explanation}</dd></div>
               </dl>
             </article>
