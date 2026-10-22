@@ -22,6 +22,7 @@ export type EvaluationRecord = {
   evaluatorRank: string | null;
   eligibilityId: string | null;
   eventTaskId: string | null;
+  eventName: string | null;
   belt: string;
   type: "teórica" | "técnica" | "kata";
   score: number;

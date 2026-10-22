@@ -4653,6 +4653,10 @@ td:first-child {
 .student-history-summary > svg { color: var(--mg-muted); transition: transform 0.18s ease; }
 .student-history article.report-open > .student-history-summary > svg { transform: rotate(180deg); }
 .individual-report { grid-column: 1 / -1; width: 100%; min-width: 0; margin: 8px 0 5px; padding: 14px; border: 1px solid var(--mg-line); border-radius: 12px; background: var(--mg-surface-soft); color: var(--mg-ink); }
+.report-print-heading { display: none; }
+.report-toolbar { margin-bottom: 13px; padding-bottom: 12px; border-bottom: 1px solid var(--mg-line); display: grid; gap: 8px; }
+.report-toolbar > span { color: var(--mg-muted); font-size: 9px; line-height: 1.4; }
+.report-toolbar button { min-height: 44px; padding: 8px 12px; border: 1px solid var(--mg-line); border-radius: 10px; background: var(--mg-surface); color: var(--mg-accent-strong); display: inline-flex; align-items: center; justify-content: center; gap: 7px; font-size: 10px; font-weight: 800; }
 .report-summary { padding-bottom: 13px; border-bottom: 1px solid var(--mg-line); display: flex; align-items: center; justify-content: space-between; gap: 12px; }
 .report-summary > div { display: grid; gap: 3px; }
 .report-summary span { color: var(--mg-muted); font-size: 9px; font-weight: 750; }
@@ -4664,6 +4668,8 @@ td:first-child {
 .report-metadata dt { color: var(--mg-muted); font-size: 8px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.04em; }
 .report-metadata dd { margin: 0; overflow-wrap: anywhere; font-size: 10px; font-weight: 750; }
 .report-metadata dd small { margin-top: 2px; color: var(--mg-muted); display: block; font-size: 8px; font-weight: 650; }
+.report-metadata .report-reference { grid-column: 1 / -1; }
+.report-reference dd { color: var(--mg-muted); font-family: "Roboto Mono", ui-monospace, monospace; font-size: 8px; font-weight: 500; }
 .report-observation { margin-top: 13px; padding: 11px; border-left: 3px solid var(--mg-accent); border-radius: 0 8px 8px 0; background: var(--mg-surface); }
 .report-observation strong { font-size: 9px; }
 .report-observation p { margin: 4px 0 0; color: var(--mg-muted); font-size: 9px; line-height: 1.55; }
@@ -4693,6 +4699,33 @@ td:first-child {
 .legacy-report > span { display: grid; gap: 3px; }
 .legacy-report strong { color: var(--mg-ink); font-size: 10px; }
 .legacy-report small { font-size: 8px; line-height: 1.4; }
+
+@media print {
+  @page { size: A4; margin: 12mm; }
+  body.printing-evaluation { background: #fff !important; }
+  body.printing-evaluation * { visibility: hidden !important; }
+  body.printing-evaluation .individual-report.print-target,
+  body.printing-evaluation .individual-report.print-target * { visibility: visible !important; }
+  body.printing-evaluation .individual-report.print-target { position: absolute; inset: 0 auto auto 0; width: 100%; padding: 0; border: 0; background: #fff !important; color: #1f2921 !important; box-shadow: none; }
+  .individual-report.print-target .report-print-heading { margin-bottom: 14px; padding-bottom: 12px; border-bottom: 2px solid #6f1e24; display: flex; align-items: center; gap: 12px; }
+  .individual-report.print-target .report-print-heading .brand img { width: 54px; height: 54px; }
+  .individual-report.print-target .report-print-heading > div:last-child { display: grid; gap: 2px; }
+  .individual-report.print-target .report-print-heading strong { font-size: 16px; }
+  .individual-report.print-target .report-print-heading span { color: #5a625b; font-size: 9px; text-transform: uppercase; letter-spacing: .06em; }
+  .individual-report.print-target .report-toolbar { display: none; }
+  .individual-report.print-target .report-metadata { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  .individual-report.print-target .report-summary,
+  .individual-report.print-target .report-metadata,
+  .individual-report.print-target .report-observation,
+  .individual-report.print-target .report-groups details,
+  .individual-report.print-target .report-techniques { border-color: #d9ded9 !important; background: #fff !important; color: #1f2921 !important; }
+  .individual-report.print-target .report-groups details { break-inside: avoid; }
+  .individual-report.print-target .report-groups summary { cursor: default; }
+  .individual-report.print-target .report-groups summary > svg { display: none; }
+  .individual-report.print-target .report-groups summary,
+  .individual-report.print-target .report-technique-heading,
+  .individual-report.print-target .report-parts li { color: #1f2921 !important; }
+}
 
 .team-grid { display: grid; gap: 14px; }
 .invite-panel,

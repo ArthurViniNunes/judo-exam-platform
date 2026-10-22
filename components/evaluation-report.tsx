@@ -1,7 +1,8 @@
 "use client";
 
-import { ChevronDown, ClipboardCheck } from "lucide-react";
+import { ChevronDown, ClipboardCheck, Printer } from "lucide-react";
 import { formatDate, scoreLabel } from "@/components/admin-portal-shared";
+import { Brand } from "@/components/exam-public";
 import type {
   EvaluationCategoryRecord,
   EvaluationItemRecord,
@@ -38,12 +39,39 @@ function reportCategories(evaluation: EvaluationRecord) {
 export function EvaluationReport({ evaluation }: { evaluation: EvaluationRecord }) {
   const itemsByCategory = groupItems(evaluation.items);
   const categories = reportCategories(evaluation);
+  const reportId = `evaluation-report-${evaluation.id}`;
+
+  const printReport = () => {
+    const report = document.getElementById(reportId);
+    if (!report) return;
+    const details = [...report.querySelectorAll("details")];
+    const previousState = details.map((detail) => detail.open);
+    details.forEach((detail) => { detail.open = true; });
+    document.body.classList.add("printing-evaluation");
+    report.classList.add("print-target");
+    try {
+      window.print();
+    } finally {
+      report.classList.remove("print-target");
+      document.body.classList.remove("printing-evaluation");
+      details.forEach((detail, index) => { detail.open = previousState[index]; });
+    }
+  };
 
   return (
     <section
+      id={reportId}
       className="individual-report"
       aria-label={`Relatório da avaliação de ${evaluation.athlete}`}
     >
+      <div className="report-print-heading">
+        <Brand compact />
+        <div><strong>Relatório de avaliação</strong><span>Associação Judô Rogério Cruz</span></div>
+      </div>
+      <div className="report-toolbar">
+        <span>Relatório completo disponível sob demanda.</span>
+        <button onClick={printReport}><Printer size={17} /> Imprimir ou salvar PDF</button>
+      </div>
       <header className="report-summary">
         <div>
           <span>Resultado geral</span>
@@ -78,6 +106,18 @@ export function EvaluationReport({ evaluation }: { evaluation: EvaluationRecord 
               {formatDate(evaluation.createdAt, true)}
             </time>
           </dd>
+        </div>
+        <div>
+          <dt>Evento</dt>
+          <dd>{evaluation.eventName || "Avaliação avulsa"}</dd>
+        </div>
+        <div>
+          <dt>Versão do exame</dt>
+          <dd>{evaluation.matrixId || "Catálogo oficial fixo"}</dd>
+        </div>
+        <div className="report-reference">
+          <dt>Referência do registro</dt>
+          <dd>{evaluation.id}</dd>
         </div>
       </dl>
 

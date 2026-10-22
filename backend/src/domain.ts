@@ -145,6 +145,7 @@ export function formatEvaluation(row: EvaluationRow) {
     evaluatorRank: row.evaluator_rank ?? null,
     eligibilityId: row.eligibility_id,
     eventTaskId: row.event_task_id,
+    eventName: row.event_name ?? null,
     belt: row.belt,
     type: row.type,
     score: row.score,

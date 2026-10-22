@@ -90,6 +90,7 @@ export type EvaluationRow = {
   matrix_id: string | null;
   eligibility_id: string | null;
   event_task_id: string | null;
+  event_name?: string | null;
   detail: string | null;
   created_at: string;
   categories?: EvaluationCategoryRow[];

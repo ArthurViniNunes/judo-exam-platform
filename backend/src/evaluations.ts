@@ -26,9 +26,16 @@ async function evaluationRows(
   const where = filterId ? "WHERE evaluations.evaluator_id = ?" : "";
   const statement = env.DB.prepare(
     `SELECT evaluations.*, users.name AS evaluator_name,
-            users.evaluator_rank AS evaluator_rank
+            users.evaluator_rank AS evaluator_rank,
+            events.name AS event_name
      FROM evaluations
      LEFT JOIN users ON users.id = evaluations.evaluator_id
+     LEFT JOIN exam_event_tasks AS event_tasks
+       ON event_tasks.id = evaluations.event_task_id
+     LEFT JOIN exam_event_entries AS event_entries
+       ON event_entries.id = event_tasks.entry_id
+     LEFT JOIN exam_events AS events
+       ON events.id = event_entries.event_id
      ${where}
      ORDER BY evaluations.created_at DESC
      LIMIT 2000`,
