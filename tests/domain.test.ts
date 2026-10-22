@@ -45,6 +45,10 @@ import {
   BROWN_THEORY_TEMPLATE_SUMMARY,
 } from "../backend/src/brown-theory-template";
 import {
+  getTheoryTemplate,
+  listTheoryTemplateSummaries,
+} from "../backend/src/theory-templates";
+import {
   scoreTheoryAttempt,
   shuffleTheoryItems,
 } from "../backend/src/theory-attempt-domain";
@@ -198,10 +202,24 @@ describe("provas teóricas versionadas", () => {
       gridQuestionCount: 9,
       pendingMediaCount: 14,
     });
+
     expect(
       BROWN_THEORY_TEMPLATE.map((question) => validateTheoryQuestionInput(question))
         .filter((result) => typeof result === "string"),
     ).toEqual([]);
+  });
+
+  it("expõe somente os templates cadastrados no catálogo", () => {
+    expect(getTheoryTemplate("brown")?.beltId).toBe("brown");
+    expect(listTheoryTemplateSummaries()).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          beltId: "brown",
+          questionCount: expect.any(Number),
+          totalPoints: expect.any(Number),
+        }),
+      ]),
+    );
   });
 
   it("normaliza uma versão sem inventar regras ainda não configuradas", () => {

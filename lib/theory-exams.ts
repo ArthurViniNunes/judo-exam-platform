@@ -184,3 +184,14 @@ export function toTheoryYouTubeEmbedUrl(url: string) {
     return null;
   }
 }
+
+export type TheoryTemplateQuestion = {
+  type: TheoryQuestionType;
+  category: string;
+  prompt: string;
+  points: number;
+  explanation: string;
+  options: { text: string; isCorrect: boolean }[];
+  rows: { text: string; correctOptionIndexes: number[] }[];
+  mediaPending?: boolean;
+};

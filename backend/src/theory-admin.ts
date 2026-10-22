@@ -1,8 +1,9 @@
 import type { AuthUser } from "./contracts";
 import {
-  BROWN_THEORY_TEMPLATE,
-  BROWN_THEORY_TEMPLATE_SUMMARY,
-} from "./brown-theory-template";
+  getTheoryTemplate,
+  listTheoryTemplateSummaries,
+  summarizeTheoryTemplate,
+} from "./theory-templates";
 import { empty, json } from "./http";
 import {
   validateTheoryPublication,
@@ -174,6 +175,10 @@ export async function listTheoryVersions(request: Request, env: Env) {
   return json(request, env, result.results.map(formatVersion));
 }
 
+export function listTheoryTemplates(request: Request, env: Env) {
+  return json(request, env, listTheoryTemplateSummaries());
+}
+
 export async function getTheoryVersion(
   request: Request,
   env: Env,
@@ -300,37 +305,51 @@ export async function createTheoryVersion(
   return json(request, env, version, 201);
 }
 
-export async function importBrownTheoryTemplate(
+export async function importTheoryTemplate(
   request: Request,
   env: Env,
   user: AuthUser,
+  beltId: string,
 ) {
+  const template = getTheoryTemplate(beltId);
+  if (!template) {
+    return json(request, env, { error: "Não existe um template cadastrado para esta faixa." }, 404);
+  }
+
   const existingDraft = await env.DB.prepare(
-    "SELECT id FROM theory_exam_versions WHERE belt_id = 'brown' AND status = 'draft' LIMIT 1",
-  ).first<{ id: string }>();
+    "SELECT id FROM theory_exam_versions WHERE belt_id = ? AND status = 'draft' LIMIT 1",
+  ).bind(template.beltId).first<{ id: string }>();
   if (existingDraft) {
     return json(
       request,
       env,
-      { error: "Já existe um rascunho para a faixa marrom. Abra esse caderno antes de importar outro." },
+      { error: `Já existe um rascunho para ${template.beltName}. Abra esse caderno antes de importar outro.` },
       409,
     );
   }
 
   const versionNumberRow = await env.DB.prepare(
-    "SELECT COALESCE(MAX(version_number), 0) + 1 AS version_number FROM theory_exam_versions WHERE belt_id = 'brown'",
-  ).first<{ version_number: number }>();
+    "SELECT COALESCE(MAX(version_number), 0) + 1 AS version_number FROM theory_exam_versions WHERE belt_id = ?",
+  ).bind(template.beltId).first<{ version_number: number }>();
   const versionId = crypto.randomUUID();
   const statements: D1PreparedStatement[] = [
     env.DB.prepare(
       `INSERT INTO theory_exam_versions (
          id, belt_id, belt_name, version_number, minimum_score,
          question_order, status, created_by
-       ) VALUES (?, 'brown', 'Faixa marrom — 1º Kyu', ?, 70, 'random', 'draft', ?)`,
-    ).bind(versionId, Number(versionNumberRow?.version_number ?? 1), user.id),
+       ) VALUES (?, ?, ?, ?, ?, ?, 'draft', ?)`,
+    ).bind(
+      versionId,
+      template.beltId,
+      template.beltName,
+      Number(versionNumberRow?.version_number ?? 1),
+      template.minimumScore,
+      template.questionOrder,
+      user.id,
+    ),
   ];
 
-  BROWN_THEORY_TEMPLATE.forEach((question, position) => {
+  template.questions.forEach((question, position) => {
     const questionId = crypto.randomUUID();
     const optionIds = question.options.map(() => crypto.randomUUID());
     statements.push(
@@ -379,8 +398,8 @@ export async function importBrownTheoryTemplate(
 
   statements.push(
     auditStatement(request, env, user, "theory_template.imported", "theory_exam_version", versionId, {
-      beltId: "brown",
-      ...BROWN_THEORY_TEMPLATE_SUMMARY,
+      beltId: template.beltId,
+      ...summarizeTheoryTemplate(template.questions),
     }),
   );
   await env.DB.batch(statements);

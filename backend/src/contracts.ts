@@ -1,3 +1,5 @@
+import type { TheoryQuestionType } from "../../lib/theory-exams";
+
 export type Role = "super_admin" | "evaluator" | "student";
 export type ProfessionalRole = Exclude<Role, "student">;
 export type SessionContext = "professional" | "student";
@@ -128,4 +130,15 @@ export type PracticalCandidateRow = Pick<StudentRow, "id" | "name"> & {
   belt_name: string | null;
   valid_from: string | null;
   source_attempt_id: string | null;
+};
+
+export type TheoryTemplateQuestion = {
+  type: TheoryQuestionType;
+  category: string;
+  prompt: string;
+  points: number;
+  explanation: string;
+  options: { text: string; isCorrect: boolean }[];
+  rows: { text: string; correctOptionIndexes: number[] }[];
+  mediaPending?: boolean;
 };
