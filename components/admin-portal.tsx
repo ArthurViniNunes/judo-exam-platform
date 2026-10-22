@@ -166,6 +166,10 @@ export function AdminPortal({
               evaluations={evaluations}
               loading={loading}
               reload={loadData}
+              user={user}
+              users={users}
+              evaluatorId={evaluatorId}
+              setEvaluatorId={setEvaluatorId}
             />
           )}
           {section === "events" && (

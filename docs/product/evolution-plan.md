@@ -248,6 +248,11 @@ O modo rápido mantém o padrão de cards, mas reduz interações:
 
 Inclui os pontos 2, 3, 6 e 7.
 
+**Estado: em execução.** A área de notas já possui filtros combináveis e um
+primeiro painel de dificuldades com média por categoria, distribuição dos
+critérios, técnicas com menor média e aviso para amostras pequenas. Comparações
+longitudinais e impressão sob demanda seguem como próximos marcos.
+
 #### 3.1 Evolução individual
 
 No perfil do judoca:
