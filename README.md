@@ -369,6 +369,13 @@ Todas as rotas abaixo, exceto `/`, `/health`, login/registro e a leitura públic
 | `POST` | `/api/evaluations` | autenticado | Registra uma avaliação |
 | `POST` | `/api/evaluations/sync` | autenticado | Sincroniza uma avaliação local de forma idempotente |
 | `DELETE` | `/api/evaluations/:id` | autenticado | Exclui uma avaliação permitida ao usuário |
+| `GET/POST` | `/api/exam-events` | autenticado / Super Admin | Lista eventos acessíveis ou cria um evento |
+| `GET/PATCH` | `/api/exam-events/:id` | participante / Super Admin | Consulta o evento completo ou edita sua preparação |
+| `POST` | `/api/exam-events/:id/status` | Super Admin | Avança o ciclo de vida do evento |
+| `POST` | `/api/exam-events/:id/evaluators` | Super Admin | Adiciona um avaliador participante |
+| `DELETE` | `/api/exam-events/:id/evaluators/:userId` | Super Admin | Remove um avaliador sem tarefas atribuídas |
+| `POST` | `/api/exam-events/:id/entries` | Super Admin | Inscreve um judoca elegível e cria suas modalidades |
+| `DELETE` | `/api/exam-events/:id/entries/:entryId` | Super Admin | Remove uma inscrição ainda não iniciada |
 | `GET` | `/api/users` | Super Admin | Lista usuários e métricas |
 | `POST` | `/api/users/invite` | Super Admin | Autoriza um e-mail |
 | `PATCH` | `/api/users/:id` | Super Admin | Ativa ou desativa um avaliador |
@@ -384,7 +391,12 @@ corepack pnpm backend:migrate:local
 corepack pnpm backend:migrate:remote
 ```
 
-O schema ativo cobre usuários e suas graduações, sessões, alunos, avaliações, médias por categoria, notas por técnica, execuções múltiplas, auditoria, cores globais e provas teóricas versionadas. Tabelas históricas de questões e matrizes permanecem nas migrações já aplicadas para evitar uma operação destrutiva, mas não são reutilizadas pelo fluxo novo. O estado local fica em `.wrangler/state` e não deve ser commitado.
+O schema ativo cobre usuários e suas graduações, sessões, alunos, avaliações,
+médias por categoria, notas por técnica, execuções múltiplas, auditoria, cores
+globais, provas teóricas versionadas e eventos com suas filas por modalidade.
+Tabelas históricas de questões e matrizes permanecem nas migrações já aplicadas
+para evitar uma operação destrutiva, mas não são reutilizadas pelo fluxo novo.
+O estado local fica em `.wrangler/state` e não deve ser commitado.
 
 ## Uso com conexão instável
 

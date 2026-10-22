@@ -101,6 +101,21 @@ export type StudentRow = {
   created_at: string;
 };
 
+export type ExamEventRow = {
+  id: string;
+  name: string;
+  event_date: string;
+  location: string | null;
+  notes: string | null;
+  status: "draft" | "open" | "in_progress" | "closed" | "archived";
+  created_by: string;
+  created_at: string;
+  updated_at: string;
+  started_at: string | null;
+  closed_at: string | null;
+  archived_at: string | null;
+};
+
 export type PracticalCandidateRow = Pick<StudentRow, "id" | "name"> & {
   eligibility_id: string | null;
   belt_id: string | null;

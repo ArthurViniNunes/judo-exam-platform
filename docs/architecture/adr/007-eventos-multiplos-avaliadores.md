@@ -1,7 +1,8 @@
 # ADR 007 — Eventos com múltiplos avaliadores e responsável por avaliação
 
-- Estado: proposta
+- Estado: aceita; implementação incremental
 - Data: 2026-10-21
+- Aceita em: 2026-10-22
 
 ## Contexto
 
@@ -11,10 +12,16 @@ iniciem por engano a mesma modalidade do mesmo judoca.
 
 ## Decisão proposta
 
-Criar a entidade `exam_event`, suas inscrições e seus avaliadores participantes.
-Cada modalidade de uma inscrição origina uma `evaluation_session`. Vários
+Criar a entidade `exam_events`, suas inscrições e seus avaliadores participantes.
+Cada modalidade de uma inscrição origina uma tarefa em `exam_event_tasks`. Vários
 avaliadores podem trabalhar no mesmo evento, mas cada sessão possui um único
 responsável ativo.
+
+O primeiro incremento entrega o ciclo de vida do evento, participantes,
+inscrições e tarefas. A tomada atômica de responsabilidade e a ligação da tarefa
+com a avaliação concluída entram no incremento seguinte. Esse corte mantém a
+migração aditiva e permite validar a organização do evento antes de alterar o
+fluxo principal do avaliador.
 
 Assumir uma sessão é uma atualização condicional no D1: só tem sucesso quando
 ela está livre e na versão esperada. O coordenador pode atribuir, liberar ou

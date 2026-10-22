@@ -49,6 +49,44 @@ import {
 } from "../backend/src/theory-attempt-domain";
 import { toTheoryYouTubeEmbedUrl } from "../lib/theory-exams";
 import { theoryExamsEnabled } from "../backend/src/features";
+import {
+  canTransitionExamEvent,
+  validateEventEntryInput,
+  validateExamEventInput,
+} from "../backend/src/exam-events-domain";
+
+describe("eventos de exame", () => {
+  it("valida os dados operacionais sem aceitar datas impossíveis", () => {
+    expect(validateExamEventInput({
+      name: " Exame de graduação  ",
+      eventDate: "2026-11-22",
+      location: " Dojo principal ",
+      notes: "Organizar por tatame.",
+    })).toEqual({
+      name: "Exame de graduação",
+      eventDate: "2026-11-22",
+      location: "Dojo principal",
+      notes: "Organizar por tatame.",
+    });
+    expect(validateExamEventInput({ name: "Exame", eventDate: "2026-02-30" })).toMatch(/data válida/);
+  });
+
+  it("mantém o ciclo do evento progressivo e auditável", () => {
+    expect(canTransitionExamEvent("draft", "open")).toBe(true);
+    expect(canTransitionExamEvent("open", "in_progress")).toBe(true);
+    expect(canTransitionExamEvent("in_progress", "archived")).toBe(false);
+    expect(canTransitionExamEvent("closed", "archived")).toBe(true);
+  });
+
+  it("exige ao menos uma modalidade por inscrição", () => {
+    expect(validateEventEntryInput({ studentId: "student-1", technical: true })).toEqual({
+      studentId: "student-1",
+      technical: true,
+      kataType: null,
+    });
+    expect(validateEventEntryInput({ studentId: "student-1" })).toMatch(/modalidade/);
+  });
+});
 
 describe("contexto de autenticação", () => {
   it("seleciona o papel permitido para cada porta de entrada", () => {

@@ -11,6 +11,17 @@ import {
   listStudents,
 } from "./evaluations";
 import {
+  addEventEntry,
+  addEventEvaluator,
+  createExamEvent,
+  getExamEvent,
+  listExamEvents,
+  removeEventEntry,
+  removeEventEvaluator,
+  transitionExamEvent,
+  updateExamEvent,
+} from "./exam-events";
+import {
   corsHeaders,
   json,
   requireProfessionalContext,
@@ -218,6 +229,46 @@ async function handleAuthenticatedRoute(
   }
   if (url.pathname === "/api/dashboard" && request.method === "GET") {
     return getDashboard(request, env, user, url);
+  }
+  if (url.pathname === "/api/exam-events") {
+    if (request.method === "GET") return listExamEvents(request, env, user);
+    if (request.method === "POST") {
+      const denied = requireSuperAdmin(request, env, user);
+      return denied || createExamEvent(request, env, user);
+    }
+  }
+  const eventStatusMatch = url.pathname.match(/^\/api\/exam-events\/([^/]+)\/status$/);
+  if (eventStatusMatch && request.method === "POST") {
+    const denied = requireSuperAdmin(request, env, user);
+    return denied || transitionExamEvent(request, env, user, eventStatusMatch[1]);
+  }
+  const eventEvaluatorsMatch = url.pathname.match(/^\/api\/exam-events\/([^/]+)\/evaluators$/);
+  if (eventEvaluatorsMatch && request.method === "POST") {
+    const denied = requireSuperAdmin(request, env, user);
+    return denied || addEventEvaluator(request, env, user, eventEvaluatorsMatch[1]);
+  }
+  const eventEvaluatorMatch = url.pathname.match(/^\/api\/exam-events\/([^/]+)\/evaluators\/([^/]+)$/);
+  if (eventEvaluatorMatch && request.method === "DELETE") {
+    const denied = requireSuperAdmin(request, env, user);
+    return denied || removeEventEvaluator(request, env, user, eventEvaluatorMatch[1], eventEvaluatorMatch[2]);
+  }
+  const eventEntriesMatch = url.pathname.match(/^\/api\/exam-events\/([^/]+)\/entries$/);
+  if (eventEntriesMatch && request.method === "POST") {
+    const denied = requireSuperAdmin(request, env, user);
+    return denied || addEventEntry(request, env, user, eventEntriesMatch[1]);
+  }
+  const eventEntryMatch = url.pathname.match(/^\/api\/exam-events\/([^/]+)\/entries\/([^/]+)$/);
+  if (eventEntryMatch && request.method === "DELETE") {
+    const denied = requireSuperAdmin(request, env, user);
+    return denied || removeEventEntry(request, env, user, eventEntryMatch[1], eventEntryMatch[2]);
+  }
+  const examEventMatch = url.pathname.match(/^\/api\/exam-events\/([^/]+)$/);
+  if (examEventMatch) {
+    if (request.method === "GET") return getExamEvent(request, env, user, examEventMatch[1]);
+    if (request.method === "PATCH") {
+      const denied = requireSuperAdmin(request, env, user);
+      return denied || updateExamEvent(request, env, user, examEventMatch[1]);
+    }
   }
   if (url.pathname === "/api/students/available" && request.method === "GET") {
     return listAvailableStudents(request, env);

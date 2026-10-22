@@ -141,6 +141,11 @@ evento deve evitar senha, token, hash ou cópia desnecessária de dados pessoais
 
 Inclui os pontos 10 e 11, considerados centrais.
 
+**Estado: em execução.** O modelo de eventos, participantes, inscrições,
+modalidades e ciclo de vida já está disponível na API. A fila operacional,
+tomada atômica de responsabilidade, painel e modo rápido seguem como marcos
+independentes.
+
 #### 2.1 Evento de exame com vários avaliadores
 
 Um Super Admin cria o evento e cadastra:
