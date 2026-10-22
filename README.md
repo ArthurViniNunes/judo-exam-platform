@@ -6,9 +6,11 @@ Aplicação web da Associação Judô Rogério Cruz para aplicar, registrar e ac
 
 - oferece entradas separadas para alunos e equipe, com o acesso de aluno como porta principal;
 - permite que a mesma identidade acumule os papéis de aluno e avaliador sem misturar seus contextos de sessão;
-- cadastra o aluno na equipe ao criar sua conta e reserva sua área para a futura prova teórica interna;
+- cadastra o aluno na equipe ao criar sua conta e aplica sua prova teórica dentro da plataforma;
 - registra, no primeiro cadastro do aluno, a graduação que ele pretende alcançar;
 - permite que o Super Admin prepare, revise, publique e encerre versões imutáveis das provas teóricas por graduação;
+- apresenta todas as questões em ordem aleatória, salva respostas, corrige no servidor e mostra o gabarito comentado depois da entrega;
+- aceita imagem, áudio, vídeo próprio ou YouTube nas questões teóricas;
 - autentica avaliadores e Super Admins com contas individuais;
 - permite que o Super Admin autorize e desative avaliadores;
 - aplica avaliações técnicas por graduação, selecionando automaticamente técnicas de faixas anteriores quando necessário;
@@ -20,9 +22,9 @@ Aplicação web da Associação Judô Rogério Cruz para aplicar, registrar e ac
 - mostra histórico, média e evolução por aluno;
 - oferece um painel com volume de avaliações, médias, aprovação e registros recentes;
 - permite que o Super Admin escolha, com modelos prontos ou seletores de cor, a identidade visual global dos temas claro e escuro;
-- mantém a aplicação da prova teórica desativada enquanto as questões oficiais e as regras restantes são preparadas.
+- cria elegibilidade sem expiração quando o aluno é aprovado e permite nova tentativa imediata quando ele reprova.
 
-As avaliações técnica e de kata são processadas na aplicação e persistidas na API. A área do aluno já está disponível, mas exibe a prova teórica como **não liberada** até existir conteúdo oficial publicado e serem entregues os fluxos de tentativa, correção e elegibilidade para a prova prática. O editor administrativo não cria perguntas provisórias automaticamente.
+As avaliações teórica, técnica e de kata são processadas na aplicação e persistidas na API. A prova teórica fica indisponível somente enquanto não existir uma versão oficial publicada para a graduação do aluno. O editor administrativo não cria perguntas provisórias automaticamente.
 
 ## Arquitetura
 
@@ -268,14 +270,15 @@ No celular, conectado à mesma rede Wi-Fi, abra `http://192.168.0.50:3000`, subs
 ## Fluxo de acesso
 
 1. A página principal abre a **Área do aluno**. No primeiro acesso, o judoca cria sua conta e entra automaticamente no cadastro de alunos da equipe.
-2. Enquanto as questões não forem publicadas, a área do aluno informa que a prova teórica ainda não foi liberada; nenhum formulário externo é aberto.
-3. Avaliadores usam o botão **Acesso de avaliador**. O Super Admin também pode compartilhar um convite, que já abre essa entrada no modo de criação de conta.
-4. Em **Equipe**, o Super Admin informa nome, e-mail e graduação do avaliador para autorizar o acesso profissional.
-5. Se um aluno também for avaliador, ele usa a mesma identidade e senha nas duas entradas. Cada login cria uma sessão limitada ao contexto escolhido.
-6. Em **Administração → Alunos**, usuários profissionais podem continuar cadastrando previamente judocas que ainda não possuem conta.
-7. Ao iniciar uma avaliação técnica ou de kata, o avaliador escolhe um judoca cadastrado; não existe entrada manual de nome no exame.
-8. Ao salvar a primeira avaliação, o sistema associa automaticamente o judoca ao usuário logado. O avaliador consulta apenas quem já avaliou e seus próprios registros, enquanto o Super Admin mantém a visão completa.
-9. O nome exibido pode ser alterado em **Ver e editar perfil**.
+2. Quando existe uma versão publicada para sua graduação, o aluno faz a prova na plataforma, sem limite de tempo. Todas as questões e alternativas são embaralhadas em cada tentativa.
+3. Depois da entrega, o aluno vê a nota, os acertos, os erros, a resposta correta e a explicação de cada questão. Se reprovar, pode tentar novamente imediatamente; se passar, a elegibilidade não expira.
+4. Avaliadores usam o botão **Acesso de avaliador**. O Super Admin também pode compartilhar um convite, que já abre essa entrada no modo de criação de conta.
+5. Em **Equipe**, o Super Admin informa nome, e-mail e graduação do avaliador para autorizar o acesso profissional.
+6. Se um aluno também for avaliador, ele usa a mesma identidade e senha nas duas entradas. Cada login cria uma sessão limitada ao contexto escolhido.
+7. Em **Administração → Alunos**, usuários profissionais podem continuar cadastrando previamente judocas que ainda não possuem conta.
+8. Ao iniciar uma avaliação técnica ou de kata, o avaliador escolhe um judoca cadastrado; não existe entrada manual de nome no exame.
+9. Ao salvar a primeira avaliação, o sistema associa automaticamente o judoca ao usuário logado. O avaliador consulta apenas quem já avaliou e seus próprios registros, enquanto o Super Admin mantém a visão completa.
+10. O nome exibido pode ser alterado em **Ver e editar perfil**.
 
 Não há envio automático de convite, recuperação de senha ou redefinição por e-mail. A autorização precisa ser comunicada manualmente ao avaliador.
 

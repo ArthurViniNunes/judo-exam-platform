@@ -6,7 +6,7 @@ a fonte de verdade do respectivo escopo.
 
 | Documento | Objetivo | Estado |
 | --- | --- | --- |
-| [Exame teórico na plataforma](theoretical-exam-plan.md) | Fase 0: identidade do aluno, duas entradas, prova versionada e elegibilidade prática | 0.1 e 0.2 entregues; 0.3 aguarda regras |
+| [Exame teórico na plataforma](theoretical-exam-plan.md) | Fase 0: identidade do aluno, duas entradas, prova versionada e elegibilidade prática | 0.1 a 0.3 entregues; conteýo oficial pendente |
 | [Plano de evolução](evolution-plan.md) | Escopo, fases, critérios de aceite, dados, APIs e UX das próximas versões | Aguardando aprovação |
 
 As decisões estruturais associadas estão em

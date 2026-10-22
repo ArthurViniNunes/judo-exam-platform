@@ -210,16 +210,22 @@ export async function getAvailableTheoryExam(
   }
 
   const eligibility = await env.DB.prepare(
-    "SELECT belt_id, belt_name, valid_from FROM student_eligibilities WHERE student_id = ? AND revoked_at IS NULL AND (valid_until IS NULL OR valid_until > CURRENT_TIMESTAMP) ORDER BY valid_from DESC LIMIT 1",
+    "SELECT belt_id, belt_name, valid_from, source_attempt_id FROM student_eligibilities WHERE student_id = ? AND revoked_at IS NULL AND (valid_until IS NULL OR valid_until > CURRENT_TIMESTAMP) ORDER BY valid_from DESC LIMIT 1",
   )
     .bind(student.id)
-    .first<{ belt_id: string; belt_name: string; valid_from: string }>();
+    .first<{
+      belt_id: string;
+      belt_name: string;
+      valid_from: string;
+      source_attempt_id: string | null;
+    }>();
   if (eligibility) {
     return json(request, env, {
       status: "eligible",
       beltId: eligibility.belt_id,
       beltName: eligibility.belt_name,
       validFrom: eligibility.valid_from,
+      latestAttemptId: eligibility.source_attempt_id,
     });
   }
 

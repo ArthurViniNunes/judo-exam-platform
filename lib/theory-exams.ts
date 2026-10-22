@@ -136,4 +136,29 @@ export type StudentTheoryAvailability =
       };
     }
   | { status: "in_progress"; attempt: StudentTheoryAttempt | null }
-  | { status: "eligible"; beltId: string; beltName: string; validFrom: string };
+  | {
+      status: "eligible";
+      beltId: string;
+      beltName: string;
+      validFrom: string;
+      latestAttemptId: string | null;
+    };
+
+export function toTheoryYouTubeEmbedUrl(url: string) {
+  try {
+    const parsed = new URL(url);
+    const host = parsed.hostname.toLowerCase().replace(/^www\./, "");
+    let videoId = "";
+    if (host === "youtu.be") videoId = parsed.pathname.slice(1).split("/")[0];
+    if (host === "youtube.com" || host === "m.youtube.com" || host === "youtube-nocookie.com") {
+      if (parsed.pathname === "/watch") videoId = parsed.searchParams.get("v") || "";
+      else if (parsed.pathname.startsWith("/embed/") || parsed.pathname.startsWith("/shorts/")) {
+        videoId = parsed.pathname.split("/")[2] || "";
+      }
+    }
+    if (!/^[A-Za-z0-9_-]{6,}$/.test(videoId)) return null;
+    return `https://www.youtube-nocookie.com/embed/${videoId}?playsinline=1&rel=0`;
+  } catch {
+    return null;
+  }
+}

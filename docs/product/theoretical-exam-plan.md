@@ -262,10 +262,11 @@ aluno. Toda autorização é validada no backend.
 ### 0.2 — Provas versionadas
 
 **Estado: infraestrutura e gestão concluídas; conteúdo oficial pendente.** O
-Super Admin já pode criar cadernos vazios por graduação, configurar nota e
-ordem, cadastrar perguntas com gabarito, explicação e mídia, publicar uma
+Super Admin já pode criar cadernos vazios por graduação, configurar a nota,
+cadastrar perguntas com gabarito, explicação e mídia, publicar uma
 versão imutável e encerrá-la. O schema de tentativas e elegibilidades também já
-existe, mas ainda não é exposto ao aluno.
+existe e é usado pela área do aluno. A ordem aleatória é uma regra fixa, não
+uma configuração administrativa.
 
 - criar schema de provas e tentativas;
 - cadastrar o conteúdo oficial quando ele for disponibilizado;
@@ -275,13 +276,15 @@ existe, mas ainda não é exposto ao aluno.
 
 ### 0.3 — Aplicação e correção
 
-**Estado: motor de aplicação e correção concluído; interface em andamento.** A
+**Estado: concluída; conteúdo oficial pendente.** A
 área do aluno consulta o próprio cadastro e suas elegibilidades diretamente no
 backend. A API já inicia ou retoma uma tentativa, embaralha todas as questões e
 alternativas, salva cada resposta, exige a prova completa para entrega, corrige
 no servidor, libera o gabarito comentado somente depois da entrega e cria a
 elegibilidade quando há aprovação. Mídias são congeladas junto da tentativa e
-entregues com descrição neutra, sem expor campos do gabarito.
+entregues com descrição neutra, sem expor campos do gabarito. A interface
+mobile-first aplica a prova uma questão por vez, permite revisão antes da entrega
+e apresenta a correção comentada no mesmo fluxo.
 
 - salvar cada resposta;
 - permitir retomada segura;

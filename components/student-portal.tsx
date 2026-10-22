@@ -2,7 +2,6 @@
 
 import {
   BookOpenCheck,
-  CheckCircle2,
   Clock3,
   LogOut,
   Moon,
@@ -15,6 +14,7 @@ import { FormEvent, useCallback, useEffect, useState } from "react";
 import { apiRequest } from "@/lib/api";
 import type { AuthUser, StudentProfile } from "@/lib/platform";
 import { THEORY_BELTS } from "@/lib/theory-exams";
+import { StudentTheoryExam } from "./student-theory-exam";
 
 const LOGO = "https://media.base44.com/images/public/6a9b8ceb32f349c5600d2fdc/ecc432c62_41508.png/v1/fit/w_176,h_176,q_90,usm_0.66_1.00_0.01,enc_webp,quality_auto/ecc432c62_41508.webp";
 
@@ -62,8 +62,6 @@ export function StudentPortal({
     const timer = window.setTimeout(() => void loadProfile(), 0);
     return () => window.clearTimeout(timer);
   }, [loadProfile]);
-
-  const eligibility = profile?.currentEligibility ?? null;
 
   const saveTargetBelt = async (event: FormEvent) => {
     event.preventDefault();
@@ -158,35 +156,8 @@ export function StudentPortal({
               </button>
             </form>
           </article>
-        ) : eligibility ? (
-          <article className="theory-admission theory-admission-approved" aria-labelledby="theory-status-title">
-            <div className="theory-admission-icon"><CheckCircle2 size={28} /></div>
-            <div className="theory-admission-copy">
-              <span className="theory-status"><CheckCircle2 size={15} /> Apto à prática</span>
-              <h2 id="theory-status-title">Teórico concluído: {eligibility.beltName}</h2>
-              <p>Sua aprovação está registrada e esta é a graduação autorizada para a avaliação prática.</p>
-            </div>
-            <ul>
-              <li><CheckCircle2 size={17} /> Cadastro de aluno confirmado</li>
-              <li><CheckCircle2 size={17} /> Elegibilidade teórica ativa</li>
-            </ul>
-          </article>
         ) : (
-          <article className="theory-admission" aria-labelledby="theory-status-title">
-            <div className="theory-admission-icon"><BookOpenCheck size={28} /></div>
-            <div className="theory-admission-copy">
-              <span className="theory-status"><Clock3 size={15} /> Em preparação</span>
-              <h2 id="theory-status-title">Prova ainda não liberada</h2>
-              <p>
-                Seu cadastro já está ativo. A associação avisará quando a prova
-                correspondente à sua próxima graduação estiver disponível.
-              </p>
-            </div>
-            <ul>
-              <li><CheckCircle2 size={17} /> Cadastro de aluno confirmado</li>
-              <li><Clock3 size={17} /> Aguardando prova de {profile?.student.targetBeltName}</li>
-            </ul>
-          </article>
+          <StudentTheoryExam />
         )}
 
         {hasProfessionalAccess && (

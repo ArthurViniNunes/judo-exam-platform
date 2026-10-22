@@ -230,7 +230,8 @@ export async function createTheoryVersion(
   env: Env,
   user: AuthUser,
 ) {
-  const input = validateTheoryVersionInput(await request.json<unknown>());
+  const body = await request.json<Record<string, unknown>>();
+  const input = validateTheoryVersionInput({ ...body, questionOrder: "random" });
   if (typeof input === "string") return json(request, env, { error: input }, 400);
 
   const versionId = crypto.randomUUID();
@@ -274,7 +275,7 @@ export async function updateTheoryVersion(
   const input = validateTheoryVersionInput({
     beltId: current.beltId,
     minimumScore: body.minimumScore,
-    questionOrder: body.questionOrder,
+    questionOrder: "random",
   });
   if (typeof input === "string") return json(request, env, { error: input }, 400);
 

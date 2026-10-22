@@ -43,6 +43,7 @@ import {
   scoreTheoryAttempt,
   shuffleTheoryItems,
 } from "../backend/src/theory-attempt-domain";
+import { toTheoryYouTubeEmbedUrl } from "../lib/theory-exams";
 
 describe("contexto de autenticação", () => {
   it("seleciona o papel permitido para cada porta de entrada", () => {
@@ -99,6 +100,24 @@ describe("perfil do aluno", () => {
         now,
       ),
     ).toBe("revoked");
+  });
+});
+
+describe("mídia da prova teórica", () => {
+  it("converte links do YouTube para o player com privacidade ampliada", () => {
+    expect(toTheoryYouTubeEmbedUrl("https://youtu.be/abcdefghijk")).toBe(
+      "https://www.youtube-nocookie.com/embed/abcdefghijk?playsinline=1&rel=0",
+    );
+    expect(
+      toTheoryYouTubeEmbedUrl("https://www.youtube.com/watch?v=abcdefghijk"),
+    ).toBe(
+      "https://www.youtube-nocookie.com/embed/abcdefghijk?playsinline=1&rel=0",
+    );
+  });
+
+  it("recusa endereços que não identificam um vídeo do YouTube", () => {
+    expect(toTheoryYouTubeEmbedUrl("https://example.com/video")).toBeNull();
+    expect(toTheoryYouTubeEmbedUrl("endereço inválido")).toBeNull();
   });
 });
 

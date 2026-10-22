@@ -3673,6 +3673,278 @@ td:first-child {
   font-weight: 850;
 }
 .theory-target-choice form > button:disabled { opacity: 0.55; }
+
+/* Student theoretical exam */
+.student-portal-content:has(.student-theory-workspace),
+.student-portal-content:has(.student-theory-result) { width: min(100%, 1060px); }
+.student-portal-content:has(.student-theory-workspace) .student-welcome,
+.student-portal-content:has(.student-theory-result) .student-welcome { display: none; }
+.student-theory-ready {
+  padding: 20px;
+  border: 1px solid var(--mg-line);
+  border-radius: 20px;
+  background: var(--mg-surface);
+  box-shadow: 0 18px 44px color-mix(in srgb, var(--mg-ink) 8%, transparent);
+  display: grid;
+  grid-template-columns: 50px minmax(0, 1fr);
+  gap: 14px;
+}
+.student-theory-ready-icon {
+  width: 50px;
+  height: 50px;
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--mg-accent) 13%, var(--mg-surface));
+  color: var(--mg-accent-strong);
+  display: grid;
+  place-items: center;
+}
+.student-theory-ready > div > span,
+.student-theory-result > header > div > span {
+  color: var(--mg-accent-strong);
+  font-size: 10px;
+  font-weight: 850;
+}
+.student-theory-ready h2,
+.student-theory-result h2 {
+  margin: 5px 0 7px;
+  color: var(--mg-ink);
+  font-family: Oswald, "Arial Narrow", sans-serif;
+  font-size: 27px;
+  font-weight: 560;
+  line-height: 1.08;
+}
+.student-theory-ready p,
+.student-theory-result header p { margin: 0; color: var(--mg-muted); font-size: 12px; line-height: 1.55; }
+.student-theory-ready dl {
+  grid-column: 1 / -1;
+  margin: 3px 0 0;
+  padding: 14px 0;
+  border-block: 1px solid var(--mg-line);
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+}
+.student-theory-ready dl > div { min-width: 0; padding: 0 9px; text-align: center; }
+.student-theory-ready dl > div + div { border-left: 1px solid var(--mg-line); }
+.student-theory-ready dt { color: var(--mg-muted); font-size: 9px; }
+.student-theory-ready dd { margin: 5px 0 0; color: var(--mg-ink); font-size: 13px; font-weight: 850; overflow-wrap: anywhere; }
+.student-theory-ready > button,
+.student-theory-retry {
+  grid-column: 1 / -1;
+  min-height: 50px;
+  border: 0;
+  border-radius: 11px;
+  background: var(--mg-accent);
+  color: var(--mg-accent-text);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  font-weight: 850;
+}
+.student-theory-ready > button:disabled,
+.student-theory-retry:disabled { opacity: 0.6; }
+.student-theory-workspace { min-width: 0; display: grid; gap: 14px; }
+.student-theory-runner-header {
+  padding: 14px;
+  border: 1px solid var(--mg-line);
+  border-radius: 15px;
+  background: var(--mg-surface);
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 11px;
+}
+.student-theory-runner-header > div:first-child { min-width: 0; display: grid; gap: 3px; }
+.student-theory-runner-header > div:first-child span { color: var(--mg-accent-strong); font-size: 9px; font-weight: 850; }
+.student-theory-runner-header > div:first-child strong { color: var(--mg-ink); font-size: 12px; }
+.student-theory-runner-header > button,
+.student-theory-review > header > button {
+  min-height: 44px;
+  padding: 8px 11px;
+  border: 1px solid var(--mg-line);
+  border-radius: 10px;
+  background: var(--mg-surface-soft);
+  color: var(--mg-ink);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  font-size: 10px;
+  font-weight: 800;
+}
+.student-theory-progress {
+  grid-column: 1 / -1;
+  height: 7px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: var(--mg-bg);
+}
+.student-theory-progress i { height: 100%; border-radius: inherit; background: var(--mg-accent); display: block; transition: width 180ms ease; }
+.student-theory-question-card {
+  min-width: 0;
+  padding: 20px 16px;
+  border: 1px solid var(--mg-line);
+  border-radius: 20px;
+  background: var(--mg-surface);
+  box-shadow: 0 18px 44px color-mix(in srgb, var(--mg-ink) 7%, transparent);
+}
+.student-theory-question-card > header { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.student-theory-question-card > header span { color: var(--mg-accent-strong); font-size: 10px; font-weight: 850; }
+.student-theory-question-card > header small { color: var(--mg-muted); font-size: 9px; }
+.student-theory-question-card h2 {
+  margin: 18px 0;
+  color: var(--mg-ink);
+  font-family: Oswald, "Arial Narrow", sans-serif;
+  font-size: clamp(25px, 8vw, 38px);
+  font-weight: 530;
+  line-height: 1.17;
+  overflow-wrap: anywhere;
+}
+.student-theory-image,
+.student-theory-video,
+.student-theory-audio,
+.student-theory-youtube,
+.student-theory-media-error { width: 100%; margin: 0 0 18px; }
+.student-theory-image,
+.student-theory-video { max-height: 430px; border-radius: 13px; background: #090909; object-fit: contain; }
+.student-theory-audio { min-height: 54px; }
+.student-theory-youtube { position: relative; overflow: hidden; border-radius: 13px; aspect-ratio: 16 / 9; background: #090909; }
+.student-theory-youtube iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; }
+.student-theory-media-error { min-height: 90px; padding: 18px; border: 1px dashed var(--mg-line); border-radius: 12px; color: var(--mg-muted); display: grid; place-items: center; font-size: 11px; }
+.student-theory-options { min-width: 0; margin: 0; padding: 0; border: 0; }
+.student-theory-options legend { margin-bottom: 10px; color: var(--mg-muted); font-size: 10px; font-weight: 800; }
+.student-theory-options label {
+  min-width: 0;
+  min-height: 58px;
+  padding: 9px 11px;
+  border: 1px solid var(--mg-line);
+  border-radius: 12px;
+  background: var(--mg-surface-soft);
+  color: var(--mg-ink);
+  display: grid;
+  grid-template-columns: 34px minmax(0, 1fr) 20px;
+  align-items: center;
+  gap: 9px;
+  cursor: pointer;
+  font-size: 12px;
+  line-height: 1.4;
+}
+.student-theory-options label + label { margin-top: 8px; }
+.student-theory-options label.selected { border-color: var(--mg-accent); background: color-mix(in srgb, var(--mg-accent) 10%, var(--mg-surface)); }
+.student-theory-options input { position: absolute; opacity: 0; pointer-events: none; }
+.student-theory-option-letter { width: 34px; height: 34px; border-radius: 9px; background: var(--mg-bg); color: var(--mg-muted); display: grid; place-items: center; font-weight: 850; }
+.student-theory-options label.selected .student-theory-option-letter { background: var(--mg-accent); color: var(--mg-accent-text); }
+.student-theory-options label > svg { color: var(--mg-accent-strong); }
+.student-theory-save-state { min-height: 25px; margin-top: 12px; color: var(--mg-muted); display: flex; align-items: center; gap: 6px; font-size: 10px; }
+.student-theory-save-state .spin { animation: spin 0.8s linear infinite; }
+.student-theory-error { margin-top: 11px; padding: 11px 12px; border: 1px solid color-mix(in srgb, #c63d31 55%, var(--mg-line)); border-radius: 10px; background: color-mix(in srgb, #c63d31 8%, var(--mg-surface)); color: color-mix(in srgb, #b2362d 75%, var(--mg-ink)); font-size: 11px; line-height: 1.5; }
+.dark .student-theory-error { color: #ffaaa2; }
+.student-theory-error strong { display: block; }
+.student-theory-error ul { margin: 7px 0 0; padding-left: 18px; }
+.student-theory-navigation {
+  position: sticky;
+  z-index: 5;
+  bottom: 10px;
+  padding: 7px;
+  border: 1px solid var(--mg-line);
+  border-radius: 15px;
+  background: color-mix(in srgb, var(--mg-surface) 94%, transparent);
+  box-shadow: 0 10px 35px color-mix(in srgb, var(--mg-ink) 15%, transparent);
+  backdrop-filter: blur(12px);
+  display: grid;
+  grid-template-columns: 1fr 1.25fr;
+  gap: 7px;
+}
+.student-theory-navigation button {
+  min-height: 48px;
+  padding: 8px;
+  border: 0;
+  border-radius: 10px;
+  background: var(--mg-accent);
+  color: var(--mg-accent-text);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  font-weight: 850;
+}
+.student-theory-navigation button.secondary { border: 1px solid var(--mg-line); background: var(--mg-surface-soft); color: var(--mg-ink); }
+.student-theory-navigation button:disabled { opacity: 0.45; }
+.student-theory-review > header { display: grid; gap: 13px; }
+.student-theory-review > header > button { width: fit-content; }
+.student-theory-review > header > div > span { color: var(--mg-accent-strong); font-size: 10px; font-weight: 850; }
+.student-theory-review h2 { margin: 5px 0; color: var(--mg-ink); font-family: Oswald, "Arial Narrow", sans-serif; font-size: 34px; font-weight: 540; line-height: 1.05; }
+.student-theory-review > header p { margin: 0; color: var(--mg-muted); font-size: 12px; line-height: 1.5; }
+.student-theory-review-list { display: grid; gap: 8px; }
+.student-theory-review-list > button { min-height: 64px; padding: 10px 12px; border: 1px solid var(--mg-line); border-radius: 12px; background: var(--mg-surface); color: var(--mg-ink); display: grid; grid-template-columns: 24px minmax(0, 1fr) 20px; align-items: center; gap: 9px; text-align: left; }
+.student-theory-review-list > button.answered > span { color: var(--mg-accent-strong); }
+.student-theory-review-list > button.pending > span { color: var(--mg-gold); }
+.student-theory-review-list > button > div { min-width: 0; display: grid; gap: 3px; }
+.student-theory-review-list strong { font-size: 11px; }
+.student-theory-review-list small { overflow: hidden; color: var(--mg-muted); font-size: 10px; text-overflow: ellipsis; white-space: nowrap; }
+.student-theory-submit-bar { padding: 15px; border: 1px solid var(--mg-line); border-radius: 15px; background: var(--mg-surface); display: grid; gap: 12px; }
+.student-theory-submit-bar > div { display: grid; gap: 3px; }
+.student-theory-submit-bar strong { color: var(--mg-ink); font-size: 12px; }
+.student-theory-submit-bar span { color: var(--mg-muted); font-size: 10px; line-height: 1.45; }
+.student-theory-submit-bar button { min-height: 48px; border: 0; border-radius: 10px; background: var(--mg-accent); color: var(--mg-accent-text); display: inline-flex; align-items: center; justify-content: center; gap: 7px; font-weight: 850; }
+.student-theory-submit-bar button:disabled { opacity: 0.45; }
+.student-theory-result { min-width: 0; display: grid; gap: 16px; }
+.student-theory-result > header { padding: 18px; border: 1px solid var(--mg-line); border-radius: 20px; background: var(--mg-surface); display: grid; grid-template-columns: 48px minmax(0, 1fr); gap: 13px; }
+.student-theory-result-icon { width: 48px; height: 48px; border-radius: 14px; background: color-mix(in srgb, var(--mg-accent) 12%, var(--mg-surface)); color: var(--mg-accent-strong); display: grid; place-items: center; }
+.student-theory-result.failed .student-theory-result-icon { background: color-mix(in srgb, var(--mg-gold) 13%, var(--mg-surface)); color: var(--mg-gold); }
+.student-theory-score { grid-column: 1 / -1; color: var(--mg-ink); font-family: Oswald, "Arial Narrow", sans-serif; font-size: 52px; font-weight: 550; line-height: 1; }
+.student-theory-score small { margin-left: 3px; color: var(--mg-muted); font-size: 20px; }
+.student-theory-result-summary { padding: 14px 16px; border-left: 4px solid var(--mg-accent); border-radius: 4px 12px 12px 4px; background: var(--mg-surface-soft); color: var(--mg-muted); display: grid; gap: 5px; font-size: 10px; line-height: 1.45; }
+.student-theory-correction { display: grid; gap: 10px; }
+.student-theory-correction > h3 { margin: 4px 0 2px; color: var(--mg-ink); font-family: Oswald, "Arial Narrow", sans-serif; font-size: 24px; font-weight: 550; }
+.student-theory-correction > article { min-width: 0; overflow: hidden; padding: 16px; border: 1px solid var(--mg-line); border-radius: 16px; background: var(--mg-surface); }
+.student-theory-correction > article.correct { border-left: 4px solid var(--mg-accent); }
+.student-theory-correction > article.incorrect { border-left: 4px solid #c84b3f; }
+.student-theory-correction article > header { display: grid; grid-template-columns: 22px minmax(0, 1fr) auto; gap: 9px; align-items: start; }
+.student-theory-correction article.correct > header > span { color: var(--mg-accent-strong); }
+.student-theory-correction article.incorrect > header > span { color: #c84b3f; }
+.dark .student-theory-correction article.incorrect > header > span { color: #ffaaa2; }
+.student-theory-correction article > header > div { min-width: 0; display: grid; gap: 4px; }
+.student-theory-correction article > header small { color: var(--mg-muted); font-size: 9px; }
+.student-theory-correction article > header strong { color: var(--mg-ink); font-size: 12px; line-height: 1.45; overflow-wrap: anywhere; }
+.student-theory-correction article > header b { color: var(--mg-ink); font-size: 11px; }
+.student-theory-correction article > .student-theory-image,
+.student-theory-correction article > .student-theory-video,
+.student-theory-correction article > .student-theory-audio,
+.student-theory-correction article > .student-theory-youtube { margin-top: 14px; }
+.student-theory-correction dl { margin: 14px 0 0; display: grid; gap: 8px; }
+.student-theory-correction dl > div { padding: 10px 11px; border-radius: 10px; background: var(--mg-surface-soft); }
+.student-theory-correction dt { color: var(--mg-muted); font-size: 9px; font-weight: 800; }
+.student-theory-correction dd { margin: 4px 0 0; color: var(--mg-ink); font-size: 11px; line-height: 1.5; overflow-wrap: anywhere; }
+
+@media (min-width: 640px) {
+  .student-theory-ready { padding: 25px; grid-template-columns: 58px minmax(0, 1fr) auto; align-items: center; }
+  .student-theory-ready-icon { width: 58px; height: 58px; }
+  .student-theory-ready dl { grid-column: 2 / -1; }
+  .student-theory-ready > button { grid-column: 2 / -1; min-width: 210px; justify-self: end; }
+  .student-theory-question-card { padding: 28px; }
+  .student-theory-question-card h2 { margin-block: 22px; }
+  .student-theory-options label { min-height: 64px; padding-inline: 14px; }
+  .student-theory-submit-bar { grid-template-columns: minmax(0, 1fr) auto; align-items: center; }
+  .student-theory-submit-bar button { min-width: 190px; }
+  .student-theory-result > header { padding: 25px; grid-template-columns: 58px minmax(0, 1fr) auto; align-items: center; }
+  .student-theory-result-icon { width: 58px; height: 58px; }
+  .student-theory-score { grid-column: 3; grid-row: 1; }
+  .student-theory-correction > article { padding: 20px; }
+}
+
+@media (min-width: 960px) {
+  .student-theory-workspace { grid-template-columns: 220px minmax(0, 1fr); align-items: start; }
+  .student-theory-runner-header { position: sticky; top: 18px; grid-column: 1; grid-row: 1 / span 2; }
+  .student-theory-question-card { grid-column: 2; }
+  .student-theory-navigation { grid-column: 2; }
+  .student-theory-review { grid-template-columns: minmax(0, 1fr) 320px; }
+  .student-theory-review > header { grid-column: 1 / -1; }
+  .student-theory-review-list { grid-column: 1; }
+  .student-theory-review .student-theory-submit-bar { position: sticky; top: 18px; grid-column: 2; grid-row: 2; grid-template-columns: 1fr; }
+  .student-theory-correction { grid-template-columns: 1fr 1fr; align-items: start; }
+  .student-theory-correction > h3 { grid-column: 1 / -1; }
+}
 .student-professional-switch {
   padding: 16px;
   border: 1px solid var(--mg-line);
@@ -3867,6 +4139,20 @@ td:first-child {
 }
 .theory-version-settings input:disabled,
 .theory-version-settings select:disabled { opacity: 0.8; color: var(--mg-muted); }
+.theory-random-rule {
+  min-height: 64px;
+  padding: 11px 12px;
+  border: 1px solid var(--mg-line);
+  border-radius: 11px;
+  background: var(--mg-surface-soft);
+  color: var(--mg-accent-strong);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.theory-random-rule > span { min-width: 0; display: grid; gap: 3px; }
+.theory-random-rule strong { color: var(--mg-ink); font-size: 11px; }
+.theory-random-rule small { color: var(--mg-muted); font-size: 9px; line-height: 1.4; }
 .theory-questions-section { overflow: hidden; }
 .theory-questions-section > header { min-height: 70px; padding: 12px 14px; border-bottom: 1px solid var(--mg-line); }
 .theory-questions-section > header button { min-height: 44px; padding-inline: 12px; }

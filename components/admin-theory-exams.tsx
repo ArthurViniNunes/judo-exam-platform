@@ -14,6 +14,7 @@ import {
   Plus,
   Save,
   Send,
+  Shuffle,
   Trash2,
   X,
 } from "lucide-react";
@@ -26,7 +27,6 @@ import {
   type TheoryExamVersionSummary,
   type TheoryMediaKind,
   type TheoryQuestion,
-  type TheoryQuestionOrder,
 } from "@/lib/theory-exams";
 import { EmptyState, formatDate, LoadingBlock } from "./admin-portal-shared";
 
@@ -71,7 +71,7 @@ function CreateVersionDialog({
         "/api/theory/admin/versions",
         {
           method: "POST",
-          body: JSON.stringify({ beltId, minimumScore: null, questionOrder: null }),
+          body: JSON.stringify({ beltId, minimumScore: null, questionOrder: "random" }),
         },
       );
       onCreated(version);
@@ -96,7 +96,7 @@ function CreateVersionDialog({
         </button>
         <span className="theory-dialog-symbol"><FileQuestion size={23} /></span>
         <h2 id="create-version-title">Novo caderno de prova</h2>
-        <p>A versão começa vazia. Nota mínima e ordem serão definidas antes da publicação.</p>
+        <p>A versão começa vazia. Você define a nota mínima e cadastra as questões oficiais.</p>
         <form onSubmit={submit}>
           <label>
             Graduação
@@ -464,7 +464,6 @@ export function TheoryExamsView() {
   const [createOpen, setCreateOpen] = useState(false);
   const [editingQuestion, setEditingQuestion] = useState<TheoryQuestion | "new" | null>(null);
   const [minimumScore, setMinimumScore] = useState("");
-  const [questionOrder, setQuestionOrder] = useState<TheoryQuestionOrder | "">("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [errorDetails, setErrorDetails] = useState<string[]>([]);
@@ -473,7 +472,6 @@ export function TheoryExamsView() {
   const mergeVersion = useCallback((next: TheoryExamVersion) => {
     setVersion(next);
     setMinimumScore(next.minimumScore === null ? "" : String(next.minimumScore));
-    setQuestionOrder(next.questionOrder ?? "");
     setVersions((current) => current.map((item) => item.id === next.id ? next : item));
   }, []);
 
@@ -527,7 +525,7 @@ export function TheoryExamsView() {
           method: "PATCH",
           body: JSON.stringify({
             minimumScore: minimumScore === "" ? null : Number(minimumScore),
-            questionOrder: questionOrder || null,
+            questionOrder: "random",
           }),
         },
       );
@@ -609,7 +607,7 @@ export function TheoryExamsView() {
     if (!version) return [];
     return [
       { label: "Nota mínima definida", ready: version.minimumScore !== null },
-      { label: "Ordem das questões definida", ready: version.questionOrder !== null },
+      { label: "Questões em ordem aleatória", ready: true },
       { label: "Pelo menos uma questão", ready: version.questions.length > 0 },
       {
         label: "Todas as questões possuem explicação",
@@ -702,7 +700,7 @@ export function TheoryExamsView() {
 
               <form className="theory-version-settings" onSubmit={saveConfiguration}>
                 <header>
-                  <div><strong>Regras da versão</strong><span>Percentual e apresentação</span></div>
+                  <div><strong>Regras da versão</strong><span>Aprovação e apresentação</span></div>
                   {version.status === "draft" && (
                     <button className="management-secondary" disabled={busy}>
                       <Save size={17} /> Salvar
@@ -723,18 +721,13 @@ export function TheoryExamsView() {
                       onChange={(event) => setMinimumScore(event.target.value)}
                     />
                   </label>
-                  <label>
-                    Ordem das questões
-                    <select
-                      disabled={version.status !== "draft"}
-                      value={questionOrder}
-                      onChange={(event) => setQuestionOrder(event.target.value as TheoryQuestionOrder | "")}
-                    >
-                      <option value="">A definir</option>
-                      <option value="fixed">Fixa</option>
-                      <option value="random">Aleatória por tentativa</option>
-                    </select>
-                  </label>
+                  <div className="theory-random-rule">
+                    <Shuffle size={20} aria-hidden="true" />
+                    <span>
+                      <strong>Ordem aleatória</strong>
+                      <small>Todas as questões aparecem, embaralhadas a cada tentativa.</small>
+                    </span>
+                  </div>
                 </div>
               </form>
 
