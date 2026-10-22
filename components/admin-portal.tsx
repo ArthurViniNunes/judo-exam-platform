@@ -1,6 +1,6 @@
 "use client";
 
-import { ClipboardList, LayoutDashboard, Palette, ShieldCheck, Users } from "lucide-react";
+import { ClipboardList, FileQuestion, LayoutDashboard, Palette, ShieldCheck, Users } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Overview, StudentsView } from "@/components/admin-overview";
 import { EvaluationsView } from "@/components/admin-evaluations";
@@ -11,6 +11,7 @@ import {
 import { AdminPortalShell } from "@/components/admin-portal-shell";
 import { TeamView } from "@/components/admin-portal-team";
 import { ThemeSettingsView } from "@/components/admin-theme-settings";
+import { TheoryExamsView } from "@/components/admin-theory-exams";
 import { apiRequest } from "@/lib/api";
 import type {
   AuthUser,
@@ -101,6 +102,7 @@ export function AdminPortal({
       { id: "students" as const, label: "Alunos", icon: <Users size={19} /> },
       ...(user.role === "super_admin"
         ? [
+            { id: "theory" as const, label: "Provas", icon: <FileQuestion size={19} /> },
             { id: "team" as const, label: "Equipe", icon: <ShieldCheck size={19} /> },
             { id: "appearance" as const, label: "Cores", icon: <Palette size={19} /> },
           ]
@@ -168,6 +170,9 @@ export function AdminPortal({
               currentUser={user}
               reload={loadData}
             />
+          )}
+          {section === "theory" && user.role === "super_admin" && (
+            <TheoryExamsView />
           )}
           {section === "appearance" && user.role === "super_admin" && (
             <ThemeSettingsView settings={themeSettings} onSaved={onThemeSaved} />

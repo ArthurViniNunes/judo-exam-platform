@@ -1,6 +1,6 @@
 # Plano prioritário — exame teórico dentro da plataforma
 
-- Estado: planejamento solicitado; regras de prova pendentes de confirmação
+- Estado: Fases 0.1 e 0.2 entregues; aplicação da prova aguarda regras de negócio
 - Prioridade: máxima, antes das fases 2 a 5
 - Impacto: autenticação, cadastro de alunos, elegibilidade e início do exame prático
 - Data: 2026-10-21
@@ -250,6 +250,8 @@ aluno. Toda autorização é validada no backend.
 
 ### 0.1 — Identidade e duas entradas
 
+**Estado: concluída.**
+
 - criar o papel de aluno;
 - permitir múltiplos papéis por identidade;
 - separar entrada principal e entrada profissional;
@@ -259,6 +261,12 @@ aluno. Toda autorização é validada no backend.
 
 ### 0.2 — Provas versionadas
 
+**Estado: infraestrutura e gestão concluídas; conteúdo oficial pendente.** O
+Super Admin já pode criar cadernos vazios por graduação, configurar nota e
+ordem, cadastrar perguntas com gabarito, explicação e mídia, publicar uma
+versão imutável e encerrá-la. O schema de tentativas e elegibilidades também já
+existe, mas ainda não é exposto ao aluno.
+
 - criar schema de provas e tentativas;
 - cadastrar o conteúdo oficial quando ele for disponibilizado;
 - revisar respostas;
@@ -266,6 +274,8 @@ aluno. Toda autorização é validada no backend.
 - impedir a liberação de prova sem versão oficial publicada.
 
 ### 0.3 — Aplicação e correção
+
+**Estado: não iniciada; depende das decisões da seção 12.**
 
 - salvar cada resposta;
 - permitir retomada segura;

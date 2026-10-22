@@ -7,6 +7,7 @@ Aplicação web da Associação Judô Rogério Cruz para aplicar, registrar e ac
 - oferece entradas separadas para alunos e equipe, com o acesso de aluno como porta principal;
 - permite que a mesma identidade acumule os papéis de aluno e avaliador sem misturar seus contextos de sessão;
 - cadastra o aluno na equipe ao criar sua conta e reserva sua área para a futura prova teórica interna;
+- permite que o Super Admin prepare, revise, publique e encerre versões imutáveis das provas teóricas por graduação;
 - autentica avaliadores e Super Admins com contas individuais;
 - permite que o Super Admin autorize e desative avaliadores;
 - aplica avaliações técnicas por graduação, selecionando automaticamente técnicas de faixas anteriores quando necessário;
@@ -18,9 +19,9 @@ Aplicação web da Associação Judô Rogério Cruz para aplicar, registrar e ac
 - mostra histórico, média e evolução por aluno;
 - oferece um painel com volume de avaliações, médias, aprovação e registros recentes;
 - permite que o Super Admin escolha, com modelos prontos ou seletores de cor, a identidade visual global dos temas claro e escuro;
-- mantém a avaliação teórica externa desativada enquanto as questões da prova interna são preparadas.
+- mantém a aplicação da prova teórica desativada enquanto as questões oficiais e as regras restantes são preparadas.
 
-As avaliações técnica e de kata são processadas na aplicação e persistidas na API. A área do aluno já está disponível, mas exibe a prova teórica como **não liberada** até a implementação das questões, tentativas, correção e elegibilidade para a prova prática.
+As avaliações técnica e de kata são processadas na aplicação e persistidas na API. A área do aluno já está disponível, mas exibe a prova teórica como **não liberada** até existir conteúdo oficial publicado e serem entregues os fluxos de tentativa, correção e elegibilidade para a prova prática. O editor administrativo não cria perguntas provisórias automaticamente.
 
 ## Arquitetura
 

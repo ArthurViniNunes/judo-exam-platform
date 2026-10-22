@@ -85,7 +85,13 @@ o estado de prova não liberada.
 ## Estado da implementação
 
 Os papéis múltiplos, o contexto explícito da sessão, o cadastro vinculado do
-aluno e as duas entradas foram entregues. A área estudantil permanece no estado
-"prova não liberada". Versionamento de questões, tentativas, correção comentada
-e elegibilidade para a avaliação prática serão implementados nos próximos
-marcos desta decisão.
+aluno e as duas entradas foram entregues. Também estão implementados o schema
+versionado, as validações do domínio, a API administrativa e a interface de
+gestão exclusiva do Super Admin. Versões publicadas e encerradas são imutáveis,
+e somente uma versão por graduação pode permanecer publicada.
+
+A área estudantil permanece no estado "prova não liberada". O schema já prevê
+tentativas, fotografias das questões, respostas e elegibilidades, mas a
+aplicação da prova, a correção comentada e a integração com a avaliação prática
+serão implementadas depois da aprovação das regras de faixa pretendida, nova
+tentativa, validade e duração.

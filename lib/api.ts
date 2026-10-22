@@ -38,7 +38,11 @@ export function setCachedAuthUser(user: unknown | null) {
 }
 
 export class ApiError extends Error {
-  constructor(message: string, public readonly status: number) {
+  constructor(
+    message: string,
+    public readonly status: number,
+    public readonly details: string[] = [],
+  ) {
     super(message);
     this.name = "ApiError";
   }
@@ -59,9 +63,11 @@ export async function apiRequest<T>(path: string, init?: RequestInit): Promise<T
 
   if (!response.ok) {
     let message = `A API respondeu com o status ${response.status}.`;
+    let details: string[] = [];
     try {
-      const body = (await response.json()) as { error?: string };
+      const body = (await response.json()) as { error?: string; details?: string[] };
       if (body.error) message = body.error;
+      if (Array.isArray(body.details)) details = body.details;
     } catch {
       // Keep the status-based message when the body is not JSON.
     }
@@ -75,7 +81,7 @@ export async function apiRequest<T>(path: string, init?: RequestInit): Promise<T
         window.dispatchEvent(new Event("ajrc:session-expired"));
       }
     }
-    throw new ApiError(message, response.status);
+    throw new ApiError(message, response.status, details);
   }
 
   if (response.status === 204) return undefined as T;

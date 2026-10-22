@@ -5,6 +5,7 @@ export type AdminSection =
   | "overview"
   | "evaluations"
   | "students"
+  | "theory"
   | "team"
   | "appearance";
 
