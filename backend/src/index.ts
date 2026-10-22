@@ -19,7 +19,7 @@ import {
 import { authenticate } from "./security";
 import { getThemeSettings, updateThemeSettings } from "./settings";
 import { loginStudent, registerStudent } from "./student-auth";
-import { getStudentProfile } from "./student-profile";
+import { getStudentProfile, updateStudentTargetBelt } from "./student-profile";
 import {
   closeTheoryVersion,
   createTheoryQuestion,
@@ -112,6 +112,10 @@ async function handleAuthenticatedRoute(
   if (url.pathname === "/api/student/me" && request.method === "GET") {
     const denied = requireStudentContext(request, env, user);
     return denied || getStudentProfile(request, env, user);
+  }
+  if (url.pathname === "/api/student/me/target-belt" && request.method === "PATCH") {
+    const denied = requireStudentContext(request, env, user);
+    return denied || updateStudentTargetBelt(request, env, user);
   }
   const professionalOnly = requireProfessionalContext(request, env, user);
   if (professionalOnly) return professionalOnly;

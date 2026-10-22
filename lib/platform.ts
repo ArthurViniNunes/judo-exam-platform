@@ -86,6 +86,9 @@ export type StudentProfile = {
     id: string;
     name: string;
     createdAt: string;
+    targetBeltId: string | null;
+    targetBeltName: string | null;
+    targetBeltSetAt: string | null;
   };
   currentEligibility: StudentEligibility | null;
   eligibilityHistory: StudentEligibility[];

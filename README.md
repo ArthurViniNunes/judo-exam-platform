@@ -7,6 +7,7 @@ Aplicação web da Associação Judô Rogério Cruz para aplicar, registrar e ac
 - oferece entradas separadas para alunos e equipe, com o acesso de aluno como porta principal;
 - permite que a mesma identidade acumule os papéis de aluno e avaliador sem misturar seus contextos de sessão;
 - cadastra o aluno na equipe ao criar sua conta e reserva sua área para a futura prova teórica interna;
+- registra, no primeiro cadastro do aluno, a graduação que ele pretende alcançar;
 - permite que o Super Admin prepare, revise, publique e encerre versões imutáveis das provas teóricas por graduação;
 - autentica avaliadores e Super Admins com contas individuais;
 - permite que o Super Admin autorize e desative avaliadores;
@@ -329,6 +330,7 @@ Todas as rotas abaixo, exceto `/`, `/health`, login/registro e a leitura públic
 | `POST` | `/api/student-auth/register` | público | Cria a identidade e o cadastro vinculados do aluno |
 | `POST` | `/api/student-auth/login` | público | Inicia uma sessão no contexto de aluno |
 | `GET` | `/api/student/me` | Aluno | Retorna o cadastro próprio e o histórico de elegibilidades |
+| `PATCH` | `/api/student/me/target-belt` | Aluno | Define a graduação de cadastros antigos antes da primeira tentativa |
 | `GET` | `/api/auth/me` | autenticado | Retorna o usuário atual |
 | `PATCH` | `/api/auth/profile` | autenticado | Atualiza o nome do usuário |
 | `POST` | `/api/auth/logout` | autenticado | Encerra a sessão atual |

@@ -62,7 +62,7 @@ aquela identidade possui o papel solicitado antes de criar a sessão.
 Criar conta
   → validar identidade/e-mail
   → criar ou vincular cadastro de judoca
-  → escolher graduação pretendida permitida
+  → confirmar a graduação pretendida no primeiro cadastro
   → ler instruções
   → iniciar tentativa
   → responder prova
@@ -331,23 +331,25 @@ Cada subfase é um marco independente e recebe commit próprio.
 - ações sensíveis ficam auditadas;
 - 360 px, 768 px, 1280 px, claro, escuro, teclado e movimento reduzido são verificados.
 
-## 12. Decisões necessárias antes da implementação das provas
+## 12. Decisões da aplicação da prova
 
-| Tema | Decisão necessária |
+| Tema | Decisão |
 | --- | --- |
-| Nota mínima | percentual exigido em cada faixa |
-| Nova tentativa | quantidade, intervalo e necessidade de liberação |
-| Faixa pretendida | aluno escolhe entre opções permitidas ou recebe indicação da equipe |
-| Validade | aprovação teórica expira ou vale até concluir o ciclo |
-| Banco de questões | perguntas fixas ou subconjunto sorteado |
-| Ordem | fixa ou embaralhada por tentativa |
-| Tempo | prova livre ou com limite de duração |
+| Nota mínima | configurada pelo Super Admin em cada versão publicada |
+| Nova tentativa | permitida imediatamente após reprovação |
+| Faixa pretendida | escolhida pelo aluno no primeiro cadastro |
+| Validade | aprovação não expira |
+| Banco de questões | todas as questões da versão publicada são apresentadas |
+| Ordem | questões e alternativas embaralhadas em cada tentativa |
+| Tempo | prova sem limite de duração |
 | Explicação | formato e profundidade pedagógica esperados no gabarito |
 | Identidade | verificação por e-mail e tratamento de menores de idade |
 | Alunos antigos | regra de vinculação quando já existir nome igual ou semelhante |
 | Exceção | quem pode liberar a prática sem aprovação e em quais casos |
 
-Essas escolhas mudam regra de negócio e não devem ser inferidas no código.
+As decisões ainda abertas não impedem o fluxo normal da prova, mas precisam ser
+resolvidas antes de habilitar comunicação por e-mail, tratamento específico de
+menores ou exceções administrativas.
 
 ## 13. Relação com as demais fases
 

@@ -16,6 +16,7 @@ import Image from "next/image";
 import { FormEvent, useState } from "react";
 import { apiRequest, setAuthToken } from "@/lib/api";
 import type { AuthUser } from "@/lib/platform";
+import { THEORY_BELTS } from "@/lib/theory-exams";
 
 const LOGO = "https://media.base44.com/images/public/6a9b8ceb32f349c5600d2fdc/ecc432c62_41508.png/v1/fit/w_176,h_176,q_90,usm_0.66_1.00_0.01,enc_webp,quality_auto/ecc432c62_41508.webp";
 
@@ -39,6 +40,7 @@ export function StudentAuthScreen({
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [beltId, setBeltId] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
@@ -66,7 +68,9 @@ export function StudentAuthScreen({
       const response = await apiRequest<AuthResponse>(endpoint, {
         method: "POST",
         body: JSON.stringify(
-          mode === "login" ? { email, password } : { name, email, password },
+          mode === "login"
+            ? { email, password }
+            : { name, email, password, beltId },
         ),
       });
       setAuthToken(response.token);
@@ -157,17 +161,33 @@ export function StudentAuthScreen({
 
         <form onSubmit={submit}>
           {mode === "register" && (
-            <label>
-              Nome completo
-              <input
-                autoComplete="name"
-                required
-                minLength={3}
-                value={name}
-                onChange={(event) => setName(event.target.value)}
-                placeholder="Nome do judoca"
-              />
-            </label>
+            <>
+              <label>
+                Nome completo
+                <input
+                  autoComplete="name"
+                  required
+                  minLength={3}
+                  value={name}
+                  onChange={(event) => setName(event.target.value)}
+                  placeholder="Nome do judoca"
+                />
+              </label>
+              <label>
+                Próxima graduação
+                <select
+                  required
+                  value={beltId}
+                  onChange={(event) => setBeltId(event.target.value)}
+                >
+                  <option value="">Selecione a faixa do exame</option>
+                  {THEORY_BELTS.map((belt) => (
+                    <option key={belt.id} value={belt.id}>{belt.name}</option>
+                  ))}
+                </select>
+                <small>Você fará a prova teórica correspondente a esta graduação.</small>
+              </label>
+            </>
           )}
           <label>
             E-mail

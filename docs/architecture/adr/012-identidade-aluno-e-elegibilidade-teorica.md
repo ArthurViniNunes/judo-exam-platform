@@ -26,6 +26,10 @@ somente após o backend confirmar a permissão. A rota escolhida restringe a
 sessão, mas não serve como prova nem como fonte de autorização. A sessão guarda
 o contexto ativo para que cada requisição seja autorizada no escopo correto.
 
+No primeiro cadastro, o próprio aluno escolhe a graduação pretendida. Cadastros
+anteriores à introdução dessa regra devem confirmá-la no primeiro acesso. A
+escolha pode ser ajustada somente antes do início da primeira tentativa.
+
 Provas teóricas serão versionadas. Entregar uma tentativa gera correção no
 backend e, quando aprovada, uma `student_eligibility` imutavelmente ligada à
 tentativa. A avaliação prática receberá apenas o aluno; o backend resolverá e
@@ -93,6 +97,8 @@ e somente uma versão por graduação pode permanecer publicada.
 A área estudantil permanece no estado "prova não liberada". O schema já prevê
 tentativas, fotografias das questões, respostas e elegibilidades, mas a
 aplicação da prova, a correção comentada e a integração com a avaliação prática
-serão implementadas depois da aprovação das regras de faixa pretendida, nova
-tentativa, validade e duração. A consulta autenticada do perfil estudantil e do
+seguem como próximos marcos. Faixa pretendida, nova tentativa, validade,
+duração e composição da prova já foram decididas: escolha do aluno no cadastro,
+retentativa imediata, aprovação sem expiração, prova sem cronômetro e todas as
+questões em ordem aleatória. A consulta autenticada do perfil estudantil e do
 histórico de elegibilidades já está ativa e rejeita sessões profissionais.

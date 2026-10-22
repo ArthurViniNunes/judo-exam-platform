@@ -14,6 +14,7 @@ import {
   secureEqual,
   validPassword,
 } from "./security";
+import { theoryBelt } from "./theory-domain";
 
 type CredentialUser = {
   id: string;
@@ -57,11 +58,12 @@ function validateRegistration(
   env: Env,
   body: { name?: string; email?: string; password?: string },
 ):
-  | { valid: true; name: string; email: string; password: string }
+  | { valid: true; name: string; email: string; password: string; beltId: string; beltName: string }
   | { valid: false; response: Response } {
   const name = body.name?.trim().replace(/\s+/g, " ") || "";
   const email = normalizeEmail(body.email || "");
   const password = body.password || "";
+  const belt = theoryBelt((body as { beltId?: string }).beltId);
   if (name.length < 3 || name.length > 80 || !isValidEmail(email)) {
     return {
       valid: false,
@@ -87,7 +89,25 @@ function validateRegistration(
       ),
     };
   }
-  return { valid: true, name, email, password };
+  if (!belt) {
+    return {
+      valid: false,
+      response: json(
+        request,
+        env,
+        { error: "Selecione a graduação que você pretende alcançar." },
+        400,
+      ),
+    };
+  }
+  return {
+    valid: true,
+    name,
+    email,
+    password,
+    beltId: belt.id,
+    beltName: belt.name,
+  };
 }
 
 export async function registerStudent(request: Request, env: Env) {
@@ -95,11 +115,12 @@ export async function registerStudent(request: Request, env: Env) {
     name?: string;
     email?: string;
     password?: string;
+    beltId?: string;
   }>();
   const input = validateRegistration(request, env, body);
   if (!input.valid) return input.response;
 
-  const { name, email, password } = input;
+  const { name, email, password, beltId, beltName } = input;
   const normalizedName = normalizeName(name);
   const [existingUser, existingStudent] = await Promise.all([
     credentialUserByEmail(env, email),
@@ -197,17 +218,19 @@ export async function registerStudent(request: Request, env: Env) {
   }
   if (existingStudent) {
     statements.push(
-      env.DB.prepare("UPDATE students SET name = ?, user_id = ? WHERE id = ?").bind(
+      env.DB.prepare("UPDATE students SET name = ?, user_id = ?, target_belt_id = ?, target_belt_name = ?, target_belt_set_at = CURRENT_TIMESTAMP WHERE id = ?").bind(
         name,
         userId,
+        beltId,
+        beltName,
         studentId,
       ),
     );
   } else {
     statements.push(
       env.DB.prepare(
-        "INSERT INTO students (id, name, normalized_name, user_id) VALUES (?, ?, ?, ?)",
-      ).bind(studentId, name, normalizedName, userId),
+        "INSERT INTO students (id, name, normalized_name, user_id, target_belt_id, target_belt_name, target_belt_set_at) VALUES (?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)",
+      ).bind(studentId, name, normalizedName, userId, beltId, beltName),
     );
   }
   statements.push(
@@ -218,7 +241,7 @@ export async function registerStudent(request: Request, env: Env) {
       userId,
       studentId,
       request.headers.get("X-Request-Id") || "unidentified",
-      JSON.stringify({ selfRegistration: true }),
+      JSON.stringify({ selfRegistration: true, targetBeltId: beltId }),
     ),
   );
   await env.DB.batch(statements);

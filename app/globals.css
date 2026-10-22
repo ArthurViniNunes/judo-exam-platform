@@ -3351,6 +3351,7 @@ td:first-child {
   gap: 7px;
 }
 .auth-panel input,
+.auth-panel select,
 .invite-panel input,
 .invite-panel select {
   width: 100%;
@@ -3363,6 +3364,7 @@ td:first-child {
   color: var(--mg-ink);
 }
 .auth-panel input:focus,
+.auth-panel select:focus,
 .invite-panel input:focus,
 .invite-panel select:focus {
   border-color: var(--mg-accent);
@@ -3634,6 +3636,43 @@ td:first-child {
   gap: 7px;
   font-weight: 800;
 }
+.theory-target-choice form {
+  grid-column: 1 / -1;
+  padding-top: 15px;
+  border-top: 1px solid var(--mg-line);
+  display: grid;
+  gap: 11px;
+}
+.theory-target-choice form label {
+  color: var(--mg-muted);
+  display: grid;
+  gap: 7px;
+  font-size: 11px;
+  font-weight: 800;
+}
+.theory-target-choice select {
+  width: 100%;
+  min-height: 48px;
+  padding: 10px 12px;
+  border: 1px solid var(--mg-line);
+  border-radius: 10px;
+  outline: 0;
+  background: var(--mg-surface-soft);
+  color: var(--mg-ink);
+}
+.theory-target-choice select:focus {
+  border-color: var(--mg-accent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--mg-accent) 18%, transparent);
+}
+.theory-target-choice form > button {
+  min-height: 48px;
+  border: 0;
+  border-radius: 10px;
+  background: var(--mg-accent);
+  color: var(--mg-accent-text);
+  font-weight: 850;
+}
+.theory-target-choice form > button:disabled { opacity: 0.55; }
 .student-professional-switch {
   padding: 16px;
   border: 1px solid var(--mg-line);

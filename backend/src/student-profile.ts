@@ -1,5 +1,6 @@
 import type { AuthUser } from "./contracts";
 import { json } from "./http";
+import { theoryBelt } from "./theory-domain";
 
 type EligibilityRow = {
   id: string;
@@ -57,10 +58,17 @@ export async function getStudentProfile(
   }
 
   const student = await env.DB.prepare(
-    "SELECT id, name, created_at FROM students WHERE id = ? AND user_id = ?",
+    "SELECT id, name, created_at, target_belt_id, target_belt_name, target_belt_set_at FROM students WHERE id = ? AND user_id = ?",
   )
     .bind(user.student_id, user.id)
-    .first<{ id: string; name: string; created_at: string }>();
+    .first<{
+      id: string;
+      name: string;
+      created_at: string;
+      target_belt_id: string | null;
+      target_belt_name: string | null;
+      target_belt_set_at: string | null;
+    }>();
 
   if (!student) {
     return json(
@@ -89,10 +97,70 @@ export async function getStudentProfile(
       id: student.id,
       name: student.name,
       createdAt: student.created_at,
+      targetBeltId: student.target_belt_id,
+      targetBeltName: student.target_belt_name,
+      targetBeltSetAt: student.target_belt_set_at,
     },
     currentEligibility:
       eligibilityHistory.find((eligibility) => eligibility.status === "active") ??
       null,
     eligibilityHistory,
   });
+}
+
+export async function updateStudentTargetBelt(
+  request: Request,
+  env: Env,
+  user: AuthUser,
+) {
+  if (!user.student_id) {
+    return json(
+      request,
+      env,
+      { error: "Sua conta ainda não está vinculada a um cadastro de aluno." },
+      409,
+    );
+  }
+  const body = await request.json<{ beltId?: string }>();
+  const belt = theoryBelt(body.beltId);
+  if (!belt) {
+    return json(request, env, { error: "Selecione uma graduação válida." }, 400);
+  }
+
+  const attempt = await env.DB.prepare(
+    "SELECT id FROM theory_attempts WHERE student_id = ? LIMIT 1",
+  )
+    .bind(user.student_id)
+    .first<{ id: string }>();
+  if (attempt) {
+    return json(
+      request,
+      env,
+      { error: "A graduação não pode ser alterada depois que uma prova foi iniciada." },
+      409,
+    );
+  }
+
+  const result = await env.DB.prepare(
+    "UPDATE students SET target_belt_id = ?, target_belt_name = ?, target_belt_set_at = CURRENT_TIMESTAMP WHERE id = ? AND user_id = ?",
+  )
+    .bind(belt.id, belt.name, user.student_id, user.id)
+    .run();
+  if (!result.meta.changes) {
+    return json(request, env, { error: "Cadastro de aluno não encontrado." }, 404);
+  }
+
+  await env.DB.prepare(
+    "INSERT INTO audit_events (id, actor_user_id, action, entity_type, entity_id, request_id, metadata_json) VALUES (?, ?, 'student.target_belt_updated', 'student', ?, ?, ?)",
+  )
+    .bind(
+      crypto.randomUUID(),
+      user.id,
+      user.student_id,
+      request.headers.get("X-Request-Id") || "unidentified",
+      JSON.stringify({ targetBeltId: belt.id }),
+    )
+    .run();
+
+  return getStudentProfile(request, env, user);
 }
