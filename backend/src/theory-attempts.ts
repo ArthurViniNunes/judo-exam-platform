@@ -1,4 +1,5 @@
 import type { AuthUser } from "./contracts";
+import { theoryExamsEnabled } from "./features";
 import { json } from "./http";
 import {
   scoreTheoryAttempt,
@@ -294,6 +295,14 @@ export async function getAvailableTheoryExam(
     });
   }
 
+  if (!theoryExamsEnabled(env)) {
+    return json(request, env, {
+      status: "disabled",
+      beltId: student.target_belt_id,
+      beltName: student.target_belt_name,
+    });
+  }
+
   const version = await env.DB.prepare(
     `SELECT versions.id, versions.belt_id, versions.belt_name,
             versions.version_number, versions.minimum_score,
@@ -383,6 +392,15 @@ export async function startTheoryAttempt(
     .first<{ id: string }>();
   if (eligibility) {
     return json(request, env, { error: "Sua aprovação teórica já está registrada." }, 409);
+  }
+
+  if (!theoryExamsEnabled(env)) {
+    return json(
+      request,
+      env,
+      { error: "As provas teóricas ainda não foram liberadas pela associação." },
+      409,
+    );
   }
 
   const version = await env.DB.prepare(

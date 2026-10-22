@@ -113,9 +113,14 @@ O arquivo precisa conter:
 ```dotenv
 SUPER_ADMIN_INITIAL_PASSWORD=TroqueEstaSenhaLocal123!
 FRONTEND_ORIGIN=http://127.0.0.1:3000,http://localhost:3000
+THEORY_EXAMS_ENABLED=true
 ```
 
 Escolha uma senha local com pelo menos 10 caracteres, uma letra e um número. Não coloque a senha entre aspas. `FRONTEND_ORIGIN` é obrigatório para o navegador permitir que o frontend local acesse a API local.
+
+`THEORY_EXAMS_ENABLED` controla apenas a abertura de novas provas teóricas. Use
+`false` durante a preparação do conteúdo oficial; tentativas já iniciadas,
+correções e aprovações existentes continuam acessíveis.
 
 5. Crie ou atualize o banco local:
 

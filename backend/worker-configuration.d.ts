@@ -5,6 +5,7 @@ interface __BaseEnv_Env {
 	FRONTEND_ORIGIN: string;
 	SUPER_ADMIN_EMAIL: string;
 	SUPER_ADMIN_INITIAL_PASSWORD: string;
+	THEORY_EXAMS_ENABLED: string;
 }
 declare namespace Cloudflare {
 	interface GlobalProps {

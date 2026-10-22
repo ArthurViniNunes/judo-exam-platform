@@ -579,6 +579,19 @@ export function StudentTheoryExam() {
       </article>
     );
   }
+  if (availability?.status === "disabled") {
+    return (
+      <article className="theory-admission" aria-labelledby="theory-status-title">
+        <div className="theory-admission-icon"><BookOpenCheck size={28} /></div>
+        <div className="theory-admission-copy">
+          <span className="theory-status">Aguardando abertura</span>
+          <h2 id="theory-status-title">Exames teóricos ainda não iniciados</h2>
+          <p>Seu cadastro para a {availability.beltName} está pronto. A associação avisará quando o acesso for aberto.</p>
+        </div>
+        <ul><li><CheckCircle2 size={17} /> Cadastro de aluno confirmado</li><li><CircleAlert size={17} /> Aguardando abertura oficial</li></ul>
+      </article>
+    );
+  }
   if (!examDescription) return null;
   return (
     <article className="student-theory-ready" aria-labelledby="theory-ready-title">

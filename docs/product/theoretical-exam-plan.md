@@ -313,10 +313,13 @@ a nota, grava sua origem na avaliação e audita tentativas sem autorização.
 
 ### 0.5 — Migração e entrada em produção
 
+- **Estado: preparação técnica concluída; homologação de conteúdo pendente.** A
+  flag `THEORY_EXAMS_ENABLED` controla novas tentativas sem interromper uma
+  tentativa já iniciada nem ocultar resultados e elegibilidades existentes.
 - vincular alunos antigos sem criar duplicatas;
 - ensaiar com contas de aluno e avaliador;
 - validar notas e resultados contra os critérios oficiais aprovados;
-- ativar por feature flag;
+- [x] ativar por feature flag;
 - substituir definitivamente os links externos pela prova interna quando a
   primeira versão oficial for publicada.
 

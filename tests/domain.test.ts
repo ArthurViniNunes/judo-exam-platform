@@ -48,6 +48,7 @@ import {
   shuffleTheoryItems,
 } from "../backend/src/theory-attempt-domain";
 import { toTheoryYouTubeEmbedUrl } from "../lib/theory-exams";
+import { theoryExamsEnabled } from "../backend/src/features";
 
 describe("contexto de autenticação", () => {
   it("seleciona o papel permitido para cada porta de entrada", () => {
@@ -126,6 +127,12 @@ describe("mídia da prova teórica", () => {
 });
 
 describe("provas teóricas versionadas", () => {
+  it("só libera novas tentativas quando a chave estiver explicitamente ativa", () => {
+    expect(theoryExamsEnabled({ THEORY_EXAMS_ENABLED: "true" })).toBe(true);
+    expect(theoryExamsEnabled({ THEORY_EXAMS_ENABLED: "TRUE" })).toBe(true);
+    expect(theoryExamsEnabled({ THEORY_EXAMS_ENABLED: "false" })).toBe(false);
+  });
+
   it("mantém íntegro o modelo importável do exame marrom", () => {
     expect(BROWN_THEORY_TEMPLATE_SUMMARY).toEqual({
       questionCount: 52,

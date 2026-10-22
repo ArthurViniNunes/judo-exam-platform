@@ -144,6 +144,7 @@ export type StudentTheoryResult = {
 
 export type StudentTheoryAvailability =
   | { status: "needs_target_belt" }
+  | { status: "disabled"; beltId: string; beltName: string }
   | { status: "unavailable"; beltId: string; beltName: string }
   | {
       status: "available";

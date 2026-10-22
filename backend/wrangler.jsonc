@@ -7,7 +7,8 @@
   "preview_urls": false,
   "vars": {
     "FRONTEND_ORIGIN": "https://judo-exam-platform.judo-rogerio-cruz.workers.dev",
-    "SUPER_ADMIN_EMAIL": "admin@judorogeriocruz.com.br"
+    "SUPER_ADMIN_EMAIL": "admin@judorogeriocruz.com.br",
+    "THEORY_EXAMS_ENABLED": "true"
   },
   "observability": {
     "enabled": true,
