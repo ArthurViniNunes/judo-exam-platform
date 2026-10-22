@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import {
+  ApiError,
   apiRequest,
   getAuthToken,
   getCachedAuthUser,
@@ -27,7 +28,7 @@ import {
   type View,
 } from "@/components/exam-flow";
 import { ProfileDialog } from "@/components/profile-dialog";
-import type { AuthUser, ExamStudent, PracticalCandidate, ThemeSettings } from "@/lib/platform";
+import type { AuthUser, EventTaskLaunch, ExamStudent, PracticalCandidate, ThemeSettings } from "@/lib/platform";
 import type { EvaluationSubmission } from "@/lib/platform";
 import { DEFAULT_THEME_SETTINGS } from "@/lib/theme";
 import { KATAS, type KataId, type KataMode, type KataResult } from "@/lib/kata-exams";
@@ -296,6 +297,7 @@ export default function App() {
     const beltName = PRACTICAL_BELTS.find((item) => item.id === belt)?.name ?? belt;
     const evaluation: EvaluationSubmission = {
       id: activeTechnicalDraft.id,
+      eventTaskId: activeTechnicalDraft.eventTaskId,
       studentId,
       beltId: belt,
       belt: beltName,
@@ -333,6 +335,7 @@ export default function App() {
     const detail = `Descontos: ${evaluationResult.totalDeductions}. ${severeNote}${observations}`;
     const evaluation: EvaluationSubmission = {
       id: activeKataDraft.id,
+      eventTaskId: activeKataDraft.eventTaskId,
       studentId,
       belt: kataName,
       type: "kata" as const,
@@ -425,6 +428,81 @@ export default function App() {
     navigate("kata-form");
   };
 
+  const startEventTask = (task: EventTaskLaunch) => {
+    if (!user) return;
+    const existingDraft = persistence.drafts.find((draft) => draft.eventTaskId === task.taskId);
+    if (existingDraft?.kind === "technical") {
+      setStudentId(existingDraft.studentId);
+      setAthlete(existingDraft.athlete);
+      setBelt(existingDraft.beltId);
+      setActiveTechnicalDraft(existingDraft);
+      navigate("technical-form");
+      return;
+    }
+    if (existingDraft?.kind === "kata") {
+      setStudentId(existingDraft.studentId);
+      setAthlete(existingDraft.athlete);
+      setKataId(existingDraft.kataId);
+      setKataMode(existingDraft.mode);
+      setActiveKataDraft(existingDraft);
+      navigate("kata-form");
+      return;
+    }
+
+    const now = new Date().toISOString();
+    if (task.modality === "technical") {
+      const selectedBelt = PRACTICAL_BELTS.find((item) => item.id === task.beltId)?.id;
+      if (!selectedBelt) {
+        window.alert("A graduação desta tarefa não é compatível com a avaliação técnica.");
+        return;
+      }
+      const draft: TechnicalDraft = {
+        id: crypto.randomUUID(),
+        userId: user.id,
+        eventId: task.eventId,
+        eventTaskId: task.taskId,
+        kind: "technical",
+        studentId: task.studentId,
+        athlete: task.studentName,
+        beltId: selectedBelt,
+        createdAt: now,
+        updatedAt: now,
+        data: { exam: createPracticalExam(selectedBelt), groupIndex: 0, standardScores: {}, sequenceScores: {}, notes: "" },
+      };
+      setStudentId(task.studentId);
+      setAthlete(task.studentName);
+      setBelt(selectedBelt);
+      setActiveTechnicalDraft(draft);
+      void persistence.saveDraft(draft);
+      navigate("technical-form");
+      return;
+    }
+
+    const kataIdForTask: KataId = task.kataType === "katame-no-kata" ? "katame-no-kata" : "nage-no-kata";
+    const modeForTask: KataMode = task.kataType === "nage-no-kata-partial" ? "partial" : "complete";
+    const draft: KataDraft = {
+      id: crypto.randomUUID(),
+      userId: user.id,
+      eventId: task.eventId,
+      eventTaskId: task.taskId,
+      kind: "kata",
+      studentId: task.studentId,
+      athlete: task.studentName,
+      kataId: kataIdForTask,
+      mode: modeForTask,
+      createdAt: now,
+      updatedAt: now,
+      data: { marks: {}, notes: "" },
+    };
+    setStudentId(task.studentId);
+    setAthlete(task.studentName);
+    setKataId(kataIdForTask);
+    setKataMode(modeForTask);
+    setActiveKataDraft(draft);
+    void persistence.saveDraft(draft);
+    navigate("kata-form");
+  };
+
   const resumeKataEvaluation = (draft: KataDraft) => {
     setStudentId(draft.studentId);
     setAthlete(draft.athlete);
@@ -434,9 +512,27 @@ export default function App() {
     navigate("kata-form");
   };
 
-  const discardDraft = (draft: TechnicalDraft | KataDraft) => {
+  const discardDraft = async (draft: TechnicalDraft | KataDraft) => {
     if (!window.confirm(`Descartar o rascunho da avaliação de ${draft.athlete}?`)) return;
-    void persistence.discardDraft(draft.id);
+    if (draft.eventId && draft.eventTaskId) {
+      try {
+        await apiRequest(`/api/exam-events/${draft.eventId}/tasks/${draft.eventTaskId}/release`, {
+          method: "POST",
+        });
+      } catch (caught) {
+        if (caught instanceof ApiError && (caught.status === 404 || caught.status === 409)) {
+          await persistence.discardDraft(draft.id);
+          return;
+        }
+        window.alert(
+          caught instanceof Error
+            ? caught.message
+            : "Não foi possível liberar a avaliação no evento.",
+        );
+        return;
+      }
+    }
+    await persistence.discardDraft(draft.id);
   };
 
   const authenticated = (authenticatedUser: AuthUser) => {
@@ -508,6 +604,7 @@ export default function App() {
           onOpenProfile={() => setProfileOpen(true)}
           themeSettings={themeSettings}
           onThemeSaved={setThemeSettings}
+          onStartEventTask={startEventTask}
         />
         {profileOpen && (
           <ProfileDialog

@@ -6,8 +6,11 @@ import {
   CheckCircle2,
   ChevronRight,
   CircleDot,
+  ClipboardCheck,
   MapPin,
   Plus,
+  Play,
+  RotateCcw,
   ShieldCheck,
   Trash2,
   UserRoundCheck,
@@ -19,6 +22,7 @@ import { apiRequest } from "@/lib/api";
 import type {
   AuthUser,
   EventKataType,
+  EventTaskLaunch,
   ExamEventDetail,
   ExamEventStatus,
   ExamEventSummary,
@@ -94,13 +98,14 @@ function CreateEventForm({ onCreated, onCancel }: {
   );
 }
 
-function EventDetail({ event, user, users, candidates, onBack, onChanged }: {
+function EventDetail({ event, user, users, candidates, onBack, onChanged, onStartTask }: {
   event: ExamEventDetail;
   user: AuthUser;
   users: ManagedUser[];
   candidates: PracticalCandidate[];
   onBack: () => void;
   onChanged: (event: ExamEventDetail) => void;
+  onStartTask: (task: EventTaskLaunch) => void;
 }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
@@ -170,6 +175,33 @@ function EventDetail({ event, user, users, candidates, onBack, onChanged }: {
     });
   };
 
+  const taskLaunch = (taskId: string): EventTaskLaunch | null => {
+    const task = event.tasks.find((item) => item.id === taskId);
+    const entry = event.entries.find((item) => item.id === task?.entryId);
+    if (!task || !entry) return null;
+    return {
+      eventId: event.id,
+      eventName: event.name,
+      taskId: task.id,
+      modality: task.modality,
+      kataType: task.kataType,
+      studentId: entry.studentId,
+      studentName: entry.studentName,
+      beltId: entry.beltId,
+      beltName: entry.beltName,
+    };
+  };
+
+  const claimTask = (taskId: string) => mutate(
+    `/api/exam-events/${event.id}/tasks/${taskId}/claim`,
+    { method: "POST" },
+  );
+
+  const releaseTask = (taskId: string) => mutate(
+    `/api/exam-events/${event.id}/tasks/${taskId}/release`,
+    { method: "POST" },
+  );
+
   return (
     <div className="management-page event-detail-page">
       <button className="event-back" onClick={onBack}><ArrowLeft size={18} /> Todos os eventos</button>
@@ -189,6 +221,38 @@ function EventDetail({ event, user, users, candidates, onBack, onChanged }: {
         <div><i style={{ width: `${event.counts.tasks ? (event.counts.completed / event.counts.tasks) * 100 : 0}%` }} /></div>
       </div>
       {event.notes && <p className="event-notes">{event.notes}</p>}
+      {event.status === "in_progress" && (
+        <section className="event-task-board" aria-labelledby="event-queue-title">
+          <header><div><span>Fila operacional</span><h2 id="event-queue-title">Avaliações do evento</h2></div><strong>Ao vivo</strong></header>
+          <div>
+            {event.tasks.map((task) => {
+              const entry = event.entries.find((item) => item.id === task.entryId);
+              const mine = task.evaluatorId === user.id;
+              const canRelease = task.status === "in_progress" && (mine || user.role === "super_admin");
+              const launch = taskLaunch(task.id);
+              return (
+                <article key={task.id} className={mine ? "mine" : ""}>
+                  <span className={`event-task-state ${task.status}`}>{task.status === "completed" ? <CheckCircle2 size={15} /> : <CircleDot size={15} />}{task.status === "completed" ? "Concluída" : task.status === "in_progress" ? "Em avaliação" : "Aguardando"}</span>
+                  <div className="event-task-person"><strong>{entry?.studentName || "Judoca"}</strong><small>{entry?.beltName}</small></div>
+                  <div className="event-task-kind"><ClipboardCheck size={17} /><span>{task.modality === "technical" ? "Técnica" : task.kataType ? KATA_LABELS[task.kataType] : "Kata"}</span></div>
+                  {task.evaluatorName && <p>Responsável: <strong>{task.evaluatorName}</strong></p>}
+                  <footer>
+                    {(task.status === "waiting" || task.status === "called") && (
+                      <button className="management-primary" disabled={busy} onClick={() => void claimTask(task.id)}><UserRoundCheck size={17} /> Assumir</button>
+                    )}
+                    {mine && task.status === "in_progress" && launch && (
+                      <button className="management-primary" disabled={busy} onClick={() => onStartTask(launch)}><Play size={17} fill="currentColor" /> Iniciar avaliação</button>
+                    )}
+                    {canRelease && (
+                      <button className="management-secondary" disabled={busy} onClick={() => void releaseTask(task.id)}><RotateCcw size={16} /> Liberar</button>
+                    )}
+                  </footer>
+                </article>
+              );
+            })}
+          </div>
+        </section>
+      )}
       <div className="event-operations">
         <section className="event-operation-panel">
           <header><span><ShieldCheck size={18} /></span><div><h2>Equipe do evento</h2><p>Quem pode acessar e assumir avaliações.</p></div></header>
@@ -226,7 +290,7 @@ function EventDetail({ event, user, users, candidates, onBack, onChanged }: {
   );
 }
 
-export function ExamEventsView({ user, users }: { user: AuthUser; users: ManagedUser[] }) {
+export function ExamEventsView({ user, users, onStartTask }: { user: AuthUser; users: ManagedUser[]; onStartTask: (task: EventTaskLaunch) => void }) {
   const [events, setEvents] = useState<ExamEventSummary[]>([]);
   const [candidates, setCandidates] = useState<PracticalCandidate[]>([]);
   const [selected, setSelected] = useState<ExamEventDetail | null>(null);
@@ -263,7 +327,7 @@ export function ExamEventsView({ user, users }: { user: AuthUser; users: Managed
 
   const sortedEvents = useMemo(() => [...events].sort((a, b) => b.eventDate.localeCompare(a.eventDate)), [events]);
   if (loading && !selected) return <LoadingBlock label="Organizando os eventos…" />;
-  if (selected) return <EventDetail event={selected} user={user} users={users} candidates={candidates} onBack={() => { setSelected(null); void load(); }} onChanged={(next) => { setSelected(next); setEvents((current) => current.map((item) => item.id === next.id ? next : item)); }} />;
+  if (selected) return <EventDetail event={selected} user={user} users={users} candidates={candidates} onBack={() => { setSelected(null); void load(); }} onChanged={(next) => { setSelected(next); setEvents((current) => current.map((item) => item.id === next.id ? next : item)); }} onStartTask={onStartTask} />;
   return (
     <div className="management-page events-page">
       <header className="management-page-heading"><div><h1>Dia de exame</h1><p>Prepare equipe e judocas, acompanhe o andamento e encerre sem deixar avaliações pendentes.</p></div>{user.role === "super_admin" && <button className="management-primary" onClick={() => setCreating((value) => !value)}><Plus size={18} /> {creating ? "Fechar" : "Novo evento"}</button>}</header>

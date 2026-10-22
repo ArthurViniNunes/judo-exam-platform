@@ -32,6 +32,8 @@ export type KataDraftState = {
 type DraftBase = {
   id: string;
   userId: string;
+  eventId?: string;
+  eventTaskId?: string;
   studentId: string;
   athlete: string;
   createdAt: string;

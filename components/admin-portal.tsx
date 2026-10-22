@@ -18,6 +18,7 @@ import type {
   AuthUser,
   DashboardData,
   EvaluationRecord,
+  EventTaskLaunch,
   ManagedUser,
   StudentRecord,
   ThemeSettings,
@@ -33,6 +34,7 @@ type AdminPortalProps = {
   onOpenProfile: () => void;
   themeSettings: ThemeSettings;
   onThemeSaved: (settings: ThemeSettings) => void;
+  onStartEventTask: (task: EventTaskLaunch) => void;
 };
 
 export function AdminPortal({
@@ -45,6 +47,7 @@ export function AdminPortal({
   onOpenProfile,
   themeSettings,
   onThemeSaved,
+  onStartEventTask,
 }: AdminPortalProps) {
   const [section, setSection] = useState<AdminSection>(initialSection);
   const [mobileMenu, setMobileMenu] = useState(false);
@@ -166,7 +169,7 @@ export function AdminPortal({
             />
           )}
           {section === "events" && (
-            <ExamEventsView user={user} users={users} />
+            <ExamEventsView user={user} users={users} onStartTask={onStartEventTask} />
           )}
           {section === "team" && user.role === "super_admin" && (
             <TeamView

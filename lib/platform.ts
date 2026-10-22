@@ -205,3 +205,15 @@ export type ExamEventDetail = ExamEventSummary & {
   entries: ExamEventEntry[];
   tasks: ExamEventTask[];
 };
+
+export type EventTaskLaunch = {
+  eventId: string;
+  eventName: string;
+  taskId: string;
+  modality: "technical" | "kata";
+  kataType: EventKataType | null;
+  studentId: string;
+  studentName: string;
+  beltId: string;
+  beltName: string;
+};
