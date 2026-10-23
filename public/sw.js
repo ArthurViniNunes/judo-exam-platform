@@ -1,4 +1,4 @@
-const CACHE_VERSION = "ajrc-shell-v1";
+const CACHE_VERSION = "ajrc-shell-v2";
 const APP_SHELL = ["/"];
 
 self.addEventListener("install", (event) => {
@@ -57,8 +57,15 @@ self.addEventListener("fetch", (event) => {
 
   if (
     url.origin === self.location.origin &&
-    (url.pathname.startsWith("/_next/static/") ||
-      url.pathname === "/favicon.ico" ||
+    url.pathname.startsWith("/_next/static/")
+  ) {
+    event.respondWith(networkFirst(request));
+    return;
+  }
+
+  if (
+    url.origin === self.location.origin &&
+    (url.pathname === "/favicon.ico" ||
       url.pathname === "/manifest.webmanifest")
   ) {
     event.respondWith(cacheFirst(request));
