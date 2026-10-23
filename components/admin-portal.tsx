@@ -1,6 +1,6 @@
 "use client";
 
-import { CalendarDays, ClipboardList, FileQuestion, LayoutDashboard, Palette, ShieldCheck, Users } from "lucide-react";
+import { CalendarDays, ClipboardList, FileQuestion, LayoutDashboard, Palette, ScrollText, ShieldCheck, Users } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Overview, StudentsView } from "@/components/admin-overview";
 import { EvaluationsView } from "@/components/admin-evaluations";
@@ -13,6 +13,7 @@ import { TeamView } from "@/components/admin-portal-team";
 import { ThemeSettingsView } from "@/components/admin-theme-settings";
 import { TheoryExamsView } from "@/components/admin-theory-exams";
 import { ExamEventsView } from "@/components/admin-exam-events";
+import { AuditTrailView } from "@/components/admin-audit";
 import { apiRequest } from "@/lib/api";
 import type {
   AuthUser,
@@ -109,6 +110,7 @@ export function AdminPortal({
         ? [
             { id: "theory" as const, label: "Provas", icon: <FileQuestion size={19} /> },
             { id: "team" as const, label: "Equipe", icon: <ShieldCheck size={19} /> },
+            { id: "audit" as const, label: "Auditoria", icon: <ScrollText size={19} /> },
             { id: "appearance" as const, label: "Cores", icon: <Palette size={19} /> },
           ]
         : []),
@@ -185,6 +187,9 @@ export function AdminPortal({
           )}
           {section === "theory" && user.role === "super_admin" && (
             <TheoryExamsView />
+          )}
+          {section === "audit" && user.role === "super_admin" && (
+            <AuditTrailView />
           )}
           {section === "appearance" && user.role === "super_admin" && (
             <ThemeSettingsView settings={themeSettings} onSaved={onThemeSaved} />

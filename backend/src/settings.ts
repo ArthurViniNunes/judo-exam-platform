@@ -1,3 +1,5 @@
+import { auditStatement } from "./audit";
+import type { AuthUser } from "./contracts";
 import { json } from "./http";
 
 export type ThemeSettings = {
@@ -79,23 +81,32 @@ export async function getThemeSettings(request: Request, env: Env) {
   return json(request, env, fromRow(row));
 }
 
-export async function updateThemeSettings(request: Request, env: Env) {
+export async function updateThemeSettings(
+  request: Request,
+  env: Env,
+  user: AuthUser,
+) {
   const parsed = validateThemeSettings(await request.json<unknown>());
   if (typeof parsed === "string") {
     return json(request, env, { error: parsed }, 400);
   }
 
-  await env.DB.prepare(
-    `INSERT INTO theme_settings (id, light_accent, dark_accent, dark_background, updated_at)
-     VALUES (1, ?, ?, ?, CURRENT_TIMESTAMP)
-     ON CONFLICT(id) DO UPDATE SET
-       light_accent = excluded.light_accent,
-       dark_accent = excluded.dark_accent,
-       dark_background = excluded.dark_background,
-       updated_at = CURRENT_TIMESTAMP`,
-  )
-    .bind(parsed.lightAccent, parsed.darkAccent, parsed.darkBackground)
-    .run();
+  await env.DB.batch([
+    env.DB.prepare(
+      `INSERT INTO theme_settings (id, light_accent, dark_accent, dark_background, updated_at)
+       VALUES (1, ?, ?, ?, CURRENT_TIMESTAMP)
+       ON CONFLICT(id) DO UPDATE SET
+         light_accent = excluded.light_accent,
+         dark_accent = excluded.dark_accent,
+         dark_background = excluded.dark_background,
+         updated_at = CURRENT_TIMESTAMP`,
+    ).bind(parsed.lightAccent, parsed.darkAccent, parsed.darkBackground),
+    auditStatement(request, env, user, "settings.theme_updated", "settings", "theme", {
+      lightAccent: parsed.lightAccent,
+      darkAccent: parsed.darkAccent,
+      darkBackground: parsed.darkBackground,
+    }),
+  ]);
 
   return json(request, env, parsed);
 }

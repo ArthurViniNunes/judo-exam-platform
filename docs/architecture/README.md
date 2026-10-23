@@ -68,6 +68,7 @@ backend/src/                 módulos do Worker
   theory-domain.ts           validação pura do conteúdo teórico
   security.ts                senha, sessão e autenticação da requisição
   evaluations.ts             consultas e escrita de avaliações
+  audit.ts                   gravação e consulta paginada da auditoria
   users.ts                   equipe e convites
   domain.ts                  validações e transformações puras
   http.ts                    respostas, CORS e autorização comum
@@ -109,6 +110,7 @@ erDiagram
   USERS ||--o{ SESSIONS : possui
   USERS ||--o| STUDENTS : representa
   USERS ||--o{ EVALUATIONS : aplica
+  USERS ||--o{ AUDIT_EVENTS : executa
   STUDENTS ||--o{ EVALUATIONS : recebe
   EVALUATIONS ||--o{ EVALUATION_CATEGORIES : resume
   EVALUATIONS ||--o{ EVALUATION_ITEMS : detalha
@@ -159,6 +161,14 @@ erDiagram
     real score
     integer position
   }
+  AUDIT_EVENTS {
+    text id PK
+    text actor_user_id FK
+    text action
+    text entity_type
+    text entity_id
+    text request_id
+  }
 ```
 
 ## Invariantes
@@ -168,6 +178,8 @@ erDiagram
   graduação pretendida do judoca;
 - um avaliador comum só consulta as próprias avaliações;
 - apenas o Super Admin convida e gerencia usuários;
+- somente o Super Admin consulta o histórico de auditoria, que não pode ser
+  alterado pela interface;
 - IDs de avaliações são idempotentes por avaliador;
 - a nota persistida usa a escala inteira de 0 a 100; a interface exibe 0 a 10;
 - kata não participa do indicador de aprovação de exames técnicos;

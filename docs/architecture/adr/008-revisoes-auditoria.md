@@ -1,6 +1,6 @@
 # ADR 008 — Revisões imutáveis, exclusão lógica e auditoria
 
-- Estado: aceita; revisões e exclusão lógica implementadas
+- Estado: aceita; revisões, exclusão lógica e consulta da auditoria implementadas
 - Data: 2026-10-21
 
 ## Contexto
@@ -25,6 +25,11 @@ revisão vigente não excluída.
 Excluir pela interface passa a arquivar o registro. Restaurar e remover
 fisicamente são ações distintas. `audit_events` registra ações relevantes com
 tipo, entidade, ator, instante, `requestId` e metadados mínimos.
+
+O Super Admin consulta esse registro por uma linha temporal paginada. Filtros
+por ator, ação, entidade, período e identificador são aplicados no D1 antes da
+paginação. O cursor combina instante e identificador, mantendo a ordem estável
+mesmo quando duas ações ocorrem no mesmo segundo. A interface é somente leitura.
 
 Senhas, tokens, hashes e conteúdo pessoal desnecessário nunca são copiados para
 o log. Eventos de auditoria não podem ser alterados pela interface.

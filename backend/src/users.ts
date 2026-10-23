@@ -1,4 +1,5 @@
 import type { AuthUser } from "./contracts";
+import { auditStatement } from "./audit";
 import { isValidEmail, normalizeEmail } from "./domain";
 import { json } from "./http";
 import { isEvaluatorRank } from "../../lib/judo-ranks";
@@ -55,7 +56,11 @@ export async function listUsers(request: Request, env: Env) {
   return json(request, env, result.results);
 }
 
-export async function inviteUser(request: Request, env: Env) {
+export async function inviteUser(
+  request: Request,
+  env: Env,
+  actor: AuthUser,
+) {
   const body = await request.json<{
     email?: string;
     name?: string;
@@ -122,6 +127,15 @@ export async function inviteUser(request: Request, env: Env) {
         env.DB.prepare(
           "UPDATE user_roles SET updated_at = CURRENT_TIMESTAMP WHERE user_id = ? AND role = 'evaluator'",
         ).bind(existing.id),
+        auditStatement(
+          request,
+          env,
+          actor,
+          "user.invitation_updated",
+          "user",
+          existing.id,
+          { evaluatorRank },
+        ),
       ]);
       return json(request, env, {
         ...existing,
@@ -151,6 +165,15 @@ export async function inviteUser(request: Request, env: Env) {
       env.DB.prepare(
         "INSERT INTO user_roles (user_id, role, status) VALUES (?, 'evaluator', ?)",
       ).bind(existing.id, evaluatorStatus),
+      auditStatement(
+        request,
+        env,
+        actor,
+        "user.evaluator_access_added",
+        "user",
+        existing.id,
+        { status: evaluatorStatus, evaluatorRank },
+      ),
     ]);
     return json(
       request,
@@ -180,6 +203,9 @@ export async function inviteUser(request: Request, env: Env) {
     env.DB.prepare(
       "INSERT INTO user_roles (user_id, role, status) VALUES (?, 'evaluator', 'invited')",
     ).bind(invited.id),
+    auditStatement(request, env, actor, "user.invited", "user", invited.id, {
+      evaluatorRank,
+    }),
   ]);
   return json(
     request,
@@ -192,6 +218,7 @@ export async function inviteUser(request: Request, env: Env) {
 export async function cancelInvitation(
   request: Request,
   env: Env,
+  actor: AuthUser,
   userId: string,
 ) {
   const invited = await env.DB.prepare(
@@ -222,6 +249,14 @@ export async function cancelInvitation(
           AND password_hash IS NULL
           AND NOT EXISTS (SELECT 1 FROM user_roles WHERE user_id = ?)`,
     ).bind(userId, userId),
+    auditStatement(
+      request,
+      env,
+      actor,
+      "user.invitation_cancelled",
+      "user",
+      userId,
+    ),
   ]);
   return json(request, env, { ok: true });
 }
@@ -257,10 +292,13 @@ export async function updateUserStatus(
   }
 
   const evaluatorRole = await env.DB.prepare(
-    "SELECT status FROM user_roles WHERE user_id = ? AND role = 'evaluator'",
+    `SELECT user_roles.status, users.evaluator_rank
+       FROM user_roles
+       INNER JOIN users ON users.id = user_roles.user_id
+      WHERE user_roles.user_id = ? AND user_roles.role = 'evaluator'`,
   )
     .bind(userId)
-    .first<{ status: string }>();
+    .first<{ status: string; evaluator_rank: string | null }>();
   if (!evaluatorRole) {
     return json(request, env, { error: "Avaliador não encontrado." }, 404);
   }
@@ -302,6 +340,22 @@ export async function updateUserStatus(
       );
     }
   }
+  statements.push(
+    auditStatement(
+      request,
+      env,
+      currentUser,
+      "user.access_updated",
+      "user",
+      userId,
+      {
+        previousStatus: evaluatorRole.status,
+        status: body.status ?? evaluatorRole.status,
+        previousEvaluatorRank: evaluatorRole.evaluator_rank,
+        evaluatorRank: body.evaluatorRank ?? evaluatorRole.evaluator_rank,
+      },
+    ),
+  );
   await env.DB.batch(statements);
   return json(request, env, { ok: true });
 }

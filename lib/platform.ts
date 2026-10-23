@@ -174,6 +174,30 @@ export type ManagedUser = {
   average_score: number;
 };
 
+export type AuditEventRecord = {
+  id: string;
+  actorId: string | null;
+  actorName: string;
+  actorEmail: string | null;
+  action: string;
+  entityType: string;
+  entityId: string;
+  requestId: string;
+  metadata: Record<string, unknown>;
+  createdAt: string;
+};
+
+export type AuditEventPage = {
+  items: AuditEventRecord[];
+  total: number;
+  nextCursor: string | null;
+  filters: {
+    actions: string[];
+    entityTypes: string[];
+    actors: { id: string; name: string }[];
+  };
+};
+
 export type ExamEventStatus = "draft" | "open" | "in_progress" | "closed" | "archived";
 export type ExamEventTaskStatus = "waiting" | "called" | "in_progress" | "pending_sync" | "completed";
 export type EventKataType = "nage-no-kata-partial" | "nage-no-kata-complete" | "katame-no-kata";

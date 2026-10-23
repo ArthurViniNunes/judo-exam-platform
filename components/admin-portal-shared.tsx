@@ -8,6 +8,7 @@ export type AdminSection =
   | "students"
   | "theory"
   | "team"
+  | "audit"
   | "appearance";
 
 type EmptyStateProps = {

@@ -325,7 +325,9 @@ remove o registro das consultas operacionais, preserva todo o detalhamento e
 gera eventos de auditoria. O Super Admin possui uma área própria para consultar
 e restaurar esses registros. Correções também criam revisões imutáveis com
 motivo, autor, data e linha do tempo completa; painéis usam somente a versão
-vigente. Backup e recuperação de senha seguem como marcos independentes.
+vigente. A auditoria administrativa agora possui consulta cronológica somente
+leitura, filtros e paginação, e também cobre convites, perfis, cadastros e cores
+da plataforma. Backup e recuperação de senha seguem como marcos independentes.
 
 #### 4.1 Correção auditável
 

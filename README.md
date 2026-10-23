@@ -292,6 +292,7 @@ No celular, conectado à mesma rede Wi-Fi, abra `http://192.168.0.50:3000`, subs
 12. Em **Administração → Notas**, os registros podem ser combinados por avaliador, modalidade, graduação, resultado, categoria, técnica e período. O painel de dificuldades sempre informa o tamanho da amostra e destaca quando ainda há poucos exames para uma conclusão segura.
 13. Abra **Detalhes → Imprimir ou salvar PDF** para gerar um relatório somente quando necessário. A versão de impressão inclui identidade visual, judoca, graduação, avaliador, evento, data, resultado, categorias, técnicas, execuções e a referência imutável do registro.
 14. Em **Administração → Alunos**, escolha um judoca e a série de exames. A plataforma compara somente avaliações da mesma modalidade, graduação e matriz, mostrando a mudança da nota geral, cada categoria e técnicas que ficaram abaixo de 7,0 de forma recorrente. O histórico completo pode ser filtrado por modalidade, graduação e período.
+15. Em **Administração → Auditoria**, o Super Admin consulta um histórico cronológico somente leitura, com filtros por responsável, ação, tipo de registro, período e identificadores. Cada item preserva o ator, o horário, os metadados mínimos e o identificador da requisição para investigação.
 
 O Super Admin pode carregar o caderno fornecido para 1º Kyu em **Administração → Provas teóricas → Importar exame marrom**. Ele entra como rascunho: revise o gabarito provisório e inclua as 14 mídias pendentes antes de publicar. O inventário está em [`docs/product/brown-theory-exam.md`](docs/product/brown-theory-exam.md).
 
@@ -356,6 +357,7 @@ Todas as rotas abaixo, exceto `/`, `/health`, login/registro e a leitura públic
 | `POST` | `/api/auth/logout` | autenticado | Encerra a sessão atual |
 | `GET` | `/api/settings/theme` | público | Retorna as cores globais da aplicação |
 | `PATCH` | `/api/settings/theme` | Super Admin | Valida e atualiza as cores globais |
+| `GET` | `/api/audit-events` | Super Admin | Consulta o histórico paginado com filtros de ator, ação, entidade, período e identificador |
 | `GET/POST` | `/api/theory/admin/versions` | Super Admin | Lista ou cria versões teóricas em rascunho |
 | `GET/PATCH/DELETE` | `/api/theory/admin/versions/:id` | Super Admin | Consulta, configura ou exclui um rascunho |
 | `POST` | `/api/theory/admin/versions/:id/questions` | Super Admin | Adiciona uma questão ao rascunho |

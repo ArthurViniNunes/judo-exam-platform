@@ -7,6 +7,7 @@ import type {
   PracticalCandidateRow,
   StudentRow,
 } from "./contracts";
+import { auditStatement } from "./audit";
 import {
   canDeleteEvaluation,
   dashboardFromRows,
@@ -265,6 +266,7 @@ export async function listPracticalCandidates(request: Request, env: Env) {
 export async function createStudent(
   request: Request,
   env: Env,
+  user: AuthUser,
 ) {
   const body = await request.json<{ name?: string }>();
   const name = body.name?.trim().replace(/\s+/g, " ") || "";
@@ -293,13 +295,14 @@ export async function createStudent(
   }
 
   const id = crypto.randomUUID();
-  const student = await env.DB.prepare(
-    "INSERT INTO students (id, name, normalized_name) VALUES (?, ?, ?) RETURNING *",
-  )
-    .bind(id, name, normalized)
-    .first<StudentRow>();
+  await env.DB.batch([
+    env.DB.prepare(
+      "INSERT INTO students (id, name, normalized_name) VALUES (?, ?, ?)",
+    ).bind(id, name, normalized),
+    auditStatement(request, env, user, "student.created", "student", id),
+  ]);
 
-  return json(request, env, { id: student!.id, name: student!.name }, 201);
+  return json(request, env, { id, name }, 201);
 }
 
 export async function listEvaluations(

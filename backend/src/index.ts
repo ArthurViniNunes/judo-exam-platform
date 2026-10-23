@@ -1,4 +1,5 @@
 import { login, logout, register, updateProfile } from "./auth";
+import { listAuditEvents } from "./audit";
 import { publicUser } from "./domain";
 import {
   createEvaluation,
@@ -182,7 +183,11 @@ async function handleAuthenticatedRoute(
   if (professionalOnly) return professionalOnly;
   if (url.pathname === "/api/settings/theme" && request.method === "PATCH") {
     const denied = requireSuperAdmin(request, env, user);
-    return denied || updateThemeSettings(request, env);
+    return denied || updateThemeSettings(request, env, user);
+  }
+  if (url.pathname === "/api/audit-events" && request.method === "GET") {
+    const denied = requireSuperAdmin(request, env, user);
+    return denied || listAuditEvents(request, env, url);
   }
   if (url.pathname === "/api/theory/admin/versions") {
     const denied = requireSuperAdmin(request, env, user);
@@ -302,7 +307,7 @@ async function handleAuthenticatedRoute(
     return listStudents(request, env, user, url);
   }
   if (url.pathname === "/api/students" && request.method === "POST") {
-    return createStudent(request, env);
+    return createStudent(request, env, user);
   }
   if (url.pathname === "/api/evaluations" && request.method === "GET") {
     return listEvaluations(request, env, user, url);
@@ -347,7 +352,7 @@ async function handleAuthenticatedRoute(
   }
   if (url.pathname === "/api/users/invite" && request.method === "POST") {
     const denied = requireSuperAdmin(request, env, user);
-    return denied || inviteUser(request, env);
+    return denied || inviteUser(request, env, user);
   }
 
   const invitationMatch = url.pathname.match(
@@ -355,7 +360,7 @@ async function handleAuthenticatedRoute(
   );
   if (invitationMatch && request.method === "DELETE") {
     const denied = requireSuperAdmin(request, env, user);
-    return denied || cancelInvitation(request, env, invitationMatch[1]);
+    return denied || cancelInvitation(request, env, user, invitationMatch[1]);
   }
 
   const userMatch = url.pathname.match(/^\/api\/users\/([^/]+)$/);

@@ -1,4 +1,5 @@
 import type { AuthUser, Role, UserStatus } from "./contracts";
+import { auditStatement } from "./audit";
 import {
   activeRoleForContext,
   normalizeEmail,
@@ -192,9 +193,13 @@ export async function updateProfile(
       400,
     );
   }
-  await env.DB.prepare("UPDATE users SET name = ? WHERE id = ?")
-    .bind(name, user.id)
-    .run();
+  await env.DB.batch([
+    env.DB.prepare("UPDATE users SET name = ? WHERE id = ?").bind(name, user.id),
+    auditStatement(request, env, user, "user.profile_updated", "user", user.id, {
+      previousName: user.name,
+      name,
+    }),
+  ]);
   return json(request, env, { user: publicUser({ ...user, name }) });
 }
 
