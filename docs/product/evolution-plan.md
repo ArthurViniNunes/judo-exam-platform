@@ -1,6 +1,6 @@
 # Plano de evolução da plataforma
 
-- Estado: aguardando aprovação
+- Estado: software concluído no escopo aprovado; ativações operacionais listadas abaixo
 - Data da proposta: 2026-10-21
 - Responsável pelo produto: Associação Judô Rogério Cruz
 - Escopo: pontos 1, 2, 3, 5, 6, 7, 9, 10, 11, 14, 16, 17 e 18
@@ -624,14 +624,14 @@ antes da implementação:
 
 | Tema | Recomendação | Decisão do cliente |
 | --- | --- | --- |
-| Distribuição no evento | Avaliador assume ou recebe um judoca; somente um responsável por modalidade | Pendente |
+| Distribuição no evento | Avaliador assume ou recebe um judoca; somente um responsável por modalidade | Implementada |
 | Correção pelo avaliador | Permitida nas próprias avaliações por 24 horas | Implementada |
-| Exclusão | Lógica e reversível; remoção física somente por retenção | Pendente |
+| Exclusão | Lógica e reversível; remoção física somente por retenção | Implementada |
 | PDF | Gerado sob demanda no histórico/portal via impressão | Confirmado no pedido |
-| Portal de menor | Acesso por conta verificada do responsável | Pendente |
-| Liberação do relatório | Super Admin define quando o aluno pode visualizar | Pendente |
-| Backups no R2 | 30 dias para diários e 370 dias para mensais | Automação pronta; ativação pendente |
-| Provedor de e-mail | Brevo gratuito, isolado por `EmailProvider` | Pendente |
+| Portal de menor | Exige consentimento e representação legal definidos pela associação | Adiado; fora do escopo aprovado |
+| Liberação do relatório | Super Admin define quando o aluno pode visualizar | Implementada |
+| Backups no R2 | 30 dias para diários e 370 dias para mensais | Automação pronta; R2 ainda não habilitado na conta |
+| Provedor de e-mail | Brevo gratuito, isolado por `EmailProvider` | Implementado; chave de produção pendente |
 | Eventos encerrados | Somente leitura; reabertura exclusiva do Super Admin | Implementada |
 | Vibração no modo rápido | Opcional, desativada inicialmente e persistida por aparelho | Implementada |
 
@@ -647,7 +647,22 @@ O conjunto estará concluído quando:
 - correções preservem valores anteriores;
 - backups sejam restaurados em teste documentado;
 - recuperação de senha funcione sem revelar contas;
-- judoca ou responsável acesse somente os dados explicitamente vinculados.
+- o judoca acesse somente os dados explicitamente vinculados à própria conta.
+
+### Ativações externas restantes
+
+As fases de software estão concluídas no escopo aprovado. Para colocar todas as
+integrações em operação ainda é necessário:
+
+1. habilitar o R2 na conta Cloudflare, criar o bucket privado e cadastrar no
+   GitHub as variáveis e o token descritos no runbook;
+2. executar e conferir o primeiro backup e um ensaio de restauração isolada;
+3. cadastrar `BREVO_API_KEY` como secret do Worker e validar o domínio remetente;
+4. revisar as mídias dos exames teóricos, importar os cadernos como rascunho e
+   publicá-los pela interface administrativa.
+
+Essas tarefas alteram contas externas ou conteúdo pedagógico e, portanto, não
+são substituídas por código nem executadas com valores fictícios.
 
 ## 13. Referências de infraestrutura
 

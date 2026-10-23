@@ -296,9 +296,9 @@ No celular, conectado à mesma rede Wi-Fi, abra `http://192.168.0.50:3000`, subs
 16. Em **Administração → Auditoria**, o Super Admin consulta um histórico cronológico somente leitura, com filtros por responsável, ação, tipo de registro, período e identificadores. Cada item preserva o ator, o horário, os metadados mínimos e o identificador da requisição para investigação.
 17. Em **Administração → Notas**, cada avaliador pode corrigir as próprias avaliações por até 24 horas. A correção exige motivo e cria uma nova revisão; o Super Admin pode corrigir a qualquer momento e consultar todo o histórico.
 
-O Super Admin pode carregar o caderno fornecido para 1º Kyu em **Administração → Provas teóricas → Importar exame marrom**. Ele entra como rascunho: revise o gabarito provisório e inclua as 14 mídias pendentes antes de publicar. O inventário está em [`docs/product/brown-theory-exam.md`](docs/product/brown-theory-exam.md).
+O Super Admin pode carregar os cadernos disponíveis em **Administração → Provas teóricas → Importar exame teórico padrão**. Eles entram como rascunho: revise o conteúdo e inclua as mídias pendentes antes de publicar. As orientações estão em [`docs/product/theory-exam.md`](docs/product/theory-exam.md).
 
-Não há envio automático de convite, recuperação de senha ou redefinição por e-mail. A autorização precisa ser comunicada manualmente ao avaliador.
+Convites de avaliadores continuam sendo comunicados manualmente. A recuperação de senha envia e-mail automaticamente quando `BREVO_API_KEY` e o remetente estão configurados no Worker; sem essas variáveis, a API mantém a resposta segura e registra a falha operacional sem revelar se a conta existe.
 
 ## Regras das avaliações
 

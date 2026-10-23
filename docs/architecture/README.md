@@ -202,7 +202,8 @@ de 10% para traces.
 - o token de sessão fica no `localStorage` porque frontend e API são Workers
   separados; uma origem única permitiria migrar para cookie `HttpOnly`;
 - nomes ainda funcionam como fallback de identidade para registros históricos;
-- a interface calcula o resultado antes da persistência; uma falha de rede deve
-  permanecer visível ao avaliador em uma evolução futura com fila local;
+- a fila offline preserva avaliações no aparelho, mas um item ainda não
+  sincronizado depende daquele dispositivo até a confirmação do servidor;
 - rate limiting de autenticação e política formal de retenção ainda são ações
-  operacionais pendentes.
+  operacionais pendentes, separadas do estado de conclusão do software no
+  [plano de evolução](../product/evolution-plan.md#ativações-externas-restantes).

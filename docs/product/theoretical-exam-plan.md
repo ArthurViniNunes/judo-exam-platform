@@ -309,7 +309,8 @@ a nota, grava sua origem na avaliação e audita tentativas sem autorização.
 - [x] validar novamente a elegibilidade ao salvar a prática;
 - [x] mostrar origem e data da aprovação teórica;
 - [x] auditar rejeições e vincular a elegibilidade utilizada;
-- [ ] definir, antes de implementar, se existirá exceção administrativa.
+- [x] manter o fluxo normal sem exceção administrativa nesta versão; qualquer
+  liberação sem aprovação teórica exigirá nova decisão de produto e auditoria.
 
 ### 0.5 — Migração e entrada em produção
 
