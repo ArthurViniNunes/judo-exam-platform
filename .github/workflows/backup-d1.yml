@@ -25,9 +25,9 @@ jobs:
     timeout-minutes: 15
 
     env:
-      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_BACKUP_API_TOKEN }}
-      BACKUP_BUCKET: ${{ vars.CLOUDFLARE_BACKUP_BUCKET }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID || vars.CLOUDFLARE_ACCOUNT_ID }}
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_BACKUP_API_TOKEN || secrets.CLOUDFLARE_API_TOKEN }}
+      BACKUP_BUCKET: ${{ vars.CLOUDFLARE_BACKUP_BUCKET || secrets.CLOUDFLARE_BACKUP_BUCKET }}
       DATABASE_NAME: judo-exam-db
       FORCE_MONTHLY: ${{ inputs.incluir_copia_mensal || false }}
 
@@ -47,13 +47,30 @@ jobs:
       - name: Conferir configuracao protegida
         shell: bash
         run: |
-          if [[ -z "$CLOUDFLARE_ACCOUNT_ID" || -z "$CLOUDFLARE_API_TOKEN" || -z "$BACKUP_BUCKET" ]]; then
-            echo "::error::Cadastre CLOUDFLARE_ACCOUNT_ID, CLOUDFLARE_BACKUP_API_TOKEN e CLOUDFLARE_BACKUP_BUCKET conforme o runbook."
-            exit 1
+          missing=0
+          if [[ -z "$CLOUDFLARE_ACCOUNT_ID" ]]; then
+            echo "::error title=Account ID ausente::Cadastre CLOUDFLARE_ACCOUNT_ID como secret ou variable do repositorio."
+            missing=1
           fi
+          if [[ -z "$CLOUDFLARE_API_TOKEN" ]]; then
+            echo "::error title=Token ausente::Cadastre CLOUDFLARE_BACKUP_API_TOKEN. Como contingencia, o workflow aceita CLOUDFLARE_API_TOKEN."
+            missing=1
+          fi
+          if [[ -z "$BACKUP_BUCKET" ]]; then
+            echo "::error title=Bucket ausente::Cadastre CLOUDFLARE_BACKUP_BUCKET em Variables. O mesmo nome em Secrets tambem e aceito."
+            missing=1
+          fi
+          exit "$missing"
 
       - name: Instalar dependencias
         run: pnpm install --frozen-lockfile
+
+      - name: Conferir acesso ao D1 e ao R2
+        shell: bash
+        run: |
+          set -euo pipefail
+          pnpm exec wrangler d1 info "$DATABASE_NAME" --config backend/wrangler.jsonc --json > /dev/null
+          pnpm exec wrangler r2 bucket info "$BACKUP_BUCKET" --config backend/wrangler.jsonc > /dev/null
 
       - name: Exportar e gerar manifesto
         id: files

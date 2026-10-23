@@ -77,6 +77,17 @@ No GitHub, em **Settings → Secrets and variables → Actions**:
 5. confira no R2 os três objetos em `daily/AAAA/MM/DD/` e mantenha o bucket sem
    domínio público e sem `r2.dev`.
 
+O workflow também aceita `CLOUDFLARE_ACCOUNT_ID` como variável,
+`CLOUDFLARE_BACKUP_BUCKET` como secret e, provisoriamente,
+`CLOUDFLARE_API_TOKEN` como token. O token exclusivo continua recomendado por
+ter permissões menores. A etapa `Conferir acesso ao D1 e ao R2` informa se a
+credencial não possui permissão ou se o bucket ainda não existe.
+
+Se o Wrangler responder com o código `10042`, abra **Cloudflare Dashboard →
+R2 Object Storage** e habilite o R2 para a conta antes de criar o bucket. Essa
+ativação pode exigir aceite comercial ou forma de pagamento e deve ser feita
+pelo titular da conta.
+
 ### Ensaio de restauração isolada
 
 Nunca importe primeiro no banco de produção. Pelo painel do R2, escolha o trio
