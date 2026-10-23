@@ -146,10 +146,12 @@ modalidades e ciclo de vida já está disponível na API. A fila operacional já
 permite assumir uma tarefa de forma atômica, abrir a prova técnica ou de kata
 diretamente e preservar o vínculo no rascunho offline e na avaliação
 sincronizada. O primeiro incremento do modo rápido também já oferece avanço
-automático para a próxima técnica e desfazer o último lançamento. Os
-fila ao vivo recebe atualização periódica e filtros por situação, modalidade e
-responsável. Indicadores de duração e pendências por dispositivo seguem como
-marco independente.
+automático para a próxima técnica e desfazer o último lançamento. A fila ao
+vivo recebe atualização periódica e filtros por situação, modalidade e
+responsável. O painel do evento já calcula duração média, destaca a avaliação
+ativa há mais tempo e apresenta uma conferência das pendências antes do
+encerramento. A identificação de pendências por dispositivo segue como marco
+independente.
 
 #### 2.1 Evento de exame com vários avaliadores
 

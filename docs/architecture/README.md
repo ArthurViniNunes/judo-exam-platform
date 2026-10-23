@@ -60,6 +60,7 @@ lib/                         domínio executado no navegador e contratos da API
   practical-exams.ts         catálogo, seleção automática e vídeos
   practical-scoring.ts       regra de aprovação da prática
   kata-exams.ts              catálogo e pontuação de kata
+  event-operations.ts        indicadores e bloqueios do dia de exame
 backend/src/                 módulos do Worker
   index.ts                   composição e roteamento HTTP
   auth.ts                    casos de uso de autenticação e perfil

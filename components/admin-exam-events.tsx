@@ -1,10 +1,12 @@
 "use client";
 
 import {
+  AlertTriangle,
   ArrowLeft,
   CalendarDays,
   CheckCircle2,
   ChevronRight,
+  Clock3,
   CircleDot,
   ClipboardCheck,
   MapPin,
@@ -12,13 +14,16 @@ import {
   Play,
   RotateCcw,
   ShieldCheck,
+  Timer,
   Trash2,
   UserRoundCheck,
   Users,
+  X,
 } from "lucide-react";
 import { type FormEvent, useCallback, useEffect, useMemo, useState } from "react";
 import { EmptyState, initials, LoadingBlock } from "@/components/admin-portal-shared";
 import { apiRequest } from "@/lib/api";
+import { eventOperationalSummary } from "@/lib/event-operations";
 import type {
   AuthUser,
   EventKataType,
@@ -126,11 +131,13 @@ function EventDetail({ event, user, users, candidates, onBack, onChanged, onStar
   const [taskStatusFilter, setTaskStatusFilter] = useState<"all" | ExamEventTaskStatus>("all");
   const [taskModalityFilter, setTaskModalityFilter] = useState<"all" | "technical" | "kata">("all");
   const [taskEvaluatorFilter, setTaskEvaluatorFilter] = useState("all");
+  const [closeReviewOpen, setCloseReviewOpen] = useState(false);
   const editable = user.role === "super_admin" && (event.status === "draft" || event.status === "open");
   const assignedEvaluatorIds = new Set(event.evaluators.map((item) => item.id));
   const registeredStudentIds = new Set(event.entries.map((item) => item.studentId));
   const availableEvaluators = users.filter((item) => item.status === "active" && !assignedEvaluatorIds.has(item.id));
   const availableCandidates = candidates.filter((item) => item.eligibility && !registeredStudentIds.has(item.id));
+  const operations = eventOperationalSummary(event.tasks);
   const filteredTasks = event.tasks.filter((task) => {
     const matchesStatus = taskStatusFilter === "all" || task.status === taskStatusFilter;
     const matchesModality = taskModalityFilter === "all" || task.modality === taskModalityFilter;
@@ -138,6 +145,20 @@ function EventDetail({ event, user, users, candidates, onBack, onChanged, onStar
       || (taskEvaluatorFilter === "unassigned" ? !task.evaluatorId : task.evaluatorId === taskEvaluatorFilter);
     return matchesStatus && matchesModality && matchesEvaluator;
   });
+
+  useEffect(() => {
+    if (!closeReviewOpen) return;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    const closeOnEscape = (keyboardEvent: KeyboardEvent) => {
+      if (keyboardEvent.key === "Escape" && !busy) setCloseReviewOpen(false);
+    };
+    window.addEventListener("keydown", closeOnEscape);
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      window.removeEventListener("keydown", closeOnEscape);
+    };
+  }, [busy, closeReviewOpen]);
 
   const mutate = async (path: string, init: RequestInit) => {
     setBusy(true);
@@ -185,13 +206,14 @@ function EventDetail({ event, user, users, candidates, onBack, onChanged, onStar
     if (changed) { setStudentId(""); setTechnical(true); setKataType(""); }
   };
 
-  const transition = async () => {
-    const next = NEXT_STATUS[event.status];
+  const transition = async (requestedStatus?: ExamEventStatus) => {
+    const next = requestedStatus ?? NEXT_STATUS[event.status];
     if (!next) return;
-    await mutate(`/api/exam-events/${event.id}/status`, {
+    const changed = await mutate(`/api/exam-events/${event.id}/status`, {
       method: "POST",
       body: JSON.stringify({ status: next }),
     });
+    if (changed) setCloseReviewOpen(false);
   };
 
   const taskLaunch = (taskId: string): EventTaskLaunch | null => {
@@ -231,7 +253,7 @@ function EventDetail({ event, user, users, candidates, onBack, onChanged, onStar
           <p><CalendarDays size={16} /> {eventDate(event.eventDate)} {event.location && <><MapPin size={16} /> {event.location}</>}</p>
         </div>
         {user.role === "super_admin" && EVENT_STATUS[event.status].action && (
-          <button className="management-primary" disabled={busy} onClick={() => void transition()}>{EVENT_STATUS[event.status].action}<ChevronRight size={17} /></button>
+          <button className="management-primary" disabled={busy} onClick={() => event.status === "in_progress" ? setCloseReviewOpen(true) : void transition()}>{EVENT_STATUS[event.status].action}<ChevronRight size={17} /></button>
         )}
       </header>
       {error && <p className="management-error event-feedback" role="alert">{error}</p>}
@@ -239,6 +261,20 @@ function EventDetail({ event, user, users, candidates, onBack, onChanged, onStar
         <span><strong>{event.status === "in_progress" ? "Operação em progresso" : event.status === "closed" || event.status === "archived" ? "Evento encerrado" : "Preparação do evento"}</strong><small>{event.counts.students} judocas · {event.counts.evaluators} avaliadores</small></span>
         <div><i style={{ width: `${event.counts.tasks ? (event.counts.completed / event.counts.tasks) * 100 : 0}%` }} /></div>
       </div>
+      {(event.status === "in_progress" || event.status === "closed" || event.status === "archived") && (
+        <section className="event-live-summary" aria-labelledby="event-live-summary-title">
+          <header><Timer size={18} /><div><h2 id="event-live-summary-title">Ritmo do evento</h2><p>Situação atual das avaliações e tempo observado.</p></div></header>
+          <dl>
+            <div><dt>Aguardando</dt><dd>{operations.counts.waiting + operations.counts.called}</dd></div>
+            <div><dt>Em avaliação</dt><dd>{operations.counts.inProgress}</dd></div>
+            <div><dt>Aguardando envio</dt><dd>{operations.counts.pendingSync}</dd></div>
+            <div><dt>Tempo médio</dt><dd>{operations.averageDurationMinutes === null ? "—" : `${operations.averageDurationMinutes} min`}</dd></div>
+          </dl>
+          {operations.longestActiveMinutes !== null && (
+            <p><Clock3 size={15} /> A avaliação em andamento há mais tempo começou há {operations.longestActiveMinutes} min.</p>
+          )}
+        </section>
+      )}
       {event.notes && <p className="event-notes">{event.notes}</p>}
       {event.status === "in_progress" && (
         <section className="event-task-board" aria-labelledby="event-queue-title">
@@ -311,6 +347,40 @@ function EventDetail({ event, user, users, candidates, onBack, onChanged, onStar
           </div>
         </section>
       </div>
+      {closeReviewOpen && (
+        <div className="event-close-layer" role="presentation" onMouseDown={() => !busy && setCloseReviewOpen(false)}>
+          <section className="event-close-dialog" role="dialog" aria-modal="true" aria-labelledby="event-close-title" onMouseDown={(mouseEvent) => mouseEvent.stopPropagation()}>
+            <button className="event-close-x" onClick={() => setCloseReviewOpen(false)} disabled={busy} aria-label="Fechar conferência"><X size={19} /></button>
+            <header className={operations.readyToClose ? "ready" : "blocked"}>
+              <span>{operations.readyToClose ? <CheckCircle2 size={24} /> : <AlertTriangle size={24} />}</span>
+              <div>
+                <h2 id="event-close-title">{operations.readyToClose ? "Tudo pronto para encerrar" : "Ainda existem avaliações pendentes"}</h2>
+                <p>{operations.readyToClose ? "Confira o resumo antes de tornar o evento somente leitura." : "Resolva a fila abaixo antes de tentar encerrar o evento."}</p>
+              </div>
+            </header>
+            {error && <p className="management-error" role="alert">{error}</p>}
+            {operations.readyToClose ? (
+              <dl className="event-close-summary">
+                <div><dt>Avaliações concluídas</dt><dd>{operations.counts.completed}</dd></div>
+                <div><dt>Tempo médio observado</dt><dd>{operations.averageDurationMinutes === null ? "Sem duração calculada" : `${operations.averageDurationMinutes} min`}</dd></div>
+                <div><dt>Judocas</dt><dd>{event.counts.students}</dd></div>
+                <div><dt>Avaliadores</dt><dd>{event.counts.evaluators}</dd></div>
+              </dl>
+            ) : (
+              <ul className="event-close-pending">
+                {operations.counts.waiting > 0 && <li><span>Aguardando chamada</span><strong>{operations.counts.waiting}</strong></li>}
+                {operations.counts.called > 0 && <li><span>Chamadas</span><strong>{operations.counts.called}</strong></li>}
+                {operations.counts.inProgress > 0 && <li><span>Em avaliação</span><strong>{operations.counts.inProgress}</strong></li>}
+                {operations.counts.pendingSync > 0 && <li><span>Aguardando envio ao servidor</span><strong>{operations.counts.pendingSync}</strong></li>}
+              </ul>
+            )}
+            <footer>
+              <button className="management-secondary" onClick={() => setCloseReviewOpen(false)} disabled={busy}>{operations.readyToClose ? "Cancelar" : "Voltar à fila"}</button>
+              {operations.readyToClose && <button className="management-primary" autoFocus onClick={() => void transition("closed")} disabled={busy}>{busy ? "Encerrando…" : "Encerrar evento"}</button>}
+            </footer>
+          </section>
+        </div>
+      )}
     </div>
   );
 }
