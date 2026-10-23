@@ -350,7 +350,10 @@ Todas as rotas abaixo, exceto `/`, `/health`, login/registro e a leitura públic
 | `POST` | `/api/auth/register` | público | Ativa um e-mail previamente autorizado |
 | `POST` | `/api/student-auth/register` | público | Cria a identidade e o cadastro vinculados do aluno |
 | `POST` | `/api/student-auth/login` | público | Inicia uma sessão no contexto de aluno |
+| `POST` | `/api/auth/password-reset/request` | público | Solicita link de uso único sem revelar se a conta existe |
+| `POST` | `/api/auth/password-reset/confirm` | público | Troca a senha e encerra todas as sessões anteriores |
 | `GET` | `/api/student/me` | Aluno | Retorna o cadastro próprio e o histórico de elegibilidades |
+| `GET` | `/api/student/me/evaluations` | Aluno | Lista somente relatórios próprios liberados pela associação |
 | `PATCH` | `/api/student/me/target-belt` | Aluno | Define a graduação de cadastros antigos antes da primeira tentativa |
 | `GET` | `/api/auth/me` | autenticado | Retorna o usuário atual |
 | `PATCH` | `/api/auth/profile` | autenticado | Atualiza o nome do usuário |
@@ -383,6 +386,7 @@ Todas as rotas abaixo, exceto `/`, `/health`, login/registro e a leitura públic
 | `DELETE` | `/api/evaluations/:id` | autenticado | Arquiva uma avaliação permitida, com motivo obrigatório e auditoria |
 | `GET` | `/api/evaluations/deleted` | Super Admin | Lista avaliações excluídas logicamente |
 | `POST` | `/api/evaluations/:id/restore` | Super Admin | Restaura uma avaliação excluída e registra auditoria |
+| `PATCH` | `/api/evaluations/:id/student-visibility` | Super Admin | Libera ou recolhe o relatório no portal do aluno |
 | `GET/POST` | `/api/exam-events` | autenticado / Super Admin | Lista eventos acessíveis ou cria um evento |
 | `GET/PATCH` | `/api/exam-events/:id` | participante / Super Admin | Consulta o evento completo ou edita sua preparação |
 | `POST` | `/api/exam-events/:id/status` | Super Admin | Avança o ciclo de vida do evento |
@@ -409,7 +413,8 @@ corepack pnpm backend:migrate:remote
 
 O schema ativo cobre usuários e suas graduações, sessões, alunos, avaliações,
 médias por categoria, notas por técnica, execuções múltiplas, auditoria, cores
-globais, provas teóricas versionadas e eventos com suas filas por modalidade.
+globais, provas teóricas versionadas, recuperação de senha e eventos com
+suas filas por modalidade.
 Tabelas históricas de questões e matrizes permanecem nas migrações já aplicadas
 para evitar uma operação destrutiva, mas não são reutilizadas pelo fluxo novo.
 O estado local fica em `.wrangler/state` e não deve ser commitado.
@@ -466,6 +471,20 @@ Configure o segredo do Super Admin no Worker:
 ```powershell
 corepack pnpm wrangler secret put SUPER_ADMIN_INITIAL_PASSWORD --config backend/wrangler.jsonc
 ```
+
+Para ativar a recuperação de senha, cadastre um remetente verificado na Brevo,
+confira `EMAIL_FROM_ADDRESS` e `PUBLIC_APP_URL` em `backend/wrangler.jsonc` e
+grave os dois valores protegidos sem colocá-los em arquivos:
+
+```powershell
+corepack pnpm wrangler secret put BREVO_API_KEY --config backend/wrangler.jsonc
+corepack pnpm wrangler secret put PASSWORD_RESET_PEPPER --config backend/wrangler.jsonc
+```
+
+Use uma sequência aleatória longa e exclusiva no segundo secret. A API nunca
+devolve o token ao frontend durante a solicitação e o banco armazena apenas seu
+hash. Sem a chave ou um remetente verificado, `/health` informa
+`missing_email_configuration` e nenhuma mensagem é enviada.
 
 Depois, aplique as migrações e publique a API:
 

@@ -3503,6 +3503,40 @@ td:first-child {
 .management-secondary { border-color: var(--mg-line); background: var(--mg-surface); color: var(--mg-ink); }
 .auth-submit:disabled,
 .management-primary:disabled { opacity: 0.55; }
+.auth-forgot,
+.password-recovery-back {
+  width: fit-content;
+  min-height: 44px;
+  padding: 8px 4px;
+  border: 0;
+  background: transparent;
+  color: var(--mg-accent-strong);
+  font-size: 11px;
+  font-weight: 800;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.auth-forgot { justify-self: center; }
+.password-recovery-back { margin-top: -5px; display: inline-flex; align-items: center; gap: 6px; }
+.password-recovery > .auth-heading { margin-top: 14px; }
+.password-recovery-success {
+  padding: 16px;
+  border: 1px solid color-mix(in srgb, #3e9a61 45%, var(--mg-line));
+  border-radius: 12px;
+  background: color-mix(in srgb, #3e9a61 9%, var(--mg-surface));
+  color: #2f6f46;
+  display: grid;
+  grid-template-columns: 24px minmax(0, 1fr);
+  gap: 10px;
+}
+.dark .password-recovery-success { color: #bce8c9; }
+.password-recovery-success > svg { margin-top: 1px; }
+.password-recovery-success > div { min-width: 0; }
+.password-recovery-success strong { color: var(--mg-ink); font-size: 12px; }
+.password-recovery-success p { margin: 4px 0 0; font-size: 11px; line-height: 1.5; }
+.password-recovery-success button { grid-column: 1 / -1; min-height: 46px; border: 1px solid var(--mg-line); border-radius: 10px; background: var(--mg-surface); color: var(--mg-ink); font-weight: 800; }
+.auth-forgot:focus-visible,
+.password-recovery-back:focus-visible { border-radius: 6px; outline: 3px solid color-mix(in srgb, var(--mg-accent) 42%, transparent); outline-offset: 2px; }
 .auth-error,
 .management-error,
 .management-success {

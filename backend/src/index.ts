@@ -39,6 +39,7 @@ import {
   requireSuperAdmin,
 } from "./http";
 import { authenticate } from "./security";
+import { confirmPasswordReset, requestPasswordReset } from "./password-recovery";
 import { getThemeSettings, updateThemeSettings } from "./settings";
 import { loginStudent, registerStudent } from "./student-auth";
 import { getStudentProfile, updateStudentTargetBelt } from "./student-profile";
@@ -75,6 +76,7 @@ async function handlePublicRoute(
   request: Request,
   env: Env,
   url: URL,
+  context: ExecutionContext,
 ): Promise<Response | null> {
   if (request.method === "OPTIONS") {
     return new Response(null, {
@@ -97,6 +99,9 @@ async function handlePublicRoute(
       authentication: env.SUPER_ADMIN_INITIAL_PASSWORD
         ? "configured"
         : "missing_super_admin_secret",
+      passwordRecovery: env.BREVO_API_KEY && env.EMAIL_FROM_ADDRESS && env.PUBLIC_APP_URL
+        ? "configured"
+        : "missing_email_configuration",
     });
   }
   if (url.pathname === "/api/auth/login" && request.method === "POST") {
@@ -110,6 +115,12 @@ async function handlePublicRoute(
   }
   if (url.pathname === "/api/student-auth/register" && request.method === "POST") {
     return registerStudent(request, env);
+  }
+  if (url.pathname === "/api/auth/password-reset/request" && request.method === "POST") {
+    return requestPasswordReset(request, env, context);
+  }
+  if (url.pathname === "/api/auth/password-reset/confirm" && request.method === "POST") {
+    return confirmPasswordReset(request, env);
   }
   if (url.pathname === "/api/settings/theme" && request.method === "GET") {
     return getThemeSettings(request, env);
@@ -395,21 +406,25 @@ async function handleAuthenticatedRoute(
   return json(request, env, { error: "Rota não encontrada." }, 404);
 }
 
-async function handle(request: Request, env: Env): Promise<Response> {
+async function handle(
+  request: Request,
+  env: Env,
+  context: ExecutionContext,
+): Promise<Response> {
   const url = new URL(request.url);
-  const publicResponse = await handlePublicRoute(request, env, url);
+  const publicResponse = await handlePublicRoute(request, env, url, context);
   return publicResponse || handleAuthenticatedRoute(request, env, url);
 }
 
 export default {
-  async fetch(request: Request, env: Env): Promise<Response> {
+  async fetch(request: Request, env: Env, context: ExecutionContext): Promise<Response> {
     const headers = new Headers(request.headers);
     if (!headers.has("X-Request-Id")) {
       headers.set("X-Request-Id", crypto.randomUUID());
     }
     const identifiedRequest = new Request(request, { headers });
     try {
-      return await handle(identifiedRequest, env);
+      return await handle(identifiedRequest, env, context);
     } catch (error) {
       console.error(
         JSON.stringify({

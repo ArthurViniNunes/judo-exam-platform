@@ -13,10 +13,11 @@ import {
   UserRoundPlus,
 } from "lucide-react";
 import Image from "next/image";
-import { FormEvent, useState } from "react";
+import { FormEvent, useEffect, useState } from "react";
 import { apiRequest, setAuthToken } from "@/lib/api";
 import type { AuthUser } from "@/lib/platform";
 import { THEORY_BELTS } from "@/lib/theory-exams";
+import { PasswordRecovery } from "@/components/password-recovery";
 
 const LOGO = "https://media.base44.com/images/public/6a9b8ceb32f349c5600d2fdc/ecc432c62_41508.png/v1/fit/w_176,h_176,q_90,usm_0.66_1.00_0.01,enc_webp,quality_auto/ecc432c62_41508.webp";
 
@@ -42,8 +43,20 @@ export function StudentAuthScreen({
   const [confirmPassword, setConfirmPassword] = useState("");
   const [beltId, setBeltId] = useState("");
   const [showPassword, setShowPassword] = useState(false);
+  const [recoveryToken, setRecoveryToken] = useState("");
+  const [recovering, setRecovering] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+
+  useEffect(() => {
+    const resetToken = new URLSearchParams(window.location.search).get("recuperar") || "";
+    if (!resetToken) return;
+    const timer = window.setTimeout(() => {
+      setRecoveryToken(resetToken);
+      setRecovering(true);
+    }, 0);
+    return () => window.clearTimeout(timer);
+  }, []);
 
   const submit = async (event: FormEvent) => {
     event.preventDefault();
@@ -120,8 +133,18 @@ export function StudentAuthScreen({
         </ul>
       </section>
 
-      <section className="auth-panel" aria-labelledby="student-auth-title">
+      <section className="auth-panel" aria-labelledby={recovering ? "password-recovery-title" : "student-auth-title"}>
         <div className="auth-audience"><GraduationCap size={17} /> Acesso de aluno</div>
+        {recovering ? (
+          <PasswordRecovery
+            initialToken={recoveryToken}
+            onClose={() => {
+              setRecovering(false);
+              setRecoveryToken("");
+            }}
+          />
+        ) : (
+          <>
         <div className="auth-mode" role="tablist" aria-label="Acesso do aluno">
           <button
             type="button"
@@ -248,6 +271,7 @@ export function StudentAuthScreen({
                 : "Criar meu cadastro"}
             <ArrowRight size={19} />
           </button>
+          {mode === "login" && <button className="auth-forgot" type="button" onClick={() => setRecovering(true)}>Esqueci minha senha</button>}
         </form>
 
         <div className="auth-switch">
@@ -258,6 +282,8 @@ export function StudentAuthScreen({
           </div>
           <button type="button" onClick={onUseProfessional}>Acesso de avaliador</button>
         </div>
+          </>
+        )}
       </section>
     </main>
   );

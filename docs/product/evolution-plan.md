@@ -329,7 +329,7 @@ custo baixo. PDF assinado e arquivado no R2 fica fora do escopo inicial.
 
 Inclui os pontos 9, 16, 17 e 18.
 
-**Estado: em execução.** A exclusão de avaliações já é lógica, exige motivo,
+**Estado: concluída no software, com ativações operacionais pendentes.** A exclusão de avaliações é lógica, exige motivo,
 remove o registro das consultas operacionais, preserva todo o detalhamento e
 gera eventos de auditoria. O Super Admin possui uma área própria para consultar
 e restaurar esses registros. Correções também criam revisões imutáveis com
@@ -339,7 +339,9 @@ leitura, filtros e paginação, e também cobre convites, perfis, cadastros e co
 da plataforma. O workflow de backup diário e mensal já está versionado com
 manifesto, checksum e conferência pós-upload. Sua ativação depende do bucket
 privado, das regras de retenção e dos segredos descritos no runbook.
-Recuperação de senha segue como marco independente.
+A recuperação de senha usa token único, expiração, limites, auditoria e
+invalidação das sessões. Restam habilitar o R2, ensaiar a restauração e
+configurar o remetente e os secrets do provedor de e-mail em produção.
 
 #### 4.1 Correção auditável
 
@@ -379,7 +381,7 @@ primeiro ensaio de restauração isolada.
 - invalidação das sessões anteriores após a troca;
 - limites por IP e por conta;
 - auditoria de solicitação e conclusão, sem guardar o token;
-- e-mail transacional com versão texto e HTML;
+- e-mail transacional em HTML semântico, com link legível como alternativa;
 - remetente em domínio autenticado da associação.
 
 O backend usa uma interface de provedor. Para preservar a operação sem gastos,

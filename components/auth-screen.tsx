@@ -16,6 +16,7 @@ import { FormEvent, useEffect, useState } from "react";
 import { apiRequest, setAuthToken } from "@/lib/api";
 import { readInvitationPrefill } from "@/lib/invitations";
 import type { AuthUser } from "@/lib/platform";
+import { PasswordRecovery } from "@/components/password-recovery";
 
 const LOGO = "https://media.base44.com/images/public/6a9b8ceb32f349c5600d2fdc/ecc432c62_41508.png/v1/fit/w_176,h_176,q_90,usm_0.66_1.00_0.01,enc_webp,quality_auto/ecc432c62_41508.webp";
 
@@ -36,10 +37,20 @@ export function AuthScreen({ dark, setDark, onAuthenticated, onUseStudent }: Aut
   const [confirmPassword, setConfirmPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [invitedEmail, setInvitedEmail] = useState("");
+  const [recoveryToken, setRecoveryToken] = useState("");
+  const [recovering, setRecovering] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
 
   useEffect(() => {
+    const resetToken = new URLSearchParams(window.location.search).get("recuperar") || "";
+    if (resetToken) {
+      const timer = window.setTimeout(() => {
+        setRecoveryToken(resetToken);
+        setRecovering(true);
+      }, 0);
+      return () => window.clearTimeout(timer);
+    }
     const invitation = readInvitationPrefill(window.location.search);
     if (!invitation) return;
     const timer = window.setTimeout(() => {
@@ -113,8 +124,18 @@ export function AuthScreen({ dark, setDark, onAuthenticated, onUseStudent }: Aut
         </ul>
       </section>
 
-      <section className="auth-panel" aria-labelledby="auth-title">
+      <section className="auth-panel" aria-labelledby={recovering ? "password-recovery-title" : "auth-title"}>
         <div className="auth-audience"><ShieldCheck size={17} /> Acesso da equipe</div>
+        {recovering ? (
+          <PasswordRecovery
+            initialToken={recoveryToken}
+            onClose={() => {
+              setRecovering(false);
+              setRecoveryToken("");
+            }}
+          />
+        ) : (
+          <>
         <div className="auth-mode" role="tablist" aria-label="Acesso à plataforma">
           <button role="tab" aria-selected={mode === "login"} className={mode === "login" ? "active" : ""} onClick={() => changeMode("login")}>Entrar</button>
           <button role="tab" aria-selected={mode === "register"} className={mode === "register" ? "active" : ""} onClick={() => changeMode("register")}>Criar conta</button>
@@ -145,11 +166,14 @@ export function AuthScreen({ dark, setDark, onAuthenticated, onUseStudent }: Aut
           {mode === "register" && <label>Confirme a senha<input type={showPassword ? "text" : "password"} autoComplete="new-password" required minLength={10} value={confirmPassword} onChange={(event) => setConfirmPassword(event.target.value)} /></label>}
           {error && <div className="auth-error" role="alert">{error}</div>}
           <button className="auth-submit" disabled={busy}>{busy ? "Aguarde…" : mode === "login" ? "Entrar na plataforma" : "Criar minha conta"}<ArrowRight size={19} /></button>
+          {mode === "login" && <button className="auth-forgot" type="button" onClick={() => setRecovering(true)}>Esqueci minha senha</button>}
         </form>
         <p className="auth-help"><ShieldCheck size={17} /> {mode === "login" ? "Ainda não tem conta? Escolha “Criar conta” acima." : "E-mail não autorizado? Solicite a inclusão ao responsável pela associação."}</p>
         <button className="auth-return-link" type="button" onClick={onUseStudent}>
           Voltar para a entrada de alunos
         </button>
+          </>
+        )}
       </section>
     </main>
   );

@@ -96,6 +96,26 @@ export function auditStatement(
   );
 }
 
+export function systemAuditStatement(
+  request: Request,
+  env: Env,
+  action: string,
+  entityType: string,
+  entityId: string,
+  metadata: AuditMetadata = {},
+) {
+  return env.DB.prepare(
+    "INSERT INTO audit_events (id, actor_user_id, action, entity_type, entity_id, request_id, metadata_json) VALUES (?, NULL, ?, ?, ?, ?, ?)",
+  ).bind(
+    crypto.randomUUID(),
+    action,
+    entityType,
+    entityId,
+    request.headers.get("X-Request-Id") || crypto.randomUUID(),
+    JSON.stringify(metadata),
+  );
+}
+
 export async function listAuditEvents(
   request: Request,
   env: Env,
