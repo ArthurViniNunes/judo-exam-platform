@@ -396,15 +396,15 @@ export function EvaluationsView({
                   <span>Detalhes</span>
                   <ChevronDown size={16} />
                 </button>
-                {user.role === "super_admin" && <button
+                {evaluation.canCorrect && <button
                   className="evaluation-revision-action"
                   onClick={() => setCorrectionTarget(evaluation)}
                   aria-label={`Corrigir avaliação de ${evaluation.athlete}`}
-                  title="Criar uma correção sem apagar o histórico"
+                  title={user.role === "super_admin" ? "Criar uma correção sem apagar o histórico" : "Corrigir sua avaliação em até 24 horas"}
                 >
                   <PencilLine size={18} />
                 </button>}
-                {user.role === "super_admin" && evaluation.revisionNumber > 1 && <button
+                {evaluation.revisionNumber > 1 && <button
                   className="evaluation-revision-action"
                   onClick={() => setHistoryTarget(evaluation)}
                   aria-label={`Ver histórico de correções de ${evaluation.athlete}`}

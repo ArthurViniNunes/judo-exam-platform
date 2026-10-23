@@ -9,6 +9,7 @@ import type {
 } from "./contracts";
 import { auditStatement } from "./audit";
 import {
+  canCorrectEvaluation,
   canDeleteEvaluation,
   dashboardFromRows,
   formatEvaluation,
@@ -312,7 +313,14 @@ export async function listEvaluations(
   url: URL,
 ) {
   const rows = await evaluationRows(env, user, url.searchParams.get("evaluator"));
-  return json(request, env, rows.map(formatEvaluation));
+  return json(
+    request,
+    env,
+    rows.map((row) => ({
+      ...formatEvaluation(row),
+      canCorrect: canCorrectEvaluation(user, row),
+    })),
+  );
 }
 
 export async function listStudentVisibleEvaluations(
@@ -452,13 +460,21 @@ export async function listDeletedEvaluations(
 export async function listEvaluationRevisions(
   request: Request,
   env: Env,
+  user: AuthUser,
   evaluationId: string,
 ) {
   const target = await env.DB.prepare(
-    "SELECT id, revision_root_id FROM evaluations WHERE id = ?",
-  ).bind(evaluationId).first<{ id: string; revision_root_id: string | null }>();
+    "SELECT id, revision_root_id, evaluator_id FROM evaluations WHERE id = ?",
+  ).bind(evaluationId).first<{
+    id: string;
+    revision_root_id: string | null;
+    evaluator_id: string | null;
+  }>();
   if (!target) {
     return json(request, env, { error: "Avaliação não encontrada." }, 404);
+  }
+  if (user.role !== "super_admin" && target.evaluator_id !== user.id) {
+    return json(request, env, { error: "Você só pode consultar correções das suas avaliações." }, 403);
   }
 
   const rootId = target.revision_root_id ?? target.id;
@@ -499,6 +515,14 @@ export async function createEvaluationRevision(
   }
   if (current.deleted_at) {
     return json(request, env, { error: "Restaure a avaliação antes de corrigi-la." }, 409);
+  }
+  if (!canCorrectEvaluation(user, current)) {
+    return json(
+      request,
+      env,
+      { error: "O prazo de 24 horas para corrigir esta avaliação terminou." },
+      403,
+    );
   }
 
   const rootId = current.revision_root_id ?? current.id;

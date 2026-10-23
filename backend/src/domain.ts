@@ -59,6 +59,26 @@ export function canDeleteEvaluation(user: AuthUser, row: EvaluationRow) {
   return user.role === "super_admin" || row.evaluator_id === user.id;
 }
 
+export const EVALUATION_CORRECTION_WINDOW_MS = 24 * 60 * 60 * 1000;
+
+function sqliteTimestamp(value: string) {
+  const normalized = /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/.test(value)
+    ? `${value.replace(" ", "T")}Z`
+    : value;
+  return Date.parse(normalized);
+}
+
+export function canCorrectEvaluation(
+  user: AuthUser,
+  row: EvaluationRow,
+  now = new Date(),
+) {
+  if (user.role === "super_admin") return true;
+  if (row.evaluator_id !== user.id) return false;
+  const createdAt = sqliteTimestamp(row.created_at);
+  return Number.isFinite(createdAt) && now.getTime() - createdAt <= EVALUATION_CORRECTION_WINDOW_MS;
+}
+
 export function normalizeEvaluationDeletionReason(value: unknown) {
   if (typeof value !== "string") return null;
   const reason = value.trim().replace(/\s+/g, " ");

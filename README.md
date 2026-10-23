@@ -294,6 +294,7 @@ No celular, conectado à mesma rede Wi-Fi, abra `http://192.168.0.50:3000`, subs
 14. Abra **Detalhes → Imprimir ou salvar PDF** para gerar apenas o relatório individual. A versão de impressão inclui identidade visual, judoca, graduação, avaliador, evento, data, resultado, categorias, técnicas, execuções e a referência imutável do registro.
 15. Em **Administração → Alunos**, escolha um judoca e a série de exames. A plataforma compara somente avaliações da mesma modalidade, graduação e matriz, mostrando a mudança da nota geral, cada categoria e técnicas que ficaram abaixo de 7,0 de forma recorrente. O histórico completo pode ser filtrado por modalidade, graduação e período.
 16. Em **Administração → Auditoria**, o Super Admin consulta um histórico cronológico somente leitura, com filtros por responsável, ação, tipo de registro, período e identificadores. Cada item preserva o ator, o horário, os metadados mínimos e o identificador da requisição para investigação.
+17. Em **Administração → Notas**, cada avaliador pode corrigir as próprias avaliações por até 24 horas. A correção exige motivo e cria uma nova revisão; o Super Admin pode corrigir a qualquer momento e consultar todo o histórico.
 
 O Super Admin pode carregar o caderno fornecido para 1º Kyu em **Administração → Provas teóricas → Importar exame marrom**. Ele entra como rascunho: revise o gabarito provisório e inclua as 14 mídias pendentes antes de publicar. O inventário está em [`docs/product/brown-theory-exam.md`](docs/product/brown-theory-exam.md).
 

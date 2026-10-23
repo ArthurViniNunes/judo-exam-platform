@@ -42,6 +42,7 @@ export type EvaluationRecord = {
   correctedAt: string | null;
   studentVisibleAt: string | null;
   studentVisibleBy: string | null;
+  canCorrect?: boolean;
   categories: EvaluationCategoryRecord[];
   items: EvaluationItemRecord[];
 };

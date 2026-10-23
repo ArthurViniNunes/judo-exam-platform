@@ -349,13 +349,13 @@ configurar o remetente e os secrets do provedor de e-mail em produção.
 - corrigir cria uma nova revisão ligada à anterior;
 - motivo é obrigatório;
 - o relatório mostra a revisão vigente e indica que houve correção;
-- Super Admin vê a linha do tempo completa;
+- Super Admin vê a linha do tempo completa, e o avaliador vê a linha do tempo
+  das próprias avaliações;
 - exclusão na interface passa a ser lógica e reversível;
 - remoção física ocorre apenas pela política de retenção e com registro.
 
-Regra inicial proposta: avaliador corrige avaliações próprias por até 24 horas;
-Super Admin corrige ou restaura a qualquer momento, sempre com motivo. Esse
-prazo precisa de aprovação do cliente.
+Regra implementada: o avaliador corrige avaliações próprias por até 24 horas;
+o Super Admin corrige ou restaura a qualquer momento, sempre com motivo.
 
 #### 4.2 Backup e restauração
 
@@ -625,7 +625,7 @@ antes da implementação:
 | Tema | Recomendação | Decisão do cliente |
 | --- | --- | --- |
 | Distribuição no evento | Avaliador assume ou recebe um judoca; somente um responsável por modalidade | Pendente |
-| Correção pelo avaliador | Permitida nas próprias avaliações por 24 horas | Pendente |
+| Correção pelo avaliador | Permitida nas próprias avaliações por 24 horas | Implementada |
 | Exclusão | Lógica e reversível; remoção física somente por retenção | Pendente |
 | PDF | Gerado sob demanda no histórico/portal via impressão | Confirmado no pedido |
 | Portal de menor | Acesso por conta verificada do responsável | Pendente |

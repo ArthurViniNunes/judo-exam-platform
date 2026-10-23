@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import type { EvaluationRow, StudentRow } from "../backend/src/contracts";
 import {
   activeRoleForContext,
+  canCorrectEvaluation,
   dashboardFromRows,
   canDeleteEvaluation,
   formatEvaluation,
@@ -597,6 +598,35 @@ describe("domínio administrativo", () => {
     expect(canDeleteEvaluation({ ...evaluator, id: "another" }, row)).toBe(false);
     expect(
       canDeleteEvaluation({ ...evaluator, id: "admin", role: "super_admin" }, row),
+    ).toBe(true);
+  });
+
+  it("permite ao avaliador corrigir a própria nota por 24 horas", () => {
+    const row = evaluation({
+      evaluator_id: "evaluator-owner",
+      created_at: "2026-10-22 12:00:00",
+    });
+    const evaluator = {
+      id: "evaluator-owner",
+      email: "owner@example.com",
+      name: "Avaliador",
+      evaluator_rank: "Faixa preta — 1º dan",
+      role: "evaluator" as const,
+      roles: ["evaluator" as const],
+      context: "professional" as const,
+      student_id: null,
+      status: "active" as const,
+    };
+
+    expect(canCorrectEvaluation(evaluator, row, new Date("2026-10-23T11:59:59Z"))).toBe(true);
+    expect(canCorrectEvaluation(evaluator, row, new Date("2026-10-23T12:00:01Z"))).toBe(false);
+    expect(canCorrectEvaluation({ ...evaluator, id: "another" }, row)).toBe(false);
+    expect(
+      canCorrectEvaluation(
+        { ...evaluator, id: "admin", role: "super_admin" },
+        row,
+        new Date("2027-10-23T12:00:01Z"),
+      ),
     ).toBe(true);
   });
 

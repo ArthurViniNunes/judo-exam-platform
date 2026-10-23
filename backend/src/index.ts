@@ -348,10 +348,8 @@ async function handleAuthenticatedRoute(
     /^\/api\/evaluations\/([^/]+)\/revisions$/,
   );
   if (evaluationRevisionMatch) {
-    const denied = requireSuperAdmin(request, env, user);
-    if (denied) return denied;
     if (request.method === "GET") {
-      return listEvaluationRevisions(request, env, evaluationRevisionMatch[1]);
+      return listEvaluationRevisions(request, env, user, evaluationRevisionMatch[1]);
     }
     if (request.method === "POST") {
       return createEvaluationRevision(request, env, user, evaluationRevisionMatch[1]);
