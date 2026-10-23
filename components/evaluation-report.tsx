@@ -1,8 +1,9 @@
 "use client";
 
-import { ChevronDown, ClipboardCheck, Printer } from "lucide-react";
+import { ChevronDown, ClipboardCheck, ExternalLink, Printer } from "lucide-react";
 import { formatDate, scoreLabel } from "@/components/admin-portal-shared";
 import { Brand } from "@/components/exam-public";
+import { TECHNIQUE_VIDEOS } from "@/lib/practical-exams";
 import type {
   EvaluationCategoryRecord,
   EvaluationItemRecord,
@@ -170,6 +171,17 @@ export function EvaluationReport({ evaluation }: { evaluation: EvaluationRecord 
                         </span>
                         <b>{scoreLabel(item.score)}</b>
                       </div>
+                      {TECHNIQUE_VIDEOS[item.name]?.trim() && (
+                        <a
+                          className="report-technique-video"
+                          href={TECHNIQUE_VIDEOS[item.name]}
+                          target="_blank"
+                          rel="noreferrer"
+                        >
+                          <ExternalLink size={16} aria-hidden="true" />
+                          Ver referência em vídeo
+                        </a>
+                      )}
                       {(item.parts?.length ?? 0) > 0 && (
                         <ol className="report-parts" aria-label={`Notas das execuções de ${item.name}`}>
                           {item.parts.map((part, partIndex) => (

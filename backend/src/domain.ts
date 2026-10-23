@@ -204,6 +204,8 @@ export function formatEvaluation(row: EvaluationRow) {
     correctedBy: row.corrected_by ?? null,
     correctedByName: row.corrected_by_name ?? null,
     correctedAt: row.corrected_at ?? null,
+    studentVisibleAt: row.student_visible_at ?? null,
+    studentVisibleBy: row.student_visible_by ?? null,
     categories: (row.categories ?? [])
       .sort((left, right) => left.position - right.position)
       .map((category) => ({

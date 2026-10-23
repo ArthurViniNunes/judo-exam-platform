@@ -114,6 +114,8 @@ export type EvaluationRow = {
   corrected_by?: string | null;
   corrected_by_name?: string | null;
   corrected_at?: string | null;
+  student_visible_at?: string | null;
+  student_visible_by?: string | null;
   categories?: EvaluationCategoryRow[];
   items?: EvaluationItemRow[];
 };

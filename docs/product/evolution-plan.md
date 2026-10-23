@@ -257,7 +257,7 @@ O modo rápido mantém o padrão de cards, mas reduz interações:
 
 Inclui os pontos 2, 3, 6 e 7.
 
-**Estado: em execução.** A área de notas já possui filtros combináveis e um
+**Estado: concluída no escopo aprovado.** A área de notas possui filtros combináveis e um
 primeiro painel de dificuldades com média por categoria, distribuição dos
 critérios, técnicas com menor média e aviso para amostras pequenas. O perfil do
 judoca já separa séries pela modalidade, graduação e matriz e compara nota
@@ -398,9 +398,16 @@ implementação, pois preços e limites externos mudam.
 - tokens expirados, repetidos ou já usados são recusados;
 - alterações sensíveis aparecem no histórico de auditoria.
 
-### Fase 5 — Portal do judoca ou responsável
+### Fase 5 — Portal do judoca
 
 Inclui o ponto 14.
+
+**Estado: concluída para a conta do próprio judoca.** O aluno consulta somente
+as suas avaliações liberadas pelo Super Admin, com evolução comparável,
+técnicas prioritárias, filtros, detalhamento integral, vídeos cadastrados e PDF
+sob demanda. Relatórios corrigidos precisam de nova conferência antes de voltar
+ao portal. O acesso delegado a responsáveis permanece fora deste marco até a
+associação aprovar regras de consentimento e representação de menores.
 
 #### 5.1 Escopo do portal
 
@@ -410,21 +417,21 @@ Inclui o ponto 14.
 - relatório detalhado e PDF sob demanda;
 - técnicas prioritárias para treino;
 - referências de vídeo já cadastradas;
-- possibilidade de solicitar correção de dados, sem editar notas.
+- orientação para solicitar correção à associação, sem editar notas.
 
 #### 5.2 Identidade e privacidade
 
-O cadastro atual contém apenas o nome do judoca. Antes do portal será
-necessário adicionar vínculo explícito entre estudante e identidade de acesso.
+O cadastro possui um vínculo explícito entre a identidade autenticada e o
+registro do aluno. O backend usa esse vínculo em todas as consultas do portal;
+uma conta que também seja avaliadora não recebe dados de outros alunos ao entrar
+pela área do estudante.
 
 Modelo recomendado:
 
-- adulto: conta própria com e-mail verificado;
-- menor: conta do responsável, capaz de possuir vínculo com mais de um judoca;
-- vínculo criado pelo Super Admin e aceito por convite;
-- acesso revogável;
+- judoca: conta própria vinculada ao seu cadastro;
+- Super Admin: libera ou recolhe cada relatório individualmente;
+- responsável: somente em uma extensão futura com consentimento aprovado;
 - página sem listagem ou busca de outros alunos;
-- logs de acesso e download;
 - política de retenção e canal para correção ou exclusão de dados.
 
 Links públicos permanentes e QR Codes que dão acesso direto ao histórico não
@@ -433,12 +440,10 @@ convite curto, revogável e de uso único.
 
 #### Critérios de aceite da fase 5
 
-- uma conta acessa somente judocas explicitamente vinculados;
-- responsável com dois dependentes alterna entre eles sem misturar dados;
-- convite expira, é de uso único e pode ser revogado;
+- uma conta acessa somente o judoca explicitamente vinculado à sessão;
 - o portal funciona a partir de 320 px e não expõe funções administrativas;
 - relatório ainda não liberado não aparece para o judoca;
-- acessos e downloads ficam auditados.
+- revisões, exclusões e recolhimentos não vazam versões obsoletas.
 
 ## 4. Arquitetura alvo
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { ArchiveRestore, BarChart3, ChevronDown, ClipboardList, FileText, FilterX, History, PencilLine, RotateCcw, Search, Trash2, TrendingDown, X } from "lucide-react";
+import { ArchiveRestore, BarChart3, ChevronDown, ClipboardList, Eye, EyeOff, FileText, FilterX, History, PencilLine, RotateCcw, Search, Trash2, TrendingDown, X } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import {
   EmptyState,
@@ -61,6 +61,7 @@ export function EvaluationsView({
   const [correctionTarget, setCorrectionTarget] = useState<EvaluationRecord | null>(null);
   const [historyTarget, setHistoryTarget] = useState<EvaluationRecord | null>(null);
   const [deleteError, setDeleteError] = useState("");
+  const [visibilityBusyId, setVisibilityBusyId] = useState<string | null>(null);
 
   useEffect(() => {
     if (!deleteTarget && !archiveOpen) return;
@@ -208,6 +209,24 @@ export function EvaluationsView({
     }
   };
 
+  const toggleStudentVisibility = async (evaluation: EvaluationRecord) => {
+    setVisibilityBusyId(evaluation.id);
+    setDeleteError("");
+    try {
+      await apiRequest(`/api/evaluations/${encodeURIComponent(evaluation.id)}/student-visibility`, {
+        method: "PATCH",
+        body: JSON.stringify({ visible: !evaluation.studentVisibleAt }),
+      });
+      await reload();
+    } catch (caught) {
+      setDeleteError(
+        caught instanceof Error ? caught.message : "Não foi possível alterar a visibilidade para o aluno.",
+      );
+    } finally {
+      setVisibilityBusyId(null);
+    }
+  };
+
   return (
     <div className="management-page">
       <header className="management-page-heading">
@@ -281,6 +300,7 @@ export function EvaluationsView({
                 <strong>{evaluation.athlete}</strong>
                 <span>{evaluation.type} · {evaluation.belt}</span>
                 {evaluation.revisionNumber > 1 && <em className="evaluation-revision-badge">Revisão {evaluation.revisionNumber}</em>}
+                {evaluation.studentVisibleAt && <em className="evaluation-student-visible-badge"><Eye size={13} /> Liberada ao aluno</em>}
               </div>
               <div className="evaluation-context">
                 <small>Avaliador e graduação</small>
@@ -329,6 +349,15 @@ export function EvaluationsView({
                   title="Ver todas as versões"
                 >
                   <History size={18} />
+                </button>}
+                {user.role === "super_admin" && <button
+                  className="evaluation-revision-action"
+                  onClick={() => void toggleStudentVisibility(evaluation)}
+                  disabled={visibilityBusyId === evaluation.id}
+                  aria-label={`${evaluation.studentVisibleAt ? "Recolher" : "Liberar"} relatório de ${evaluation.athlete} para o aluno`}
+                  title={evaluation.studentVisibleAt ? "Recolher do portal do aluno" : "Liberar no portal do aluno"}
+                >
+                  {evaluation.studentVisibleAt ? <EyeOff size={18} /> : <Eye size={18} />}
                 </button>}
                 <button
                   className="evaluation-delete"

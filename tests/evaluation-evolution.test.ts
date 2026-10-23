@@ -40,6 +40,8 @@ function evaluation(
     correctedBy: null,
     correctedByName: null,
     correctedAt: null,
+    studentVisibleAt: null,
+    studentVisibleBy: null,
     categories: [],
     items: [],
     ...overrides,

@@ -45,3 +45,6 @@ next-env.d.ts
 # local Cloudflare secrets
 .dev.vars
 **/.dev.vars
+
+# Conteúdo dos exames e gabaritos fornecido pelo cliente
+/docs/exams/

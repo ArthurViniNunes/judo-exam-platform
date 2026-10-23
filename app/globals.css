@@ -4075,6 +4075,83 @@ td:first-child {
   font-weight: 800;
 }
 
+.portal-history { min-width: 0; display: grid; gap: 14px; }
+.portal-history > header { min-width: 0; display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+.portal-history > header > div { min-width: 0; }
+.portal-history > header span { color: var(--mg-accent-strong); font-size: 10px; font-weight: 850; }
+.portal-history > header h2 { margin: 5px 0 6px; color: var(--mg-ink); font-family: Oswald, "Arial Narrow", sans-serif; font-size: clamp(27px, 8vw, 38px); font-weight: 540; line-height: 1.05; }
+.portal-history > header p { max-width: 590px; margin: 0; color: var(--mg-muted); font-size: 11px; line-height: 1.5; }
+.portal-history > header button { width: 44px; height: 44px; flex: 0 0 44px; border: 1px solid var(--mg-line); border-radius: 50%; background: var(--mg-surface); color: var(--mg-accent-strong); display: grid; place-items: center; }
+.portal-history-state { min-height: 170px; padding: 24px 18px; border: 1px dashed var(--mg-line); border-radius: 18px; background: var(--mg-surface); color: var(--mg-muted); display: grid; place-items: center; align-content: center; gap: 8px; text-align: center; }
+.portal-history-state strong { color: var(--mg-ink); font-size: 13px; }
+.portal-history-state span { max-width: 420px; font-size: 11px; line-height: 1.5; }
+.portal-history-state button { min-height: 44px; padding-inline: 16px; border: 1px solid var(--mg-line); border-radius: 10px; background: var(--mg-surface-soft); color: var(--mg-ink); font-weight: 800; }
+.portal-history-state.error { border-style: solid; border-color: color-mix(in srgb, #a83e34 48%, var(--mg-line)); }
+.portal-history-summary { margin: 0; display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.portal-history-summary > div { min-width: 0; min-height: 86px; padding: 13px; border: 1px solid var(--mg-line); border-radius: 14px; background: var(--mg-surface); display: grid; align-content: center; gap: 5px; }
+.portal-history-summary > div:last-child { grid-column: 1 / -1; }
+.portal-history-summary dt { color: var(--mg-muted); font-size: 9px; line-height: 1.35; }
+.portal-history-summary dd { margin: 0; color: var(--mg-ink); font-family: Oswald, "Arial Narrow", sans-serif; font-size: 25px; font-weight: 600; display: flex; align-items: center; gap: 6px; }
+.portal-history-summary dd.positive { color: #2f7546; }
+.portal-history-summary dd.negative { color: #a83e34; }
+.dark .portal-history-summary dd.positive { color: #a9ddb8; }
+.dark .portal-history-summary dd.negative { color: #ffaaa2; }
+.portal-history-summary dd.neutral { color: var(--mg-muted); font-family: inherit; font-size: 12px; }
+.portal-history-evolution,
+.portal-history-reports { min-width: 0; padding: 16px; border: 1px solid var(--mg-line); border-radius: 18px; background: var(--mg-surface); }
+.portal-history-evolution-heading { display: grid; gap: 12px; }
+.portal-history-evolution h3,
+.portal-history-reports h3 { margin: 0; color: var(--mg-ink); font-family: Oswald, "Arial Narrow", sans-serif; font-size: 22px; font-weight: 550; }
+.portal-history-evolution-heading p,
+.portal-history-reports-heading p { margin: 3px 0 0; color: var(--mg-muted); font-size: 10px; }
+.portal-history-evolution-heading label,
+.portal-history-filters label { color: var(--mg-muted); display: grid; gap: 5px; font-size: 9px; font-weight: 800; }
+.portal-history-evolution-heading select,
+.portal-history-filters select,
+.portal-history-filters input { width: 100%; min-height: 44px; padding: 8px 10px; border: 1px solid var(--mg-line); border-radius: 10px; background: var(--mg-surface-soft); color: var(--mg-ink); font: inherit; font-size: 11px; }
+.portal-history-score-timeline { margin: 15px 0 0; padding: 0; list-style: none; display: grid; gap: 10px; }
+.portal-history-score-timeline li { min-width: 0; display: grid; gap: 5px; }
+.portal-history-score-timeline li > span { display: flex; justify-content: space-between; gap: 10px; color: var(--mg-muted); font-size: 9px; }
+.portal-history-score-timeline li strong { color: var(--mg-ink); font-size: 11px; }
+.portal-history-score-timeline li > i { height: 8px; border-radius: 999px; background: var(--mg-line); overflow: hidden; }
+.portal-history-score-timeline li > i > em { height: 100%; border-radius: inherit; background: var(--mg-accent); display: block; }
+.portal-history-priority-techniques { margin-top: 18px; padding-top: 15px; border-top: 1px solid var(--mg-line); }
+.portal-history-priority-techniques h4 { margin: 0 0 7px; color: var(--mg-ink); font-size: 11px; }
+.portal-history-priority-techniques ul { margin: 0; padding: 0; list-style: none; display: grid; }
+.portal-history-priority-techniques li { min-width: 0; min-height: 48px; padding-block: 7px; border-bottom: 1px solid var(--mg-line); display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 10px; }
+.portal-history-priority-techniques li:last-child { border-bottom: 0; }
+.portal-history-priority-techniques li span { min-width: 0; display: grid; gap: 2px; }
+.portal-history-priority-techniques li strong { overflow-wrap: anywhere; font-size: 10px; }
+.portal-history-priority-techniques li small { color: var(--mg-muted); font-size: 8px; }
+.portal-history-priority-techniques li b { color: var(--mg-accent-strong); font-family: Oswald, "Arial Narrow", sans-serif; font-size: 18px; }
+.portal-history-reports-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+.portal-history-reports-heading > svg { color: var(--mg-accent); }
+.portal-history-filters { margin-top: 14px; display: grid; gap: 8px; }
+.portal-history-report-list { margin-top: 14px; display: grid; gap: 9px; }
+.portal-history-report-list > article { min-width: 0; border: 1px solid var(--mg-line); border-radius: 13px; background: var(--mg-surface-soft); overflow: hidden; }
+.portal-history-report-list > article > button { width: 100%; min-height: 72px; padding: 11px 12px; border: 0; background: transparent; color: var(--mg-ink); display: grid; grid-template-columns: minmax(0, 1fr) auto 22px; align-items: center; gap: 8px; text-align: left; }
+.portal-history-report-list > article > button > span { min-width: 0; display: grid; gap: 3px; }
+.portal-history-report-list > article > button > span:nth-child(2) { text-align: right; }
+.portal-history-report-list > article > button strong { overflow-wrap: anywhere; font-size: 11px; }
+.portal-history-report-list > article > button small { color: var(--mg-muted); font-size: 8px; line-height: 1.4; }
+.portal-history-report-list > article > button b { color: var(--mg-accent-strong); font-family: Oswald, "Arial Narrow", sans-serif; font-size: 22px; }
+.portal-history-report-list > article > button[aria-expanded="true"] > svg { transform: rotate(180deg); }
+.portal-history-report-list .individual-report { margin: 0; border-width: 1px 0 0; border-radius: 0; }
+.portal-history-empty-filter { min-height: 90px; margin: 0; color: var(--mg-muted); display: grid; place-items: center; text-align: center; font-size: 10px; }
+
+@media (min-width: 768px) {
+  .portal-history-summary { grid-template-columns: repeat(3, 1fr); }
+  .portal-history-summary > div:last-child { grid-column: auto; }
+  .portal-history-evolution,
+  .portal-history-reports { padding: 21px; }
+  .portal-history-evolution-heading { grid-template-columns: minmax(0, 1fr) minmax(250px, 0.75fr); align-items: end; }
+  .portal-history-filters { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+@media (min-width: 1024px) {
+  .portal-history-filters { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+}
+
 /* Versioned theoretical exam editor */
 .theory-management-page { max-width: 1440px; }
 .theory-admin-layout {
@@ -4701,6 +4778,8 @@ td:first-child {
 .evaluation-delete:disabled { opacity: 0.5; }
 .evaluation-revision-action { width: 44px; height: 44px; flex: 0 0 44px; border: 1px solid var(--mg-line); border-radius: 10px; background: var(--mg-surface-soft); color: var(--mg-accent-strong); display: grid; place-items: center; }
 .evaluation-revision-badge { width: fit-content; margin-top: 3px; padding: 4px 7px; border-radius: 999px; background: var(--mg-bg); color: var(--mg-accent-strong); font-size: 8px; font-style: normal; font-weight: 850; text-transform: uppercase; letter-spacing: .04em; }
+.evaluation-student-visible-badge { width: fit-content; margin-top: 3px; padding: 4px 7px; border-radius: 999px; background: color-mix(in srgb, #3e9a61 14%, var(--mg-surface)); color: color-mix(in srgb, #2b7547 84%, var(--mg-ink)); display: inline-flex; align-items: center; gap: 4px; font-size: 8px; font-style: normal; font-weight: 850; }
+.dark .evaluation-student-visible-badge { color: #bce8c9; }
 .evaluation-delete-error { margin: 0 0 14px; }
 .evaluation-archive-button { width: 100%; }
 .evaluation-dialog-layer { position: fixed; z-index: 320; inset: 0; padding: 16px 0 0; background: rgba(14, 8, 7, 0.72); backdrop-filter: blur(4px); display: grid; align-items: end; }
@@ -4938,6 +5017,8 @@ td:first-child {
 .report-technique-heading strong { overflow-wrap: anywhere; font-size: 10px; }
 .report-technique-heading small { color: var(--mg-muted); font-size: 8px; line-height: 1.4; }
 .report-technique-heading > b { font-family: Oswald, "Arial Narrow", sans-serif; font-size: 18px; }
+.report-technique-video { width: fit-content; min-height: 44px; margin-top: 4px; color: var(--mg-accent-strong); display: inline-flex; align-items: center; gap: 7px; font-size: 9px; font-weight: 800; text-decoration: none; }
+.report-technique-video:focus-visible { border-radius: 6px; outline: 3px solid color-mix(in srgb, var(--mg-accent) 45%, transparent); outline-offset: 2px; }
 .report-parts { margin: 7px 0 0; padding: 7px 0 0; border-top: 1px dashed var(--mg-line); list-style: none; display: grid; gap: 5px; }
 .report-parts li { min-height: 32px; padding-left: 9px; border-left: 2px solid var(--mg-accent); display: flex; align-items: center; justify-content: space-between; gap: 10px; color: var(--mg-muted); font-size: 9px; }
 .report-parts b { color: var(--mg-ink); font-family: Oswald, "Arial Narrow", sans-serif; font-size: 15px; }

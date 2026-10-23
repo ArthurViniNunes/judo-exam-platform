@@ -12,8 +12,10 @@ import {
   listEvaluations,
   listEvaluationRevisions,
   listPracticalCandidates,
+  listStudentVisibleEvaluations,
   listStudents,
   restoreEvaluation,
+  updateEvaluationStudentVisibility,
 } from "./evaluations";
 import {
   addEventEntry,
@@ -146,6 +148,10 @@ async function handleAuthenticatedRoute(
   if (url.pathname === "/api/student/me/target-belt" && request.method === "PATCH") {
     const denied = requireStudentContext(request, env, user);
     return denied || updateStudentTargetBelt(request, env, user);
+  }
+  if (url.pathname === "/api/student/me/evaluations" && request.method === "GET") {
+    const denied = requireStudentContext(request, env, user);
+    return denied || listStudentVisibleEvaluations(request, env, user);
   }
   if (url.pathname === "/api/theory-exams/available" && request.method === "GET") {
     const denied = requireStudentContext(request, env, user);
@@ -346,6 +352,18 @@ async function handleAuthenticatedRoute(
   if (evaluationRestoreMatch && request.method === "POST") {
     const denied = requireSuperAdmin(request, env, user);
     return denied || restoreEvaluation(request, env, user, evaluationRestoreMatch[1]);
+  }
+  const evaluationStudentVisibilityMatch = url.pathname.match(
+    /^\/api\/evaluations\/([^/]+)\/student-visibility$/,
+  );
+  if (evaluationStudentVisibilityMatch && request.method === "PATCH") {
+    const denied = requireSuperAdmin(request, env, user);
+    return denied || updateEvaluationStudentVisibility(
+      request,
+      env,
+      user,
+      evaluationStudentVisibilityMatch[1],
+    );
   }
   const evaluationMatch = url.pathname.match(/^\/api\/evaluations\/([^/]+)$/);
   if (evaluationMatch && request.method === "DELETE") {

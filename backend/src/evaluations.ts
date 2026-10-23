@@ -315,6 +315,131 @@ export async function listEvaluations(
   return json(request, env, rows.map(formatEvaluation));
 }
 
+export async function listStudentVisibleEvaluations(
+  request: Request,
+  env: Env,
+  user: AuthUser,
+) {
+  if (!user.student_id) {
+    return json(request, env, { error: "Sua conta ainda não está vinculada a um cadastro de aluno." }, 409);
+  }
+  const condition = `evaluations.student_id = ?
+    AND evaluations.student_visible_at IS NOT NULL
+    AND evaluations.deleted_at IS NULL
+    AND NOT EXISTS (
+      SELECT 1 FROM evaluations AS newer
+       WHERE newer.revision_root_id = COALESCE(evaluations.revision_root_id, evaluations.id)
+         AND newer.revision_number > evaluations.revision_number
+         AND newer.deleted_at IS NULL
+    )`;
+  const [rows, categories, items, parts] = await Promise.all([
+    env.DB.prepare(
+      `SELECT evaluations.*, users.name AS evaluator_name,
+              users.evaluator_rank AS evaluator_rank,
+              correctors.name AS corrected_by_name,
+              events.name AS event_name
+         FROM evaluations
+         LEFT JOIN users ON users.id = evaluations.evaluator_id
+         LEFT JOIN users AS correctors ON correctors.id = evaluations.corrected_by
+         LEFT JOIN exam_event_tasks AS event_tasks ON event_tasks.id = evaluations.event_task_id
+         LEFT JOIN exam_event_entries AS event_entries ON event_entries.id = event_tasks.entry_id
+         LEFT JOIN exam_events AS events ON events.id = event_entries.event_id
+        WHERE ${condition}
+        ORDER BY evaluations.created_at DESC`,
+    ).bind(user.student_id).all<EvaluationRow>(),
+    env.DB.prepare(
+      `SELECT evaluation_categories.* FROM evaluation_categories
+       JOIN evaluations ON evaluations.id = evaluation_categories.evaluation_id
+       WHERE ${condition} ORDER BY evaluation_categories.position`,
+    ).bind(user.student_id).all<EvaluationCategoryRow>(),
+    env.DB.prepare(
+      `SELECT evaluation_items.* FROM evaluation_items
+       JOIN evaluations ON evaluations.id = evaluation_items.evaluation_id
+       WHERE ${condition} ORDER BY evaluation_items.position`,
+    ).bind(user.student_id).all<EvaluationItemRow>(),
+    env.DB.prepare(
+      `SELECT evaluation_item_parts.* FROM evaluation_item_parts
+       JOIN evaluation_items ON evaluation_items.id = evaluation_item_parts.evaluation_item_id
+       JOIN evaluations ON evaluations.id = evaluation_items.evaluation_id
+       WHERE ${condition} ORDER BY evaluation_item_parts.position`,
+    ).bind(user.student_id).all<EvaluationItemPartRow>(),
+  ]);
+  const partsByItem = new Map<string, EvaluationItemPartRow[]>();
+  for (const part of parts.results) {
+    const current = partsByItem.get(part.evaluation_item_id) ?? [];
+    current.push(part);
+    partsByItem.set(part.evaluation_item_id, current);
+  }
+  const itemsByEvaluation = new Map<string, EvaluationItemRow[]>();
+  for (const item of items.results) {
+    const current = itemsByEvaluation.get(item.evaluation_id) ?? [];
+    current.push({ ...item, parts: partsByItem.get(item.id) ?? [] });
+    itemsByEvaluation.set(item.evaluation_id, current);
+  }
+  const categoriesByEvaluation = new Map<string, EvaluationCategoryRow[]>();
+  for (const category of categories.results) {
+    const current = categoriesByEvaluation.get(category.evaluation_id) ?? [];
+    current.push(category);
+    categoriesByEvaluation.set(category.evaluation_id, current);
+  }
+  return json(
+    request,
+    env,
+    rows.results.map((row) => formatEvaluation({
+      ...row,
+      categories: categoriesByEvaluation.get(row.id) ?? [],
+      items: itemsByEvaluation.get(row.id) ?? [],
+    })),
+  );
+}
+
+export async function updateEvaluationStudentVisibility(
+  request: Request,
+  env: Env,
+  user: AuthUser,
+  evaluationId: string,
+) {
+  const body: { visible?: unknown } = await request.json<{ visible?: unknown }>().catch(() => ({}));
+  if (typeof body.visible !== "boolean") {
+    return json(request, env, { error: "Informe se o relatório deve ficar visível." }, 400);
+  }
+  const current = await env.DB.prepare(
+    `SELECT id, student_id, deleted_at FROM evaluations WHERE id = ?
+      AND NOT EXISTS (
+        SELECT 1 FROM evaluations AS newer
+         WHERE newer.revision_root_id = COALESCE(evaluations.revision_root_id, evaluations.id)
+           AND newer.revision_number > evaluations.revision_number
+           AND newer.deleted_at IS NULL
+      )`,
+  ).bind(evaluationId).first<{ id: string; student_id: string | null; deleted_at: string | null }>();
+  if (!current) return json(request, env, { error: "Avaliação vigente não encontrada." }, 404);
+  if (current.deleted_at) {
+    return json(request, env, { error: "Restaure a avaliação antes de liberá-la ao aluno." }, 409);
+  }
+  if (body.visible && !current.student_id) {
+    return json(request, env, { error: "Esta avaliação não está vinculada a um aluno cadastrado." }, 409);
+  }
+  await env.DB.batch([
+    body.visible
+      ? env.DB.prepare(
+          "UPDATE evaluations SET student_visible_at = CURRENT_TIMESTAMP, student_visible_by = ? WHERE id = ?",
+        ).bind(user.id, evaluationId)
+      : env.DB.prepare(
+          "UPDATE evaluations SET student_visible_at = NULL, student_visible_by = NULL WHERE id = ?",
+        ).bind(evaluationId),
+    auditStatement(
+      request,
+      env,
+      user,
+      body.visible ? "evaluation.released_to_student" : "evaluation.hidden_from_student",
+      "evaluation",
+      evaluationId,
+    ),
+  ]);
+  const updated = await completeEvaluationRow(env, evaluationId);
+  return json(request, env, formatEvaluation(updated!));
+}
+
 export async function listDeletedEvaluations(
   request: Request,
   env: Env,

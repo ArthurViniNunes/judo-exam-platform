@@ -40,6 +40,8 @@ export type EvaluationRecord = {
   correctedBy: string | null;
   correctedByName: string | null;
   correctedAt: string | null;
+  studentVisibleAt: string | null;
+  studentVisibleBy: string | null;
   categories: EvaluationCategoryRecord[];
   items: EvaluationItemRecord[];
 };

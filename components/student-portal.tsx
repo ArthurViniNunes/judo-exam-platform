@@ -15,6 +15,7 @@ import { apiRequest } from "@/lib/api";
 import type { AuthUser, StudentProfile } from "@/lib/platform";
 import { THEORY_BELTS } from "@/lib/theory-exams";
 import { StudentTheoryExam } from "./student-theory-exam";
+import { StudentHistory } from "./student-history";
 
 const LOGO = "https://media.base44.com/images/public/6a9b8ceb32f349c5600d2fdc/ecc432c62_41508.png/v1/fit/w_176,h_176,q_90,usm_0.66_1.00_0.01,enc_webp,quality_auto/ecc432c62_41508.webp";
 
@@ -159,6 +160,8 @@ export function StudentPortal({
         ) : (
           <StudentTheoryExam />
         )}
+
+        <StudentHistory />
 
         {hasProfessionalAccess && (
           <aside className="student-professional-switch">
