@@ -5376,7 +5376,10 @@ td:first-child {
 .event-detail-hero h1 { margin: 8px 0 7px; font-family: Oswald, "Arial Narrow", sans-serif; font-size: clamp(30px, 9vw, 45px); font-weight: 520; line-height: 1; }
 .event-detail-hero p { margin: 0; color: rgba(255,255,255,0.78); display: flex; align-items: center; flex-wrap: wrap; gap: 6px; font-size: 11px; }
 .event-detail-hero p svg:nth-of-type(2) { margin-left: 8px; }
+.event-hero-actions { display: grid; gap: 8px; }
 .event-detail-hero .management-primary { width: 100%; background: #fff; color: #371316; }
+.event-detail-hero .management-secondary { width: 100%; border-color: rgba(255,255,255,.56); background: rgba(255,255,255,.08); color: #fff; }
+.event-detail-hero .management-secondary:hover { background: rgba(255,255,255,.16); }
 .dark .event-detail-hero .management-primary { color: #371316; }
 .event-feedback { margin-top: 12px; }
 .event-progress {
@@ -5502,7 +5505,9 @@ td:first-child {
   .event-list > button { min-height: 106px; padding: 16px 19px; grid-template-columns: 58px minmax(0, 1fr) 70px 22px; gap: 15px; }
   .event-date-block { width: 58px; min-height: 66px; }
   .event-detail-hero { padding: 25px; grid-template-columns: minmax(0, 1fr) auto; align-items: center; }
-  .event-detail-hero .management-primary { width: auto; min-width: 170px; }
+  .event-hero-actions { grid-auto-flow: column; align-items: center; }
+  .event-detail-hero .management-primary,
+  .event-detail-hero .management-secondary { width: auto; min-width: 170px; }
   .event-progress { grid-template-columns: minmax(180px, 0.4fr) minmax(260px, 1fr); align-items: center; }
   .event-live-summary dl { grid-template-columns: repeat(4, minmax(0, 1fr)); }
   .event-close-layer { padding: 24px; place-items: center; }

@@ -68,7 +68,7 @@ export function canTransitionExamEvent(
   current: ExamEventStatus,
   next: ExamEventStatus,
 ) {
-  return nextEventStatus[current] === next;
+  return nextEventStatus[current] === next || (current === "closed" && next === "open");
 }
 
 export function nextExamEventStatus(current: ExamEventStatus) {

@@ -133,6 +133,7 @@ function EventDetail({ event, user, users, candidates, onBack, onChanged, onStar
   const [taskModalityFilter, setTaskModalityFilter] = useState<"all" | "technical" | "kata">("all");
   const [taskEvaluatorFilter, setTaskEvaluatorFilter] = useState("all");
   const [closeReviewOpen, setCloseReviewOpen] = useState(false);
+  const [reopenReviewOpen, setReopenReviewOpen] = useState(false);
   const editable = user.role === "super_admin" && (event.status === "draft" || event.status === "open");
   const assignedEvaluatorIds = new Set(event.evaluators.map((item) => item.id));
   const registeredStudentIds = new Set(event.entries.map((item) => item.studentId));
@@ -148,18 +149,21 @@ function EventDetail({ event, user, users, candidates, onBack, onChanged, onStar
   });
 
   useEffect(() => {
-    if (!closeReviewOpen) return;
+    if (!closeReviewOpen && !reopenReviewOpen) return;
     const previousOverflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
     const closeOnEscape = (keyboardEvent: KeyboardEvent) => {
-      if (keyboardEvent.key === "Escape" && !busy) setCloseReviewOpen(false);
+      if (keyboardEvent.key === "Escape" && !busy) {
+        setCloseReviewOpen(false);
+        setReopenReviewOpen(false);
+      }
     };
     window.addEventListener("keydown", closeOnEscape);
     return () => {
       document.body.style.overflow = previousOverflow;
       window.removeEventListener("keydown", closeOnEscape);
     };
-  }, [busy, closeReviewOpen]);
+  }, [busy, closeReviewOpen, reopenReviewOpen]);
 
   const mutate = async (path: string, init: RequestInit) => {
     setBusy(true);
@@ -214,7 +218,10 @@ function EventDetail({ event, user, users, candidates, onBack, onChanged, onStar
       method: "POST",
       body: JSON.stringify({ status: next }),
     });
-    if (changed) setCloseReviewOpen(false);
+    if (changed) {
+      setCloseReviewOpen(false);
+      setReopenReviewOpen(false);
+    }
   };
 
   const taskLaunch = (taskId: string): EventTaskLaunch | null => {
@@ -253,8 +260,17 @@ function EventDetail({ event, user, users, candidates, onBack, onChanged, onStar
           <h1>{event.name}</h1>
           <p><CalendarDays size={16} /> {eventDate(event.eventDate)} {event.location && <><MapPin size={16} /> {event.location}</>}</p>
         </div>
-        {user.role === "super_admin" && EVENT_STATUS[event.status].action && (
-          <button className="management-primary" disabled={busy} onClick={() => event.status === "in_progress" ? setCloseReviewOpen(true) : void transition()}>{EVENT_STATUS[event.status].action}<ChevronRight size={17} /></button>
+        {user.role === "super_admin" && (
+          <div className="event-hero-actions">
+            {event.status === "closed" && (
+              <button className="management-secondary" disabled={busy} onClick={() => setReopenReviewOpen(true)}>
+                <RotateCcw size={17} /> Reabrir evento
+              </button>
+            )}
+            {EVENT_STATUS[event.status].action && (
+              <button className="management-primary" disabled={busy} onClick={() => event.status === "in_progress" ? setCloseReviewOpen(true) : void transition()}>{EVENT_STATUS[event.status].action}<ChevronRight size={17} /></button>
+            )}
+          </div>
         )}
       </header>
       {error && <p className="management-error event-feedback" role="alert">{error}</p>}
@@ -381,6 +397,25 @@ function EventDetail({ event, user, users, candidates, onBack, onChanged, onStar
             <footer>
               <button className="management-secondary" onClick={() => setCloseReviewOpen(false)} disabled={busy}>{operations.readyToClose ? "Cancelar" : "Voltar à fila"}</button>
               {operations.readyToClose && <button className="management-primary" autoFocus onClick={() => void transition("closed")} disabled={busy}>{busy ? "Encerrando…" : "Encerrar evento"}</button>}
+            </footer>
+          </section>
+        </div>
+      )}
+      {reopenReviewOpen && (
+        <div className="event-close-layer" role="presentation" onMouseDown={() => !busy && setReopenReviewOpen(false)}>
+          <section className="event-close-dialog" role="dialog" aria-modal="true" aria-labelledby="event-reopen-title" onMouseDown={(mouseEvent) => mouseEvent.stopPropagation()}>
+            <button className="event-close-x" onClick={() => setReopenReviewOpen(false)} disabled={busy} aria-label="Fechar confirmação"><X size={19} /></button>
+            <header className="ready">
+              <span><RotateCcw size={24} /></span>
+              <div>
+                <h2 id="event-reopen-title">Reabrir este evento?</h2>
+                <p>O evento voltará para inscrições abertas. Você poderá ajustar participantes e, depois, iniciá-lo novamente. As avaliações concluídas não serão alteradas.</p>
+              </div>
+            </header>
+            {error && <p className="management-error" role="alert">{error}</p>}
+            <footer>
+              <button className="management-secondary" onClick={() => setReopenReviewOpen(false)} disabled={busy}>Cancelar</button>
+              <button className="management-primary" autoFocus onClick={() => void transition("open")} disabled={busy}>{busy ? "Reabrindo…" : "Confirmar reabertura"}</button>
             </footer>
           </section>
         </div>

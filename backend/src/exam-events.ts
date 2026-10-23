@@ -355,6 +355,7 @@ export async function transitionExamEvent(
       return json(request, env, { error: "Conclua todas as avaliações antes de encerrar o evento.", pending: Number(pending?.total) }, 409);
     }
   }
+  const reopening = current.status === "closed" && next === "open";
   const timestampColumn = next === "in_progress"
     ? "started_at"
     : next === "closed"
@@ -362,12 +363,19 @@ export async function transitionExamEvent(
       : next === "archived"
         ? "archived_at"
         : null;
-  const timestampSql = timestampColumn ? `, ${timestampColumn} = CURRENT_TIMESTAMP` : "";
+  const timestampSql = reopening
+    ? ", closed_at = NULL"
+    : timestampColumn
+      ? `, ${timestampColumn} = CURRENT_TIMESTAMP`
+      : "";
   await env.DB.batch([
     env.DB.prepare(
       `UPDATE exam_events SET status = ?, updated_at = CURRENT_TIMESTAMP${timestampSql} WHERE id = ? AND status = ?`,
     ).bind(next, eventId, current.status),
-    auditStatement(request, env, user, "exam_event.status_changed", eventId, { from: current.status, to: next }),
+    auditStatement(request, env, user, reopening ? "exam_event.reopened" : "exam_event.status_changed", eventId, {
+      from: current.status,
+      to: next,
+    }),
   ]);
   return getExamEvent(request, env, user, eventId);
 }

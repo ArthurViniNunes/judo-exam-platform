@@ -632,7 +632,7 @@ antes da implementação:
 | Liberação do relatório | Super Admin define quando o aluno pode visualizar | Pendente |
 | Backups no R2 | 30 dias para diários e 370 dias para mensais | Automação pronta; ativação pendente |
 | Provedor de e-mail | Brevo gratuito, isolado por `EmailProvider` | Pendente |
-| Eventos encerrados | Somente leitura; reabertura exclusiva do Super Admin | Pendente |
+| Eventos encerrados | Somente leitura; reabertura exclusiva do Super Admin | Implementada |
 | Vibração no modo rápido | Opcional e desativável | Pendente |
 
 ## 12. Definição de pronto do programa

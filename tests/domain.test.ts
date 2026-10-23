@@ -103,6 +103,8 @@ describe("eventos de exame", () => {
     expect(canTransitionExamEvent("open", "in_progress")).toBe(true);
     expect(canTransitionExamEvent("in_progress", "archived")).toBe(false);
     expect(canTransitionExamEvent("closed", "archived")).toBe(true);
+    expect(canTransitionExamEvent("closed", "open")).toBe(true);
+    expect(canTransitionExamEvent("archived", "open")).toBe(false);
   });
 
   it("exige ao menos uma modalidade por inscrição", () => {
