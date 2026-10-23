@@ -17,5 +17,5 @@ anterior.
 | [008](008-revisoes-auditoria.md) | Revisões imutáveis e auditoria | Aceita; implementação incremental |
 | [009](009-portal-do-judoca.md) | Portal somente leitura para judoca ou responsável | Proposta |
 | [010](010-email-recuperacao.md) | E-mail transacional e recuperação de senha | Proposta |
-| [011](011-backup-restauracao.md) | Recuperação D1 e cópias no R2 | Proposta |
+| [011](011-backup-restauracao.md) | Recuperação D1 e cópias no R2 | Aceita; ativação pendente |
 | [012](012-identidade-aluno-e-elegibilidade-teorica.md) | Identidade do aluno e elegibilidade pelo exame teórico | Aceita; implementação incremental |

@@ -329,7 +329,10 @@ e restaurar esses registros. Correções também criam revisões imutáveis com
 motivo, autor, data e linha do tempo completa; painéis usam somente a versão
 vigente. A auditoria administrativa agora possui consulta cronológica somente
 leitura, filtros e paginação, e também cobre convites, perfis, cadastros e cores
-da plataforma. Backup e recuperação de senha seguem como marcos independentes.
+da plataforma. O workflow de backup diário e mensal já está versionado com
+manifesto, checksum e conferência pós-upload. Sua ativação depende do bucket
+privado, das regras de retenção e dos segredos descritos no runbook.
+Recuperação de senha segue como marco independente.
 
 #### 4.1 Correção auditável
 
@@ -347,7 +350,7 @@ prazo precisa de aprovação do cliente.
 
 #### 4.2 Backup e restauração
 
-Camadas propostas:
+Camadas adotadas:
 
 1. recuperação nativa por ponto no tempo do D1;
 2. exportação lógica automática para bucket privado no R2;
@@ -356,8 +359,10 @@ Camadas propostas:
 5. teste trimestral de restauração em ambiente separado;
 6. runbook com responsáveis, tempo esperado e validações pós-restauração.
 
-Retenção inicial sugerida: 30 cópias diárias e 12 cópias mensais. A política
-final depende da definição de retenção dos dados dos judocas.
+Retenção inicial: expiração das cópias diárias após 30 dias e das mensais após
+370 dias. Antes de considerar o marco operacionalmente concluído, ainda é
+necessário ativar o bucket, executar o workflow manualmente e realizar o
+primeiro ensaio de restauração isolada.
 
 #### 4.3 Recuperação de senha
 
@@ -611,7 +616,7 @@ antes da implementação:
 | PDF | Gerado sob demanda no histórico/portal via impressão | Confirmado no pedido |
 | Portal de menor | Acesso por conta verificada do responsável | Pendente |
 | Liberação do relatório | Super Admin define quando o aluno pode visualizar | Pendente |
-| Backups no R2 | 30 diários e 12 mensais | Pendente |
+| Backups no R2 | 30 dias para diários e 370 dias para mensais | Automação pronta; ativação pendente |
 | Provedor de e-mail | Brevo gratuito, isolado por `EmailProvider` | Pendente |
 | Eventos encerrados | Somente leitura; reabertura exclusiva do Super Admin | Pendente |
 | Vibração no modo rápido | Opcional e desativável | Pendente |

@@ -548,6 +548,7 @@ backend/migrations/           Migrações do D1
 tests/                        Regressões das regras de negócio
 scripts/dev-all.mjs           Inicialização local dos dois serviços
 scripts/serve-static.mjs      Servidor local do build estático
+.github/workflows/backup-d1.yml Backup diário e mensal do D1 no R2
 docs/                         Produto, arquitetura, ADRs e operação
 ```
 
@@ -559,7 +560,7 @@ Antes do uso real:
 2. restrinja `FRONTEND_ORIGIN` à origem exata do frontend;
 3. configure rate limiting para login no ambiente de produção;
 4. defina política de privacidade, retenção e exportação dos dados dos alunos;
-5. faça backups periódicos do D1 e teste a restauração;
+5. ative o workflow de backup do D1 conforme o runbook e teste a restauração;
 6. revise os links e o catálogo técnico antes de cada ciclo de exames.
 
 As avaliações são dados pessoais operacionais. Antes de ampliar o uso, documente a base legal, o prazo de retenção, o responsável por exportações e o procedimento para correção ou exclusão de registros.
