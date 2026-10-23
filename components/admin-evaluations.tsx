@@ -1,6 +1,6 @@
 "use client";
 
-import { ArchiveRestore, BarChart3, ChevronDown, ClipboardList, Eye, EyeOff, FileText, FilterX, History, PencilLine, RotateCcw, Search, Trash2, TrendingDown, X } from "lucide-react";
+import { ArchiveRestore, BarChart3, CheckSquare2, ChevronDown, ClipboardList, Eye, EyeOff, FileText, FilterX, History, PencilLine, Printer, RotateCcw, Search, Trash2, TrendingDown, X } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import {
   EmptyState,
@@ -11,6 +11,7 @@ import {
 import type { AuthUser, EvaluationRecord, ManagedUser } from "@/lib/platform";
 import { apiRequest } from "@/lib/api";
 import { EvaluationReport } from "@/components/evaluation-report";
+import { EvaluationBatchReport } from "@/components/evaluation-batch-report";
 import { EvaluationRevisionDialogs } from "@/components/evaluation-revision-dialogs";
 
 function resultLabel(evaluation: EvaluationRecord) {
@@ -62,6 +63,8 @@ export function EvaluationsView({
   const [historyTarget, setHistoryTarget] = useState<EvaluationRecord | null>(null);
   const [deleteError, setDeleteError] = useState("");
   const [visibilityBusyId, setVisibilityBusyId] = useState<string | null>(null);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(() => new Set());
+  const [batchReportOpen, setBatchReportOpen] = useState(false);
 
   useEffect(() => {
     if (!deleteTarget && !archiveOpen) return;
@@ -143,6 +146,30 @@ export function EvaluationsView({
   }, [categoryFilter, filtered, techniqueFilter]);
 
   const hasFilters = Boolean(search || typeFilter || beltFilter || resultFilter || categoryFilter || techniqueFilter || dateFrom || dateTo || evaluatorId);
+  const selectedEvaluations = useMemo(
+    () => evaluations.filter((evaluation) => selectedIds.has(evaluation.id)),
+    [evaluations, selectedIds],
+  );
+  const filteredIds = useMemo(() => filtered.map((evaluation) => evaluation.id), [filtered]);
+  const allFilteredSelected = filteredIds.length > 0 && filteredIds.every((id) => selectedIds.has(id));
+
+  const toggleSelection = (id: string) => {
+    setSelectedIds((current) => {
+      const next = new Set(current);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const toggleFilteredSelection = () => {
+    setSelectedIds((current) => {
+      const next = new Set(current);
+      if (allFilteredSelected) filteredIds.forEach((id) => next.delete(id));
+      else filteredIds.forEach((id) => next.add(id));
+      return next;
+    });
+  };
   const clearFilters = () => {
     setSearch(""); setTypeFilter(""); setBeltFilter(""); setResultFilter("");
     setCategoryFilter(""); setTechniqueFilter(""); setDateFrom(""); setDateTo("");
@@ -261,6 +288,31 @@ export function EvaluationsView({
       </section>
       {deleteError && !deleteTarget && !archiveOpen && <p className="management-error evaluation-delete-error">{deleteError}</p>}
 
+      {filtered.length > 0 && (
+        <section className="evaluation-selection-bar" aria-label="Seleção para relatório coletivo">
+          <button
+            className="evaluation-select-filtered"
+            onClick={toggleFilteredSelection}
+            aria-pressed={allFilteredSelected}
+          >
+            <CheckSquare2 size={18} />
+            {allFilteredSelected ? "Remover filtradas" : `Selecionar filtradas (${filtered.length})`}
+          </button>
+          <div aria-live="polite">
+            <strong>{selectedEvaluations.length}</strong>
+            <span>{selectedEvaluations.length === 1 ? "avaliação escolhida" : "avaliações escolhidas"}</span>
+          </div>
+          {selectedEvaluations.length > 0 && <button className="evaluation-selection-clear" onClick={() => setSelectedIds(new Set())}>Limpar seleção</button>}
+          <button
+            className="management-primary evaluation-batch-print"
+            disabled={!selectedEvaluations.length}
+            onClick={() => setBatchReportOpen(true)}
+          >
+            <Printer size={18} /> Preparar PDF
+          </button>
+        </section>
+      )}
+
       {difficulty.items > 0 && (
         <section className="difficulty-panel" aria-labelledby="difficulty-title">
           <header><span><BarChart3 size={20} /></span><div><h2 id="difficulty-title">Dificuldades técnicas</h2><p>{difficulty.evaluations} {difficulty.evaluations === 1 ? "avaliação técnica" : "avaliações técnicas"} · {difficulty.items} {difficulty.items === 1 ? "item" : "itens"} na amostra</p></div></header>
@@ -286,6 +338,7 @@ export function EvaluationsView({
       ) : (
         <section className="evaluation-ledger" aria-label="Notas consolidadas">
           <header aria-hidden="true">
+            <span>Selecionar</span>
             <span>Judoca</span>
             <span>Avaliador e graduação</span>
             <span>Data</span>
@@ -294,7 +347,16 @@ export function EvaluationsView({
             <span>Ações</span>
           </header>
           {filtered.map((evaluation) => (
-            <article key={evaluation.id}>
+            <article key={evaluation.id} className={selectedIds.has(evaluation.id) ? "selected" : ""}>
+              <label className="evaluation-select-one">
+                <input
+                  type="checkbox"
+                  checked={selectedIds.has(evaluation.id)}
+                  onChange={() => toggleSelection(evaluation.id)}
+                />
+                <span aria-hidden="true" />
+                <b>Selecionar avaliação de {evaluation.athlete}</b>
+              </label>
               <div className="evaluation-athlete">
                 <small>Judoca</small>
                 <strong>{evaluation.athlete}</strong>
@@ -377,6 +439,9 @@ export function EvaluationsView({
             </article>
           ))}
         </section>
+      )}
+      {batchReportOpen && selectedEvaluations.length > 0 && (
+        <EvaluationBatchReport evaluations={selectedEvaluations} onClose={() => setBatchReportOpen(false)} />
       )}
       {deleteTarget && <div className="evaluation-dialog-layer" role="presentation">
         <section
