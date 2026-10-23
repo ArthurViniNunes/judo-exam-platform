@@ -21,6 +21,9 @@ function task(
     completedAt,
     evaluationId: status === "completed" ? `evaluation-${id}` : null,
     lockVersion: 1,
+    deviceId: null,
+    deviceLabel: null,
+    lastSyncAt: null,
   };
 }
 

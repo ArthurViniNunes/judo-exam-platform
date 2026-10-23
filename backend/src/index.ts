@@ -22,6 +22,7 @@ import {
   createExamEvent,
   getExamEvent,
   listExamEvents,
+  markEventTaskPendingSync,
   removeEventEntry,
   removeEventEvaluator,
   releaseEventTask,
@@ -268,6 +269,10 @@ async function handleAuthenticatedRoute(
   const eventTaskReleaseMatch = url.pathname.match(/^\/api\/exam-events\/([^/]+)\/tasks\/([^/]+)\/release$/);
   if (eventTaskReleaseMatch && request.method === "POST") {
     return releaseEventTask(request, env, user, eventTaskReleaseMatch[1], eventTaskReleaseMatch[2]);
+  }
+  const eventTaskPendingSyncMatch = url.pathname.match(/^\/api\/exam-event-tasks\/([^/]+)\/pending-sync$/);
+  if (eventTaskPendingSyncMatch && request.method === "POST") {
+    return markEventTaskPendingSync(request, env, user, eventTaskPendingSyncMatch[1]);
   }
   const eventEvaluatorsMatch = url.pathname.match(/^\/api\/exam-events\/([^/]+)\/evaluators$/);
   if (eventEvaluatorsMatch && request.method === "POST") {

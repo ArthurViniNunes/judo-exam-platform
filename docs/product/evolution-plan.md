@@ -81,6 +81,12 @@ fase deve ser dividida em entregas pequenas e publicáveis depois da aprovação
 
 Inclui os pontos 1, 5 e a base dos pontos 16 e 18.
 
+**Estado: concluída.** A aplicação é instalável, mantém rascunhos e avaliações
+concluídas no IndexedDB, sincroniza com idempotência e espera progressiva,
+preserva falhas para nova tentativa e diferencia visualmente dado local de dado
+confirmado pelo servidor. Logout e fechamento avisam quando ainda existe
+conteúdo pendente, e os testes cobrem a máquina de estados da fila.
+
 #### 1.1 Rascunho automático e modo offline
 
 - transformar o frontend em uma PWA instalável;
@@ -141,7 +147,7 @@ evento deve evitar senha, token, hash ou cópia desnecessária de dados pessoais
 
 Inclui os pontos 10 e 11, considerados centrais.
 
-**Estado: em execução.** O modelo de eventos, participantes, inscrições,
+**Estado: concluída no escopo aprovado.** O modelo de eventos, participantes, inscrições,
 modalidades e ciclo de vida já está disponível na API. A fila operacional já
 permite assumir uma tarefa de forma atômica, abrir a prova técnica ou de kata
 diretamente e preservar o vínculo no rascunho offline e na avaliação
@@ -150,8 +156,9 @@ automático para a próxima técnica e desfazer o último lançamento. A fila ao
 vivo recebe atualização periódica e filtros por situação, modalidade e
 responsável. O painel do evento já calcula duração média, destaca a avaliação
 ativa há mais tempo e apresenta uma conferência das pendências antes do
-encerramento. A identificação de pendências por dispositivo segue como marco
-independente.
+encerramento. Cada tarefa assumida também registra um identificador local não
+pessoal e um nome curto do aparelho; a fila mostra onde estão os dados enquanto
+a avaliação ainda não chegou ao servidor.
 
 #### 2.1 Evento de exame com vários avaliadores
 

@@ -248,6 +248,9 @@ export type ExamEventTask = {
   completedAt: string | null;
   evaluationId: string | null;
   lockVersion: number;
+  deviceId: string | null;
+  deviceLabel: string | null;
+  lastSyncAt: string | null;
 };
 
 export type ExamEventDetail = ExamEventSummary & {

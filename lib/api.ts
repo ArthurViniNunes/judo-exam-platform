@@ -1,3 +1,5 @@
+import { getDeviceIdentity } from "./device-identity";
+
 const DEFAULT_API_URL = "http://127.0.0.1:8787";
 
 const API_URL = (
@@ -50,9 +52,14 @@ export class ApiError extends Error {
 
 export async function apiRequest<T>(path: string, init?: RequestInit): Promise<T> {
   const token = getAuthToken();
+  const device = getDeviceIdentity();
   const headers = {
     ...(init?.body ? { "Content-Type": "application/json" } : {}),
     ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    ...(device ? {
+      "X-Device-Id": device.id,
+      "X-Device-Label": device.label,
+    } : {}),
     ...init?.headers,
   };
 

@@ -1,6 +1,6 @@
 # ADR 007 — Eventos com múltiplos avaliadores e responsável por avaliação
 
-- Estado: aceita; implementação incremental
+- Estado: aceita e implementada no escopo aprovado
 - Data: 2026-10-21
 - Aceita em: 2026-10-22
 
@@ -10,7 +10,7 @@ Um dia de exame reúne aproximadamente 50 usuários e vários avaliadores. É
 necessário distribuir a fila, acompanhar pendências e impedir que duas pessoas
 iniciem por engano a mesma modalidade do mesmo judoca.
 
-## Decisão proposta
+## Decisão
 
 Criar a entidade `exam_events`, suas inscrições e seus avaliadores participantes.
 Cada modalidade de uma inscrição origina uma tarefa em `exam_event_tasks`. Vários

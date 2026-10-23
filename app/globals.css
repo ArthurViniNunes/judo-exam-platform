@@ -5255,6 +5255,8 @@ td:first-child {
 .event-task-person small { color: var(--mg-muted); font-size: 9px; }
 .event-task-kind { min-width: 0; color: var(--mg-accent-strong); display: flex; align-items: center; gap: 7px; font-size: 10px; font-weight: 800; }
 .event-task-board article > p { margin: 0; color: var(--mg-muted); font-size: 9px; text-align: right; }
+.event-task-board article > .event-task-device { grid-column: 1 / -1; min-height: 30px; padding: 6px 8px; border-radius: 8px; background: color-mix(in srgb, var(--mg-accent) 9%, var(--mg-surface)); display: flex; align-items: center; justify-content: flex-start; gap: 6px; text-align: left; }
+.event-task-state.pending_sync { background: color-mix(in srgb, var(--mg-gold) 18%, var(--mg-surface)); color: var(--mg-ink); }
 .event-task-board article > footer { grid-column: 1 / -1; display: grid; gap: 7px; }
 .event-task-board article > footer button { width: 100%; min-height: 44px; }
 .event-queue-empty { min-height: 90px; margin: 0; padding: 18px; border: 1px dashed var(--mg-line); border-radius: 12px; color: var(--mg-muted); display: grid; place-items: center; font-size: 11px; text-align: center; }

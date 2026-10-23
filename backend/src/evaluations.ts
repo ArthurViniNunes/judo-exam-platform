@@ -712,7 +712,7 @@ export async function createEvaluation(
     ...itemStatements,
     ...(eventTask
       ? [env.DB.prepare(
-          "UPDATE exam_event_tasks SET status = 'completed', completed_at = CURRENT_TIMESTAMP, evaluation_id = ?, lock_version = lock_version + 1 WHERE id = ? AND evaluator_id = ? AND status IN ('in_progress', 'pending_sync')",
+          "UPDATE exam_event_tasks SET status = 'completed', completed_at = CURRENT_TIMESTAMP, last_sync_at = CURRENT_TIMESTAMP, evaluation_id = ?, lock_version = lock_version + 1 WHERE id = ? AND evaluator_id = ? AND status IN ('in_progress', 'pending_sync')",
         ).bind(id, eventTask.id, user.id)]
       : []),
     env.DB.prepare(

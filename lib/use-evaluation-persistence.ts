@@ -156,6 +156,15 @@ export function useEvaluationPersistence(userId: string | undefined) {
         },
         draftId,
       );
+      if (payload.eventTaskId && navigator.onLine) {
+        try {
+          await apiRequest(`/api/exam-event-tasks/${payload.eventTaskId}/pending-sync`, {
+            method: "POST",
+          });
+        } catch {
+          // The evaluation remains safely queued and the next sync retries it.
+        }
+      }
       await refresh();
       void syncNow();
     },

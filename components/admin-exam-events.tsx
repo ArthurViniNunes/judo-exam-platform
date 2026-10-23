@@ -13,6 +13,7 @@ import {
   Plus,
   Play,
   RotateCcw,
+  Smartphone,
   ShieldCheck,
   Timer,
   Trash2,
@@ -296,6 +297,9 @@ function EventDetail({ event, user, users, candidates, onBack, onChanged, onStar
                   <div className="event-task-person"><strong>{entry?.studentName || "Judoca"}</strong><small>{entry?.beltName}</small></div>
                   <div className="event-task-kind"><ClipboardCheck size={17} /><span>{task.modality === "technical" ? "Técnica" : task.kataType ? KATA_LABELS[task.kataType] : "Kata"}</span></div>
                   {task.evaluatorName && <p>Responsável: <strong>{task.evaluatorName}</strong></p>}
+                  {task.deviceLabel && task.status !== "completed" && (
+                    <p className="event-task-device"><Smartphone size={14} /> Dados neste momento: <strong>{task.deviceLabel}</strong></p>
+                  )}
                   <footer>
                     {(task.status === "waiting" || task.status === "called") && (
                       <button className="management-primary" disabled={busy} onClick={() => void claimTask(task.id)}><UserRoundCheck size={17} /> Assumir</button>

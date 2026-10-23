@@ -18,7 +18,7 @@ export function corsHeaders(request: Request, env: Env): HeadersInit {
         : null;
   const headers = new Headers({
     ...securityHeaders,
-    "Access-Control-Allow-Headers": "Content-Type, Authorization, X-Request-Id",
+    "Access-Control-Allow-Headers": "Content-Type, Authorization, X-Request-Id, X-Device-Id, X-Device-Label",
     "Access-Control-Allow-Methods": "GET,POST,PATCH,DELETE,OPTIONS",
     "Access-Control-Expose-Headers": "X-Request-Id",
     "Access-Control-Max-Age": "86400",

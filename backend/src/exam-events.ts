@@ -35,6 +35,14 @@ function auditStatement(
   );
 }
 
+function requestDevice(request: Request) {
+  const rawId = request.headers.get("X-Device-Id")?.trim() || "";
+  const rawLabel = request.headers.get("X-Device-Label")?.trim() || "";
+  const id = /^[a-zA-Z0-9-]{8,100}$/.test(rawId) ? rawId : null;
+  const label = rawLabel.replace(/\s+/g, " ").slice(0, 80) || null;
+  return { id, label };
+}
+
 function formatSummary(row: EventSummaryRow) {
   return {
     id: row.id,
@@ -127,7 +135,9 @@ export async function getExamEvent(
       `SELECT tasks.id, tasks.entry_id AS entryId, tasks.modality, tasks.kata_type AS kataType,
               tasks.status, tasks.evaluator_id AS evaluatorId, users.name AS evaluatorName,
               tasks.station, tasks.claimed_at AS claimedAt, tasks.completed_at AS completedAt,
-              tasks.evaluation_id AS evaluationId, tasks.lock_version AS lockVersion
+              tasks.evaluation_id AS evaluationId, tasks.lock_version AS lockVersion,
+              tasks.source_device_id AS deviceId, tasks.source_device_label AS deviceLabel,
+              tasks.last_sync_at AS lastSyncAt
          FROM exam_event_tasks AS tasks
          JOIN exam_event_entries AS entries ON entries.id = tasks.entry_id
          LEFT JOIN users ON users.id = tasks.evaluator_id
@@ -183,18 +193,54 @@ export async function claimEventTask(
   if (task.evaluator_id === user.id && task.status === "in_progress") {
     return getExamEvent(request, env, user, eventId);
   }
+  const device = requestDevice(request);
   const claimed = await env.DB.prepare(
     `UPDATE exam_event_tasks
         SET evaluator_id = ?, status = 'in_progress', claimed_at = CURRENT_TIMESTAMP,
+            source_device_id = ?, source_device_label = ?, last_sync_at = CURRENT_TIMESTAMP,
             lock_version = lock_version + 1
       WHERE id = ? AND evaluator_id IS NULL AND status IN ('waiting', 'called')
       RETURNING id`,
-  ).bind(user.id, taskId).first<{ id: string }>();
+  ).bind(user.id, device.id, device.label, taskId).first<{ id: string }>();
   if (!claimed) {
     return json(request, env, { error: "Esta avaliação já foi assumida por outro avaliador." }, 409);
   }
   await auditStatement(request, env, user, "exam_event.task_claimed", eventId, { taskId }).run();
   return getExamEvent(request, env, user, eventId);
+}
+
+export async function markEventTaskPendingSync(
+  request: Request,
+  env: Env,
+  user: AuthUser,
+  taskId: string,
+) {
+  const device = requestDevice(request);
+  const task = await env.DB.prepare(
+    `SELECT tasks.evaluator_id, entries.event_id
+       FROM exam_event_tasks AS tasks
+       JOIN exam_event_entries AS entries ON entries.id = tasks.entry_id
+      WHERE tasks.id = ?`,
+  ).bind(taskId).first<{ evaluator_id: string | null; event_id: string }>();
+  if (!task || task.evaluator_id !== user.id) {
+    return json(request, env, { error: "A tarefa não está disponível para este avaliador." }, 403);
+  }
+  const updated = await env.DB.prepare(
+    `UPDATE exam_event_tasks
+        SET status = 'pending_sync', source_device_id = COALESCE(?, source_device_id),
+            source_device_label = COALESCE(?, source_device_label),
+            last_sync_at = CURRENT_TIMESTAMP, lock_version = lock_version + 1
+      WHERE id = ? AND evaluator_id = ? AND status IN ('in_progress', 'pending_sync')
+      RETURNING id`,
+  ).bind(device.id, device.label, taskId, user.id).first<{ id: string }>();
+  if (!updated) {
+    return json(request, env, { error: "A tarefa não está disponível para sincronização." }, 409);
+  }
+  await auditStatement(request, env, user, "exam_event.task_pending_sync", task.event_id, {
+    taskId,
+    deviceId: device.id,
+  }).run();
+  return json(request, env, { status: "pending_sync" });
 }
 
 export async function releaseEventTask(
@@ -218,7 +264,8 @@ export async function releaseEventTask(
   const released = await env.DB.prepare(
     `UPDATE exam_event_tasks
         SET evaluator_id = NULL, status = 'waiting', claimed_at = NULL,
-            station = NULL, lock_version = lock_version + 1
+            station = NULL, source_device_id = NULL, source_device_label = NULL,
+            last_sync_at = NULL, lock_version = lock_version + 1
       WHERE id = ? AND status = 'in_progress' AND evaluation_id IS NULL
       RETURNING id`,
   ).bind(taskId).first<{ id: string }>();
