@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import {
-  ArrowLeft, Check, ChevronDown, ChevronRight, CircleHelp, Dices, Undo2,
+  ArrowLeft, Check, ChevronDown, ChevronRight, CircleHelp, Dices, Smartphone, Undo2,
 } from "lucide-react";
 import {
   PRACTICAL_BELTS, SCORE_OPTIONS, TECHNIQUE_VIDEOS, calculateSequenceScore,
@@ -11,6 +11,11 @@ import {
 } from "@/lib/practical-exams";
 import { calculatePracticalResult } from "@/lib/practical-scoring";
 import type { PracticalCandidate } from "@/lib/platform";
+import {
+  readHapticsPreference,
+  triggerHapticFeedback,
+  writeHapticsPreference,
+} from "@/lib/haptics";
 import type {
   DraftSaveState,
   TechnicalDraft,
@@ -109,6 +114,7 @@ export function TechnicalForm({
   const [videoTechnique, setVideoTechnique] = useState<string | null>(null);
   const [lastScoreAction, setLastScoreAction] = useState<ScoreAction | null>(null);
   const [draftSaveState, setDraftSaveState] = useState<DraftSaveState>("saved");
+  const [hapticsEnabled, setHapticsEnabled] = useState(readHapticsPreference);
   const saveDraftRef = useRef(onSaveDraft);
   const saveRevisionRef = useRef(0);
   const saveChainRef = useRef<Promise<void>>(Promise.resolve());
@@ -183,6 +189,7 @@ export function TechnicalForm({
   };
 
   const updateStandardScore = (techniqueId: string, value: number) => {
+    triggerHapticFeedback(hapticsEnabled);
     setLastScoreAction({
       kind: "standard",
       techniqueId,
@@ -198,6 +205,7 @@ export function TechnicalForm({
     partIndex: number,
     value: number,
   ) => {
+    triggerHapticFeedback(hapticsEnabled);
     const techniqueScores = {
       ...(sequenceScores[techniqueId] ?? {}),
       [partIndex]: value,
@@ -221,6 +229,7 @@ export function TechnicalForm({
 
   const undoLastScore = () => {
     if (!lastScoreAction) return;
+    triggerHapticFeedback(hapticsEnabled, [12, 35, 12]);
     const action = lastScoreAction;
     if (action.kind === "standard") {
       setStandardScores((current) => {
@@ -280,12 +289,30 @@ export function TechnicalForm({
     void saveChainRef.current.finally(onExit);
   };
 
+  const toggleHaptics = () => {
+    const enabled = !hapticsEnabled;
+    setHapticsEnabled(enabled);
+    writeHapticsPreference(enabled);
+    triggerHapticFeedback(enabled, 24);
+  };
+
   return (
     <section className="technical-screen">
       <header className="quiz-header">
         <Brand compact />
         <div><strong>{athlete}</strong><span>Faixa {belt.name} · {belt.kyu}</span><DraftSaveIndicator state={draftSaveState} /></div>
-        <button className="text-button" onClick={exit}>Sair</button>
+        <div className="quiz-header-actions">
+          <button
+            className={`haptics-toggle ${hapticsEnabled ? "active" : ""}`}
+            onClick={toggleHaptics}
+            aria-pressed={hapticsEnabled}
+            title={hapticsEnabled ? "Desativar vibração ao lançar notas" : "Ativar vibração ao lançar notas"}
+          >
+            <Smartphone size={17} aria-hidden="true" />
+            <span>Vibração</span>
+          </button>
+          <button className="text-button" onClick={exit}>Sair</button>
+        </div>
       </header>
       <div className="technical-layout">
         <aside className="steps-panel">

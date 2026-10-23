@@ -58,6 +58,11 @@ import {
 import { toTheoryYouTubeEmbedUrl } from "../lib/theory-exams";
 import { theoryExamsEnabled } from "../backend/src/features";
 import {
+  readHapticsPreference,
+  triggerHapticFeedback,
+  writeHapticsPreference,
+} from "../lib/haptics";
+import {
   canTransitionExamEvent,
   validateEventEntryInput,
   validateExamEventInput,
@@ -413,6 +418,28 @@ function evaluation(overrides: Partial<EvaluationRow> = {}): EvaluationRow {
 }
 
 describe("regras da avaliação prática", () => {
+  it("mantém a vibração opcional e salva a preferência no aparelho", () => {
+    const values = new Map<string, string>();
+    const storage = {
+      getItem: (key: string) => values.get(key) ?? null,
+      setItem: (key: string, value: string) => values.set(key, value),
+    };
+    const patterns: (number | number[])[] = [];
+    const vibrator = {
+      vibrate: (pattern: number | number[]) => {
+        patterns.push(pattern);
+        return true;
+      },
+    };
+
+    expect(readHapticsPreference(storage)).toBe(false);
+    expect(triggerHapticFeedback(false, 18, vibrator)).toBe(false);
+    writeHapticsPreference(true, storage);
+    expect(readHapticsPreference(storage)).toBe(true);
+    expect(triggerHapticFeedback(true, [12, 35, 12], vibrator)).toBe(true);
+    expect(patterns).toEqual([[12, 35, 12]]);
+  });
+
   it("aprova média 7 sem três grupos abaixo de 7 ou dois abaixo de 5", () => {
     const exam: ExamCategory[] = [
       { name: "Nage Waza", techniques: [{ id: "a", name: "A" }] },

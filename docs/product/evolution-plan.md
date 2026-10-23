@@ -633,7 +633,7 @@ antes da implementação:
 | Backups no R2 | 30 dias para diários e 370 dias para mensais | Automação pronta; ativação pendente |
 | Provedor de e-mail | Brevo gratuito, isolado por `EmailProvider` | Pendente |
 | Eventos encerrados | Somente leitura; reabertura exclusiva do Super Admin | Implementada |
-| Vibração no modo rápido | Opcional e desativável | Pendente |
+| Vibração no modo rápido | Opcional, desativada inicialmente e persistida por aparelho | Implementada |
 
 ## 12. Definição de pronto do programa
 
