@@ -55,6 +55,18 @@ O workflow `.github/workflows/backup-d1.yml` exporta o banco todos os dias às
 bucket R2 privado e baixa a cópia novamente para conferir sua integridade. No
 primeiro dia do mês também grava a mesma cópia sob `monthly/`.
 
+### Antes de executar os comandos
+
+1. Entre no painel da Cloudflare com a conta proprietária do projeto.
+2. Abra **Storage & databases → R2 object storage → Overview**.
+3. Habilite o R2. Se aparecer aceite comercial ou forma de pagamento, essa
+   decisão deve ser tomada pelo titular da conta; não delegue credenciais.
+4. Volte ao terminal e confirme que `corepack pnpm wrangler r2 bucket list`
+   não retorna mais o código `10042`.
+
+O bucket de backup deve permanecer privado. Não habilite domínio público nem
+`r2.dev` para ele.
+
 Ativação única, feita por uma pessoa autenticada na conta Cloudflare:
 
 ```powershell
@@ -69,9 +81,10 @@ No GitHub, em **Settings → Secrets and variables → Actions**:
 
 1. crie a variável `CLOUDFLARE_BACKUP_BUCKET` com o nome exato do bucket;
 2. mantenha o secret `CLOUDFLARE_ACCOUNT_ID` já usado no deploy;
-3. crie `CLOUDFLARE_BACKUP_API_TOKEN` com `D1 Content Read-Only` e
-   `R2 Admin Read & Write`. O Wrangler usa a API REST do R2, portanto essa
-   permissão R2 abrange a conta; não reutilize o token em outras automações;
+3. crie `CLOUDFLARE_BACKUP_API_TOKEN` com as permissões de conta **D1 Read** e
+   **Workers R2 Storage Edit**, limitadas à conta deste projeto. Esse é um API
+   token da Cloudflare usado pelo Wrangler, não o par Access Key/Secret Key da
+   API compatível com S3. Não reutilize o token em outras automações;
 4. abra **Actions → Backup do banco D1 → Run workflow** e faça a primeira
    execução manual;
 5. confira no R2 os três objetos em `daily/AAAA/MM/DD/` e mantenha o bucket sem
@@ -87,6 +100,39 @@ Se o Wrangler responder com o código `10042`, abra **Cloudflare Dashboard →
 R2 Object Storage** e habilite o R2 para a conta antes de criar o bucket. Essa
 ativação pode exigir aceite comercial ou forma de pagamento e deve ser feita
 pelo titular da conta.
+
+### Recuperação de senha com Brevo
+
+1. Na Brevo, abra **Settings → Senders, Domains, IPs → Domains**, adicione o
+   domínio de `EMAIL_FROM_ADDRESS` e conclua a autenticação indicada pela Brevo.
+2. Em **Senders**, cadastre e verifique exatamente o remetente configurado em
+   `backend/wrangler.jsonc`.
+3. Abra **Settings → SMTP & API → API Keys & MCP**, gere uma chave exclusiva
+   chamada `judo-exam-production` e copie-a uma única vez para um gerenciador de
+   senhas. Não envie a chave por mensagem e não a salve no repositório.
+4. No terminal do projeto, execute o comando abaixo e cole a chave somente no
+   prompt protegido do Wrangler:
+
+```powershell
+corepack pnpm wrangler secret put BREVO_API_KEY --config backend/wrangler.jsonc
+```
+
+5. Gere um segredo independente para os tokens de redefinição e grave-o sem
+   imprimi-lo no terminal:
+
+```powershell
+$resetPepper = [Convert]::ToBase64String([Security.Cryptography.RandomNumberGenerator]::GetBytes(48))
+$resetPepper | corepack pnpm wrangler secret put PASSWORD_RESET_PEPPER --config backend/wrangler.jsonc
+Remove-Variable resetPepper
+```
+
+6. Consulte `/health`. O item `missing_email_configuration` deve desaparecer.
+   Em seguida, solicite uma redefinição para uma conta de teste e confira caixa
+   de entrada, spam, validade de 20 minutos e uso único do link.
+
+Chaves Brevo podem expirar por prazo configurado ou ser desativadas por
+inatividade. Registre o responsável pela rotação e verifique a integração após
+cada troca.
 
 ### Ensaio de restauração isolada
 
