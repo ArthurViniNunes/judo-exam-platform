@@ -1087,8 +1087,17 @@ export function TheoryExamsView() {
                     {version.questions.map((question, index) => (
                       <li key={question.id}>
                         <span className="theory-question-number">{index + 1}</span>
-                        <div>
-                          <span>{question.category} · {question.points} pontos</span>
+                        <div className="theory-question-copy">
+                          <span className="theory-question-eyebrow">
+                            {question.category} · {question.points} pontos
+                            <em className={`theory-question-type ${question.type}`}>
+                              {question.type === "single_choice"
+                                ? "Questão simples"
+                                : question.type === "grid_single"
+                                  ? "Grade · uma resposta"
+                                  : "Grade · múltiplas respostas"}
+                            </em>
+                          </span>
                           <strong>{question.prompt}</strong>
                           <small>
                             {question.type === "single_choice"
@@ -1097,6 +1106,35 @@ export function TheoryExamsView() {
                             {question.media ? ` · mídia: ${question.media.kind}` : " · sem mídia"}
                             {!question.explanation ? " · explicação pendente" : ""}
                           </small>
+                          {question.type !== "single_choice" && (
+                            <details className="theory-grid-preview">
+                              <summary>
+                                <span>Ver grade e gabarito</span>
+                                <ChevronRight size={18} aria-hidden="true" />
+                              </summary>
+                              <div className="theory-grid-preview-body">
+                                {question.rows.map((row, rowIndex) => {
+                                  const correctAnswers = row.correctOptionIds
+                                    .map((optionId) => question.options.find((option) => option.id === optionId)?.text)
+                                    .filter((answer): answer is string => Boolean(answer));
+
+                                  return (
+                                    <div className="theory-grid-preview-row" key={row.id}>
+                                      <span>{rowIndex + 1}</span>
+                                      <div>
+                                        <strong>{row.text}</strong>
+                                        <small>
+                                          {correctAnswers.length > 0
+                                            ? correctAnswers.join(" · ")
+                                            : "Gabarito pendente"}
+                                        </small>
+                                      </div>
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            </details>
+                          )}
                         </div>
                         {version.status === "draft" && (
                           <div className="theory-question-actions">
