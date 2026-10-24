@@ -759,7 +759,7 @@ function QuestionEditor({
                     )}
                   </div>
                 )}
-                <label>
+                <label className="theory-media-url">
                   URL HTTPS <small>preenchida após o upload ou informada manualmente</small>
                   <input
                     type="url"
@@ -772,7 +772,7 @@ function QuestionEditor({
                     placeholder="https://…"
                   />
                 </label>
-                <label>
+                <label className="theory-media-description">
                   Descrição acessível neutra
                   <input
                     maxLength={200}

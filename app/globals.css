@@ -5896,7 +5896,8 @@ td:first-child {
   .theory-import-dialog { width: min(560px, 100%); }
   .theory-dialog-actions.sticky { bottom: -27px; margin: 0 -27px -27px; padding-inline: 27px; }
   .theory-media-fields { grid-template-columns: 0.55fr 1.45fr; }
-  .theory-media-fields > label:nth-child(3),
+  .theory-media-url,
+  .theory-media-description,
   .theory-media-fields > .theory-sensitive-row,
   .theory-media-warning { grid-column: 1 / -1; }
   .management-page { padding: 30px 24px; }
