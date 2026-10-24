@@ -66,6 +66,10 @@ import {
   submitTheoryAttempt,
 } from "./theory-attempts";
 import {
+  theoryMediaStorageConfigured,
+  uploadTheoryMedia,
+} from "./theory-media-storage";
+import {
   cancelInvitation,
   inviteUser,
   listUsers,
@@ -102,6 +106,9 @@ async function handlePublicRoute(
       passwordRecovery: env.BREVO_API_KEY && env.EMAIL_FROM_ADDRESS && env.PUBLIC_APP_URL
         ? "configured"
         : "missing_email_configuration",
+      theoryMedia: theoryMediaStorageConfigured(env)
+        ? "configured"
+        : "missing_media_storage_configuration",
     });
   }
   if (url.pathname === "/api/auth/login" && request.method === "POST") {
@@ -216,6 +223,10 @@ async function handleAuthenticatedRoute(
   if (url.pathname === "/api/theory/admin/templates" && request.method === "GET") {
     const denied = requireSuperAdmin(request, env, user);
     return denied || listTheoryTemplates(request, env);
+  }
+  if (url.pathname === "/api/theory/admin/media" && request.method === "POST") {
+    const denied = requireSuperAdmin(request, env, user);
+    return denied || uploadTheoryMedia(request, env);
   }
   const theoryTemplateImportMatch = url.pathname.match(
     /^\/api\/theory\/admin\/templates\/([^/]+)\/import$/,
