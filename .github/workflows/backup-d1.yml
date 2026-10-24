@@ -27,7 +27,10 @@ jobs:
     env:
       CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID || vars.CLOUDFLARE_ACCOUNT_ID }}
       CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_BACKUP_API_TOKEN || secrets.CLOUDFLARE_API_TOKEN }}
-      BACKUP_BUCKET: ${{ vars.CLOUDFLARE_BACKUP_BUCKET || secrets.CLOUDFLARE_BACKUP_BUCKET }}
+      AWS_ACCESS_KEY_ID: ${{ secrets.B2_KEY_ID }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.B2_APPLICATION_KEY }}
+      BACKUP_BUCKET: ${{ vars.B2_BACKUP_BUCKET || secrets.B2_BACKUP_BUCKET }}
+      B2_REGION: ${{ vars.B2_REGION || secrets.B2_REGION }}
       DATABASE_NAME: judo-exam-db
       FORCE_MONTHLY: ${{ inputs.incluir_copia_mensal || false }}
 
@@ -56,8 +59,20 @@ jobs:
             echo "::error title=Token ausente::Cadastre CLOUDFLARE_BACKUP_API_TOKEN. Como contingencia, o workflow aceita CLOUDFLARE_API_TOKEN."
             missing=1
           fi
+          if [[ -z "$AWS_ACCESS_KEY_ID" ]]; then
+            echo "::error title=Key ID ausente::Cadastre B2_KEY_ID em Secrets."
+            missing=1
+          fi
+          if [[ -z "$AWS_SECRET_ACCESS_KEY" ]]; then
+            echo "::error title=Application Key ausente::Cadastre B2_APPLICATION_KEY em Secrets."
+            missing=1
+          fi
           if [[ -z "$BACKUP_BUCKET" ]]; then
-            echo "::error title=Bucket ausente::Cadastre CLOUDFLARE_BACKUP_BUCKET em Variables. O mesmo nome em Secrets tambem e aceito."
+            echo "::error title=Bucket ausente::Cadastre B2_BACKUP_BUCKET em Variables. O mesmo nome em Secrets tambem e aceito."
+            missing=1
+          fi
+          if [[ -z "$B2_REGION" ]]; then
+            echo "::error title=Regiao ausente::Cadastre B2_REGION em Variables, por exemplo us-west-004."
             missing=1
           fi
           exit "$missing"
@@ -65,12 +80,17 @@ jobs:
       - name: Instalar dependencias
         run: pnpm install --frozen-lockfile
 
-      - name: Conferir acesso ao D1 e ao R2
+      - name: Conferir acesso ao D1 e ao B2
         shell: bash
         run: |
           set -euo pipefail
+          b2_endpoint="https://s3.${B2_REGION}.backblazeb2.com"
           pnpm exec wrangler d1 info "$DATABASE_NAME" --config backend/wrangler.jsonc --json > /dev/null
-          pnpm exec wrangler r2 bucket info "$BACKUP_BUCKET" --config backend/wrangler.jsonc > /dev/null
+          aws --version
+          aws s3api head-bucket \
+            --bucket "$BACKUP_BUCKET" \
+            --endpoint-url "$b2_endpoint" \
+            --region "$B2_REGION" > /dev/null
 
       - name: Exportar e gerar manifesto
         id: files
@@ -126,7 +146,7 @@ jobs:
             fi
           } >> "$GITHUB_OUTPUT"
 
-      - name: Enviar copia diaria ao R2
+      - name: Enviar copia diaria ao B2
         shell: bash
         env:
           BACKUP_DIR: ${{ steps.files.outputs.backup_dir }}
@@ -136,11 +156,12 @@ jobs:
           PREFIX: ${{ steps.files.outputs.daily_prefix }}
         run: |
           set -euo pipefail
-          pnpm exec wrangler r2 object put "$BACKUP_BUCKET/$PREFIX/$ARCHIVE_NAME" --remote --force --file "$BACKUP_DIR/$ARCHIVE_NAME" --content-type application/gzip
-          pnpm exec wrangler r2 object put "$BACKUP_BUCKET/$PREFIX/$CHECKSUM_NAME" --remote --force --file "$BACKUP_DIR/$CHECKSUM_NAME" --content-type text/plain
-          pnpm exec wrangler r2 object put "$BACKUP_BUCKET/$PREFIX/$MANIFEST_NAME" --remote --force --file "$BACKUP_DIR/$MANIFEST_NAME" --content-type application/json
+          b2_endpoint="https://s3.${B2_REGION}.backblazeb2.com"
+          aws s3 cp "$BACKUP_DIR/$ARCHIVE_NAME" "s3://$BACKUP_BUCKET/$PREFIX/$ARCHIVE_NAME" --endpoint-url "$b2_endpoint" --region "$B2_REGION" --content-type application/gzip --only-show-errors
+          aws s3 cp "$BACKUP_DIR/$CHECKSUM_NAME" "s3://$BACKUP_BUCKET/$PREFIX/$CHECKSUM_NAME" --endpoint-url "$b2_endpoint" --region "$B2_REGION" --content-type text/plain --only-show-errors
+          aws s3 cp "$BACKUP_DIR/$MANIFEST_NAME" "s3://$BACKUP_BUCKET/$PREFIX/$MANIFEST_NAME" --endpoint-url "$b2_endpoint" --region "$B2_REGION" --content-type application/json --only-show-errors
 
-      - name: Enviar copia mensal ao R2
+      - name: Enviar copia mensal ao B2
         if: steps.files.outputs.create_monthly == 'true'
         shell: bash
         env:
@@ -151,9 +172,10 @@ jobs:
           PREFIX: ${{ steps.files.outputs.monthly_prefix }}
         run: |
           set -euo pipefail
-          pnpm exec wrangler r2 object put "$BACKUP_BUCKET/$PREFIX/$ARCHIVE_NAME" --remote --force --file "$BACKUP_DIR/$ARCHIVE_NAME" --content-type application/gzip
-          pnpm exec wrangler r2 object put "$BACKUP_BUCKET/$PREFIX/$CHECKSUM_NAME" --remote --force --file "$BACKUP_DIR/$CHECKSUM_NAME" --content-type text/plain
-          pnpm exec wrangler r2 object put "$BACKUP_BUCKET/$PREFIX/$MANIFEST_NAME" --remote --force --file "$BACKUP_DIR/$MANIFEST_NAME" --content-type application/json
+          b2_endpoint="https://s3.${B2_REGION}.backblazeb2.com"
+          aws s3 cp "$BACKUP_DIR/$ARCHIVE_NAME" "s3://$BACKUP_BUCKET/$PREFIX/$ARCHIVE_NAME" --endpoint-url "$b2_endpoint" --region "$B2_REGION" --content-type application/gzip --only-show-errors
+          aws s3 cp "$BACKUP_DIR/$CHECKSUM_NAME" "s3://$BACKUP_BUCKET/$PREFIX/$CHECKSUM_NAME" --endpoint-url "$b2_endpoint" --region "$B2_REGION" --content-type text/plain --only-show-errors
+          aws s3 cp "$BACKUP_DIR/$MANIFEST_NAME" "s3://$BACKUP_BUCKET/$PREFIX/$MANIFEST_NAME" --endpoint-url "$b2_endpoint" --region "$B2_REGION" --content-type application/json --only-show-errors
 
       - name: Baixar e verificar a copia diaria
         shell: bash
@@ -163,9 +185,10 @@ jobs:
           PREFIX: ${{ steps.files.outputs.daily_prefix }}
         run: |
           set -euo pipefail
+          b2_endpoint="https://s3.${B2_REGION}.backblazeb2.com"
           verify_dir="$RUNNER_TEMP/d1-backup-verify"
           mkdir -p "$verify_dir"
-          pnpm exec wrangler r2 object get "$BACKUP_BUCKET/$PREFIX/$ARCHIVE_NAME" --remote --file "$verify_dir/$ARCHIVE_NAME"
-          pnpm exec wrangler r2 object get "$BACKUP_BUCKET/$PREFIX/$CHECKSUM_NAME" --remote --file "$verify_dir/$CHECKSUM_NAME"
+          aws s3 cp "s3://$BACKUP_BUCKET/$PREFIX/$ARCHIVE_NAME" "$verify_dir/$ARCHIVE_NAME" --endpoint-url "$b2_endpoint" --region "$B2_REGION" --only-show-errors
+          aws s3 cp "s3://$BACKUP_BUCKET/$PREFIX/$CHECKSUM_NAME" "$verify_dir/$CHECKSUM_NAME" --endpoint-url "$b2_endpoint" --region "$B2_REGION" --only-show-errors
           cd "$verify_dir"
           sha256sum --check "$CHECKSUM_NAME"

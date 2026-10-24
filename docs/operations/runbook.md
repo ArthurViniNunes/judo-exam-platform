@@ -52,54 +52,40 @@ Invoke-RestMethod https://judo-exam-api.judo-rogerio-cruz.workers.dev/health
 
 O workflow `.github/workflows/backup-d1.yml` exporta o banco todos os dias às
 03:17 UTC, compacta o SQL, gera manifesto e SHA-256, envia os três arquivos a um
-bucket R2 privado e baixa a cópia novamente para conferir sua integridade. No
-primeiro dia do mês também grava a mesma cópia sob `monthly/`.
+bucket privado no Backblaze B2 e baixa a cópia novamente para conferir sua
+integridade. No primeiro dia do mês também grava a mesma cópia sob `monthly/`.
 
-### Antes de executar os comandos
+O B2 foi escolhido porque a franquia vigente inclui 10 GB gratuitos e permite
+começar sem forma de pagamento. O uso precisa permanecer abaixo da franquia; o
+bucket não deve ser público.
 
-1. Entre no painel da Cloudflare com a conta proprietária do projeto.
-2. Abra **Storage & databases → R2 object storage → Overview**.
-3. Habilite o R2. Se aparecer aceite comercial ou forma de pagamento, essa
-   decisão deve ser tomada pelo titular da conta; não delegue credenciais.
-4. Volte ao terminal e confirme que `corepack pnpm wrangler r2 bucket list`
-   não retorna mais o código `10042`.
+### Criar o bucket gratuito
 
-O bucket de backup deve permanecer privado. Não habilite domínio público nem
-`r2.dev` para ele.
-
-Ativação única, feita por uma pessoa autenticada na conta Cloudflare:
-
-```powershell
-$bucket = "judo-exam-platform-backups"
-corepack pnpm wrangler r2 bucket create $bucket
-corepack pnpm wrangler r2 bucket lifecycle add $bucket "expirar-diarios" "daily/" --expire-days 30 --force
-corepack pnpm wrangler r2 bucket lifecycle add $bucket "expirar-mensais" "monthly/" --expire-days 370 --force
-corepack pnpm wrangler r2 bucket lifecycle list $bucket
-```
+1. Crie uma conta Backblaze e habilite **B2 Cloud Storage**.
+2. Em **Buckets → Create a Bucket**, crie um bucket privado com nome globalmente
+   único, por exemplo `judo-exam-backups-arthur`.
+3. Anote a região mostrada no endpoint S3, por exemplo `us-west-004`.
+4. Em **Lifecycle Settings**, crie regras para ocultar `daily/` após 30 dias e
+   `monthly/` após 370 dias, apagando versões ocultas um dia depois.
+5. Em **Application Keys**, crie uma chave restrita a esse bucket, com leitura e
+   escrita e permissão para listar os nomes dos buckets. Use uma chave criada
+   manualmente; a chave mestra não funciona na API compatível com S3.
 
 No GitHub, em **Settings → Secrets and variables → Actions**:
 
-1. crie a variável `CLOUDFLARE_BACKUP_BUCKET` com o nome exato do bucket;
-2. mantenha o secret `CLOUDFLARE_ACCOUNT_ID` já usado no deploy;
-3. crie `CLOUDFLARE_BACKUP_API_TOKEN` com as permissões de conta **D1 Read** e
-   **Workers R2 Storage Edit**, limitadas à conta deste projeto. Esse é um API
-   token da Cloudflare usado pelo Wrangler, não o par Access Key/Secret Key da
-   API compatível com S3. Não reutilize o token em outras automações;
-4. abra **Actions → Backup do banco D1 → Run workflow** e faça a primeira
+1. mantenha `CLOUDFLARE_ACCOUNT_ID` e um token Cloudflare com **D1 Read** em
+   `CLOUDFLARE_BACKUP_API_TOKEN`;
+2. crie o secret `B2_KEY_ID` com o identificador da Application Key;
+3. crie o secret `B2_APPLICATION_KEY` com a chave mostrada uma única vez;
+4. crie a variável `B2_BACKUP_BUCKET` com o nome exato do bucket;
+5. crie a variável `B2_REGION` apenas com a região, como `us-west-004`;
+6. abra **Actions → Backup do banco D1 → Run workflow** e faça a primeira
    execução manual;
-5. confira no R2 os três objetos em `daily/AAAA/MM/DD/` e mantenha o bucket sem
-   domínio público e sem `r2.dev`.
+7. confira no B2 os três objetos em `daily/AAAA/MM/DD/`.
 
-O workflow também aceita `CLOUDFLARE_ACCOUNT_ID` como variável,
-`CLOUDFLARE_BACKUP_BUCKET` como secret e, provisoriamente,
-`CLOUDFLARE_API_TOKEN` como token. O token exclusivo continua recomendado por
-ter permissões menores. A etapa `Conferir acesso ao D1 e ao R2` informa se a
-credencial não possui permissão ou se o bucket ainda não existe.
-
-Se o Wrangler responder com o código `10042`, abra **Cloudflare Dashboard →
-R2 Object Storage** e habilite o R2 para a conta antes de criar o bucket. Essa
-ativação pode exigir aceite comercial ou forma de pagamento e deve ser feita
-pelo titular da conta.
+O workflow aceita as duas variáveis B2 também como secrets. A etapa
+`Conferir acesso ao D1 e ao B2` diferencia configuração ausente, falha de acesso
+ao D1 e credencial ou bucket B2 inválido.
 
 ### Recuperação de senha com Brevo
 
@@ -136,18 +122,21 @@ cada troca.
 
 ### Ensaio de restauração isolada
 
-Nunca importe primeiro no banco de produção. Pelo painel do R2, escolha o trio
+Nunca importe primeiro no banco de produção. Pelo painel do B2, escolha o trio
 `.sql.gz`, `.sha256` e `.manifest.json` de uma mesma data e copie suas chaves.
-Baixe e confira a cópia em uma pasta temporária:
+Você pode baixá-los pelo painel ou usar um perfil `b2` da AWS CLI. Confira a
+cópia em uma pasta temporária:
 
 ```powershell
 $bucket = "judo-exam-platform-backups"
+$regiao = "us-west-004"
+$endpoint = "https://s3.$regiao.backblazeb2.com"
 $prefixo = "daily/AAAA/MM/DD"
 $arquivo = "judo-exam-db-AAAAMMDDTHHMMSSZ.sql.gz"
 $teste = Join-Path $env:TEMP "judo-restore-test"
 New-Item -ItemType Directory -Force -Path $teste | Out-Null
-corepack pnpm wrangler r2 object get "$bucket/$prefixo/$arquivo" --remote --file "$teste/$arquivo"
-corepack pnpm wrangler r2 object get "$bucket/$prefixo/$arquivo.sha256" --remote --file "$teste/$arquivo.sha256"
+aws s3 cp "s3://$bucket/$prefixo/$arquivo" "$teste/$arquivo" --profile b2 --endpoint-url $endpoint --region $regiao
+aws s3 cp "s3://$bucket/$prefixo/$arquivo.sha256" "$teste/$arquivo.sha256" --profile b2 --endpoint-url $endpoint --region $regiao
 Push-Location $teste
 Get-FileHash -Algorithm SHA256 $arquivo
 Get-Content "$arquivo.sha256"
@@ -180,8 +169,8 @@ janela de manutenção e aprovação explícita do responsável pela associaçã
   navegador;
 - avaliação ausente: confira a aba Rede do navegador e os logs estruturados do
   Worker antes de repetir o registro.
-- backup falhou antes da exportação: confira os três nomes configurados no
-  GitHub e as permissões do token exclusivo;
+- backup falhou antes da exportação: confira as variáveis e secrets indicados
+  pela etapa de configuração e as permissões das duas credenciais;
 - backup falhou no upload ou na conferência: não considere a execução válida;
   confirme bucket, regras de acesso e espaço antes de executar novamente.
 

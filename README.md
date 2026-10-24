@@ -569,7 +569,7 @@ backend/migrations/           Migrações do D1
 tests/                        Regressões das regras de negócio
 scripts/dev-all.mjs           Inicialização local dos dois serviços
 scripts/serve-static.mjs      Servidor local do build estático
-.github/workflows/backup-d1.yml Backup diário e mensal do D1 no R2
+.github/workflows/backup-d1.yml Backup diário e mensal do D1 no Backblaze B2
 docs/                         Produto, arquitetura, ADRs e operação
 ```
 

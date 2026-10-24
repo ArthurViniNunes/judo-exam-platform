@@ -41,7 +41,7 @@ As prioridades do produto são, nesta ordem:
 | 10. Dia de exame | Fase 2, evento, fila, estações e vários avaliadores |
 | 11. Modo rápido | Fase 2, fluxo principal de um toque |
 | 14. Portal | Fase 5, acesso somente leitura e vínculo com responsável |
-| 16. Backup | Fase 4, Time Travel e exportações privadas no R2 |
+| 16. Backup | Fase 4, Time Travel e exportações privadas no Backblaze B2 |
 | 17. Recuperação de senha | Fase 4, token único e e-mail transacional |
 | 18. Auditoria | Base na fase 1, concluída na fase 4 |
 
@@ -60,7 +60,7 @@ As prioridades do produto são, nesta ordem:
   pessoa vinculada e coleta o mínimo de dados necessário.
 - **Sem competição indevida:** indicadores servem para orientar treino; não
   haverá ranking público de alunos ou avaliadores.
-- **Custo proporcional ao uso:** D1 continua como banco principal. R2 e e-mail
+- **Custo proporcional ao uso:** D1 continua como banco principal. B2 e e-mail
   entram apenas nos casos em que resolvem backup e comunicação transacional.
 
 ## 3. Entregas por fase
@@ -314,7 +314,7 @@ Conteúdo:
 
 A primeira versão usa uma página HTML própria para impressão e o recurso
 `Salvar como PDF` do navegador. Isso evita armazenar cópias binárias e mantém o
-custo baixo. PDF assinado e arquivado no R2 fica fora do escopo inicial.
+custo baixo. PDF assinado e arquivado em storage externo fica fora do escopo inicial.
 
 #### Critérios de aceite da fase 3
 
@@ -340,7 +340,7 @@ da plataforma. O workflow de backup diário e mensal já está versionado com
 manifesto, checksum e conferência pós-upload. Sua ativação depende do bucket
 privado, das regras de retenção e dos segredos descritos no runbook.
 A recuperação de senha usa token único, expiração, limites, auditoria e
-invalidação das sessões. Restam habilitar o R2, ensaiar a restauração e
+invalidação das sessões. Restam ativar o B2, ensaiar a restauração e
 configurar o remetente e os secrets do provedor de e-mail em produção.
 
 #### 4.1 Correção auditável
@@ -362,7 +362,7 @@ o Super Admin corrige ou restaura a qualquer momento, sempre com motivo.
 Camadas adotadas:
 
 1. recuperação nativa por ponto no tempo do D1;
-2. exportação lógica automática para bucket privado no R2;
+2. exportação lógica automática para bucket privado no Backblaze B2;
 3. retenção diária e mensal definida pela associação;
 4. checksum, criptografia gerenciada pela plataforma e acesso mínimo;
 5. teste trimestral de restauração em ambiente separado;
@@ -458,7 +458,7 @@ flowchart LR
   Portal[Portal do judoca/responsável] --> API
   API --> D1[(D1)]
   API --> Email[Provedor de e-mail transacional]
-  D1 -->|exportação agendada| R2[(R2 privado)]
+  D1 -->|exportação agendada| B2[(Backblaze B2 privado)]
   API --> Audit[(Eventos de auditoria no D1)]
 ```
 
@@ -630,7 +630,7 @@ antes da implementação:
 | PDF | Gerado sob demanda no histórico/portal via impressão | Confirmado no pedido |
 | Portal de menor | Exige consentimento e representação legal definidos pela associação | Adiado; fora do escopo aprovado |
 | Liberação do relatório | Super Admin define quando o aluno pode visualizar | Implementada |
-| Backups no R2 | 30 dias para diários e 370 dias para mensais | Automação pronta; R2 ainda não habilitado na conta |
+| Backups no B2 | 30 dias para diários e 370 dias para mensais | Automação pronta; conta e bucket ainda pendentes |
 | Provedor de e-mail | Brevo gratuito, isolado por `EmailProvider` | Implementado; chave de produção pendente |
 | Eventos encerrados | Somente leitura; reabertura exclusiva do Super Admin | Implementada |
 | Vibração no modo rápido | Opcional, desativada inicialmente e persistida por aparelho | Implementada |
@@ -654,8 +654,8 @@ O conjunto estará concluído quando:
 As fases de software estão concluídas no escopo aprovado. Para colocar todas as
 integrações em operação ainda é necessário:
 
-1. habilitar o R2 na conta Cloudflare, criar o bucket privado e cadastrar no
-   GitHub as variáveis e o token descritos no runbook;
+1. criar a conta gratuita do Backblaze B2, o bucket privado e cadastrar no
+   GitHub as variáveis e as credenciais restritas descritas no runbook;
 2. executar e conferir o primeiro backup e um ensaio de restauração isolada;
 3. cadastrar `BREVO_API_KEY` como secret do Worker e validar o domínio remetente;
 4. revisar as mídias dos exames teóricos, importar os cadernos como rascunho e
@@ -667,12 +667,11 @@ são substituídas por código nem executadas com valores fictícios.
 ## 13. Referências de infraestrutura
 
 - [Cloudflare D1 — Time Travel e backups](https://developers.cloudflare.com/d1/reference/time-travel/)
-- [Cloudflare Workflows — exportar D1 para R2](https://developers.cloudflare.com/workflows/examples/backup-d1/)
+- [Backblaze B2 — preços](https://www.backblaze.com/cloud-storage/pricing)
+- [Backblaze B2 — AWS CLI](https://www.backblaze.com/docs/cloud-storage-use-the-aws-cli-with-backblaze-b2)
 - [Cloudflare Email Service — enviar por Worker](https://developers.cloudflare.com/email-service/get-started/send-emails/)
 - [Cloudflare Email Service — preços](https://developers.cloudflare.com/email-service/platform/pricing/)
 - [Cloudflare Email Service — bindings e restrições](https://developers.cloudflare.com/email-service/configuration/send-bindings/)
-- [Cloudflare R2](https://developers.cloudflare.com/r2/)
-- [Cloudflare R2 — preços](https://developers.cloudflare.com/r2/pricing/)
 - [Cloudflare Workflows — preços](https://developers.cloudflare.com/workflows/reference/pricing/)
 - [Brevo — planos e franquia gratuita](https://help.brevo.com/hc/en-us/articles/208589409-About-Brevo-s-pricing-plans)
 
@@ -690,10 +689,10 @@ eterna de serviços externos.
 | Dados | D1 já existente | paginação e consultas indexadas |
 | Offline | IndexedDB no aparelho | expiração e limpeza por usuário |
 | PDF | impressão no navegador | não armazenar binário inicialmente |
-| Backup | uma execução diária de Workflow e bucket R2 pequeno | alerta de uso e retenção automática |
+| Backup | uma execução diária no GitHub Actions e bucket B2 privado | alerta de uso e retenção automática |
 | E-mail | franquia transacional gratuita da Brevo | limite por conta/IP e alerta de falha |
 
-Antes de habilitar R2, Workflows ou e-mail, registrar limites vigentes, configurar
+Antes de habilitar B2 ou e-mail, registrar limites vigentes, configurar
 alertas disponíveis e definir o que o sistema fará ao atingir uma franquia. Uma
 mudança que possa gerar cobrança exige aprovação separada.
 

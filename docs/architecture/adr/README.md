@@ -17,6 +17,7 @@ anterior.
 | [008](008-revisoes-auditoria.md) | Revisões imutáveis e auditoria | Aceita; implementação incremental |
 | [009](009-portal-do-judoca.md) | Portal somente leitura para judoca ou responsável | Proposta |
 | [010](010-email-recuperacao.md) | E-mail transacional e recuperação de senha | Proposta |
-| [011](011-backup-restauracao.md) | Recuperação D1 e cópias no R2 | Aceita; ativação pendente |
+| [011](011-backup-restauracao.md) | Recuperação D1 e cópias no R2 | Substituída parcialmente pela ADR 014 |
 | [012](012-identidade-aluno-e-elegibilidade-teorica.md) | Identidade do aluno e elegibilidade pelo exame teórico | Aceita; implementação incremental |
 | [013](013-acesso-de-responsaveis.md) | Acesso delegado de responsáveis | Proposta; decisões pendentes |
+| [014](014-backup-backblaze-b2.md) | Backups externos no Backblaze B2 | Aceita; ativação pendente |
