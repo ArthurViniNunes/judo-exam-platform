@@ -21,3 +21,4 @@ anterior.
 | [012](012-identidade-aluno-e-elegibilidade-teorica.md) | Identidade do aluno e elegibilidade pelo exame teórico | Aceita; implementação incremental |
 | [013](013-acesso-de-responsaveis.md) | Acesso delegado de responsáveis | Proposta; decisões pendentes |
 | [014](014-backup-backblaze-b2.md) | Backups externos no Backblaze B2 | Aceita; ativação pendente |
+| [015](015-midias-teoricas-backblaze-b2.md) | Mídias teóricas em bucket B2 separado | Aceita; ativação pendente |

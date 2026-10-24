@@ -26,11 +26,13 @@ C4Context
   Person(admin, "Super Admin", "Gerencia avaliadores e possui visão global")
   System(platform, "Plataforma de Exames", "Avaliações teóricas, técnicas, kata e administração")
   System_Ext(youtube, "YouTube", "Vídeos de referência das técnicas")
+  System_Ext(b2, "Backblaze B2", "Mídias sanitizadas das questões")
 
   Rel(student, platform, "Usa a entrada principal pelo navegador")
   Rel(evaluator, platform, "Usa pelo navegador")
   Rel(admin, platform, "Administra pelo navegador")
   Rel(platform, youtube, "Incorpora vídeo com youtube-nocookie.com")
+  Rel(platform, b2, "Grava e apresenta mídias por HTTPS")
 ```
 
 ```mermaid
@@ -40,10 +42,13 @@ C4Container
   Container(frontend, "Frontend estático", "Next.js / React", "Interface, fluxo dos exames e regras puras de pontuação")
   Container(api, "API", "Cloudflare Worker", "Autenticação, autorização, validação e persistência")
   ContainerDb(db, "Banco", "Cloudflare D1", "Usuários, sessões, alunos e avaliações")
+  Container_Ext(media, "Objetos públicos", "Backblaze B2", "Imagens, áudios e vídeos sanitizados")
 
   Rel(user, frontend, "HTTPS")
-  Rel(frontend, api, "JSON/HTTPS + Bearer token")
+  Rel(frontend, api, "JSON ou mídia/HTTPS + Bearer token")
   Rel(api, db, "Binding D1")
+  Rel(api, media, "PUT assinado com credencial restrita")
+  Rel(frontend, media, "GET público da mídia")
 ```
 
 ## Limites de código
@@ -67,6 +72,7 @@ backend/src/                 módulos do Worker
   student-auth.ts            cadastro e autenticação no contexto de aluno
   theory-admin.ts            versões, questões e publicação da prova teórica
   theory-domain.ts           validação pura do conteúdo teórico
+  theory-media-storage.ts    validação e envio de mídias ao B2
   security.ts                senha, sessão e autenticação da requisição
   evaluations.ts             consultas e escrita de avaliações
   audit.ts                   gravação e consulta paginada da auditoria
@@ -189,6 +195,9 @@ erDiagram
 - o catálogo de técnicas e as regras de aprovação não são configuráveis pela interface;
 - sequências de Renraku-Henka recebem uma única nota; apenas itens que pedem
   explicitamente múltiplas execuções guardam as notas das partes e sua média.
+- somente o Super Admin envia mídias; o navegador nunca recebe a credencial B2;
+- mídias usam chaves aleatórias e um bucket próprio, público para leitura; o
+  bucket privado dos backups nunca é reutilizado.
 
 ## Qualidade e observabilidade
 

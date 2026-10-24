@@ -4,3 +4,10 @@ SUPER_ADMIN_INITIAL_PASSWORD=TroqueEstaSenhaLocal123!
 
 # Origens aceitas pelo backend durante o desenvolvimento local.
 FRONTEND_ORIGIN=http://127.0.0.1:3000,http://localhost:3000
+
+# O upload de mídia é opcional no ambiente local. Use uma chave e um bucket
+# exclusivos de desenvolvimento; deixe vazio para continuar usando URLs HTTPS.
+B2_MEDIA_KEY_ID=
+B2_MEDIA_APPLICATION_KEY=
+B2_MEDIA_BUCKET=
+B2_MEDIA_REGION=

@@ -87,6 +87,58 @@ O workflow aceita as duas variáveis B2 também como secrets. A etapa
 `Conferir acesso ao D1 e ao B2` diferencia configuração ausente, falha de acesso
 ao D1 e credencial ou bucket B2 inválido.
 
+## Mídias das provas teóricas
+
+Mídias usam um bucket diferente do backup. O bucket de backup contém dados
+pessoais e permanece privado; nunca altere sua visibilidade para atender às
+questões.
+
+### Preparar o bucket
+
+1. Em **B2 Cloud Storage → Buckets**, crie outro bucket globalmente único, por
+   exemplo `judo-exam-theory-media-arthur`.
+2. Marque **Files in Bucket are Public**. Publique somente recortes sanitizados,
+   sem nomes, rostos ou dados de alunos.
+3. Anote a região do endpoint S3, por exemplo `us-west-004`.
+4. Em **Application Keys**, crie uma chave exclusiva, restrita a esse bucket,
+   com acesso **Write Only**. Quando disponível, restrinja também ao prefixo
+   `theory-media/`.
+5. Guarde o `keyID` e o `applicationKey` no gerenciador de senhas. A chave de
+   aplicação é mostrada apenas uma vez.
+
+Não é necessário configurar upload direto nem CORS no B2: o navegador envia o
+arquivo ao Worker e o Worker grava no bucket.
+
+### Cadastrar no Worker
+
+Execute os quatro comandos e cole cada valor apenas no prompt protegido:
+
+```powershell
+corepack pnpm wrangler secret put B2_MEDIA_KEY_ID --config backend/wrangler.jsonc
+corepack pnpm wrangler secret put B2_MEDIA_APPLICATION_KEY --config backend/wrangler.jsonc
+corepack pnpm wrangler secret put B2_MEDIA_BUCKET --config backend/wrangler.jsonc
+corepack pnpm wrangler secret put B2_MEDIA_REGION --config backend/wrangler.jsonc
+```
+
+Em `B2_MEDIA_REGION`, informe somente a região, sem `https://` ou o restante do
+endpoint. Consulte `/health`: `theoryMedia` deve mudar de
+`missing_media_storage_configuration` para `configured`.
+
+Depois, entre como Super Admin, abra um rascunho em **Provas teóricas**, edite
+uma questão e envie um arquivo pequeno. Confira se a URL criada abre em uma
+janela anônima e se a mídia aparece na prévia do aluno. O editor aceita URL HTTPS
+manual mesmo quando o B2 não está configurado.
+
+### Segurança e consumo
+
+- limite atual: 50 MB por arquivo;
+- formatos ativos como SVG e HTML são recusados;
+- o nome original não vai para o bucket; a chave usa UUID;
+- remova EXIF e metadados internos antes do upload;
+- revise mensalmente o volume armazenado e a franquia vigente;
+- ao rotacionar a chave, repita somente os dois comandos de credencial; URLs já
+  gravadas continuam válidas.
+
 ### Recuperação de senha com Brevo
 
 1. Na Brevo, abra **Settings → Senders, Domains, IPs → Domains**, adicione o
@@ -173,6 +225,11 @@ janela de manutenção e aprovação explícita do responsável pela associaçã
   pela etapa de configuração e as permissões das duas credenciais;
 - backup falhou no upload ou na conferência: não considere a execução válida;
   confirme bucket, regras de acesso e espaço antes de executar novamente.
+- upload de mídia indisponível: confira `theoryMedia` em `/health` e os quatro
+  secrets `B2_MEDIA_*`; URLs manuais continuam sendo uma contingência segura;
+- mídia retorna 403: confirme que o bucket de mídias, e somente ele, está público;
+- mídia retorna 404: confirme se o objeto ainda existe e recadastre a URL na
+  questão em rascunho.
 
 Logs em tempo real:
 

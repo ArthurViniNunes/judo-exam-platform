@@ -124,6 +124,10 @@ Escolha uma senha local com pelo menos 10 caracteres, uma letra e um número. N�
 `false` durante a preparação do conteúdo oficial; tentativas já iniciadas,
 correções e aprovações existentes continuam acessíveis.
 
+O upload local de mídias é opcional. Deixe os quatro campos `B2_MEDIA_*` vazios
+para trabalhar com URLs HTTPS, ou use um bucket e uma chave exclusivos de
+desenvolvimento conforme o [runbook](docs/operations/runbook.md#midias-das-provas-teoricas).
+
 5. Crie ou atualize o banco local:
 
 ```powershell
@@ -367,6 +371,7 @@ Todas as rotas abaixo, exceto `/`, `/health`, login/registro e a leitura públic
 | `GET/PATCH/DELETE` | `/api/theory/admin/versions/:id` | Super Admin | Consulta, configura ou exclui um rascunho |
 | `POST` | `/api/theory/admin/versions/:id/questions` | Super Admin | Adiciona uma questão ao rascunho |
 | `PATCH/DELETE` | `/api/theory/admin/questions/:id` | Super Admin | Edita ou remove uma questão do rascunho |
+| `POST` | `/api/theory/admin/media` | Super Admin | Valida e envia imagem, áudio ou vídeo ao bucket de mídias |
 | `POST` | `/api/theory/admin/versions/:id/publish` | Super Admin | Valida e congela uma versão oficial |
 | `POST` | `/api/theory/admin/versions/:id/close` | Super Admin | Encerra uma versão publicada |
 | `GET` | `/api/theory-exams/available` | Aluno | Informa prova disponível, tentativa em andamento ou elegibilidade |
@@ -564,6 +569,7 @@ lib/practical-exams.ts        Catálogo, seleção automática e vídeos
 lib/practical-scoring.ts      Regra pura de aprovação prática
 lib/platform.ts               Tipos compartilhados do domínio
 backend/src/index.ts          Composição das rotas do Worker
+backend/src/theory-media-storage.ts Upload assinado de mídias teóricas
 backend/src/*.ts              Autenticação, domínio e casos de uso
 backend/migrations/           Migrações do D1
 tests/                        Regressões das regras de negócio

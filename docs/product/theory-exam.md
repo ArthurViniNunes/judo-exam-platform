@@ -33,9 +33,15 @@ sanitizado em vez do player do YouTube.
 
 ## Como entregar as mídias pendentes
 
-O cadastro administrativo atual recebe uma URL HTTPS; ele ainda não faz upload
-do arquivo. Para preparar as mídias sem ambiguidade, envie os arquivos originais
-com este padrão:
+O Super Admin pode escolher um arquivo diretamente no editor. A API valida o
+formato e o limite de 50 MB, envia o conteúdo ao bucket de mídias e preenche a
+URL HTTPS automaticamente. Imagens JPG, PNG, WebP e GIF, áudios MP3, M4A, OGG,
+WAV e WebM, e vídeos MP4, WebM e OGG são aceitos. SVG e outros formatos ativos
+são recusados.
+
+O armazenamento é opcional. Enquanto as credenciais não estiverem configuradas,
+o editor continua aceitando uma URL HTTPS informada manualmente. Para organizar
+os arquivos antes do envio, use este padrão local:
 
 ```text
 <faixa>-q<numero>-<descricao-curta>.<extensao>
@@ -43,14 +49,18 @@ verde-q42-ude-hishigi-ashi-gatame.mp4
 marrom-q39-uchi-mata-gaeshi.jpg
 ```
 
-Junto dos arquivos, informe apenas `faixa | número da questão | arquivo`. Se a
-mídia veio de um vídeo cujo título ou canal revela a resposta, envie o recorte
-sanitizado, não o link do YouTube. Imagens devem ter texto alternativo; vídeos
-devem evitar áudio ou quadros que revelem o gabarito sem intenção.
+Junto dos arquivos, informe apenas `faixa | número da questão | arquivo`. O nome
+original não é enviado ao armazenamento: a API gera uma chave aleatória que não
+expõe técnica, faixa ou gabarito. Se a mídia veio de um vídeo cujo título ou
+canal revela a resposta, envie o recorte sanitizado, não o link do YouTube.
+Remova também metadados embutidos antes do upload. Imagens devem ter texto
+alternativo; vídeos devem evitar áudio ou quadros que revelem o gabarito sem
+intenção.
 
-Os arquivos dos cadernos e suas mídias não devem entrar em commits de código sem
-revisão explícita. Depois de hospedados em endereço HTTPS, o Super Admin abre a
-questão, seleciona o tipo de mídia e cola a URL.
+Os arquivos dos cadernos e suas mídias não entram em commits de código. O bucket
+de mídias é público apenas para leitura e nunca pode ser o mesmo bucket privado
+dos backups. A configuração completa está no
+[runbook operacional](../operations/runbook.md#midias-das-provas-teoricas).
 
 ## Questões em grade
 
