@@ -17,9 +17,10 @@ import {
   Send,
   Shuffle,
   Trash2,
+  Upload,
   X,
 } from "lucide-react";
-import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
+import { ChangeEvent, FormEvent, useCallback, useEffect, useMemo, useState } from "react";
 import { ApiError, apiRequest } from "@/lib/api";
 import {
   THEORY_BELTS,
@@ -273,6 +274,15 @@ type QuestionDraft = {
   metadataSensitive: boolean;
 };
 
+type TheoryMediaUpload = {
+  sourceUrl: string;
+  kind: Exclude<TheoryMediaKind, "youtube">;
+  size: number;
+};
+
+const THEORY_MEDIA_ACCEPT = "image/jpeg,image/png,image/webp,image/gif,audio/mpeg,audio/mp4,audio/ogg,audio/wav,audio/webm,video/mp4,video/webm,video/ogg";
+const MAX_THEORY_MEDIA_BYTES = 50 * 1024 * 1024;
+
 type TheoryTemplateSummary = {
   beltId: (typeof THEORY_BELTS)[number]["id"];
   beltName: string;
@@ -343,6 +353,8 @@ function QuestionEditor({
 }) {
   const [draft, setDraft] = useState(() => questionDraft(question));
   const [busy, setBusy] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [uploadMessage, setUploadMessage] = useState("");
   const [error, setError] = useState("");
 
   useEffect(() => {
@@ -418,6 +430,44 @@ function QuestionEditor({
         };
       }),
     }));
+  };
+
+  const uploadMedia = async (event: ChangeEvent<HTMLInputElement>) => {
+    const input = event.currentTarget;
+    const file = input.files?.[0];
+    if (!file) return;
+    setError("");
+    setUploadMessage("");
+    if (file.size > MAX_THEORY_MEDIA_BYTES) {
+      setError("O arquivo deve ter no máximo 50 MB.");
+      input.value = "";
+      return;
+    }
+    if (!file.type) {
+      setError("Não foi possível identificar o formato do arquivo.");
+      input.value = "";
+      return;
+    }
+    setUploading(true);
+    try {
+      const uploaded = await apiRequest<TheoryMediaUpload>("/api/theory/admin/media", {
+        method: "POST",
+        headers: { "Content-Type": file.type },
+        body: file,
+      });
+      setDraft((current) => ({
+        ...current,
+        mediaEnabled: true,
+        mediaKind: uploaded.kind,
+        sourceUrl: uploaded.sourceUrl,
+      }));
+      setUploadMessage(`${file.name} está pronto para ser usado nesta questão.`);
+    } catch (caught) {
+      setError(actionError(caught, "Não foi possível enviar a mídia.").message);
+    } finally {
+      setUploading(false);
+      input.value = "";
+    }
   };
 
   const submit = async (event: FormEvent) => {
@@ -676,7 +726,10 @@ function QuestionEditor({
                   Tipo
                   <select
                     value={draft.mediaKind}
-                    onChange={(event) => setDraft({ ...draft, mediaKind: event.target.value as TheoryMediaKind })}
+                    onChange={(event) => {
+                      setUploadMessage("");
+                      setDraft({ ...draft, mediaKind: event.target.value as TheoryMediaKind });
+                    }}
                   >
                     <option value="image">Imagem</option>
                     <option value="audio">Áudio</option>
@@ -684,13 +737,38 @@ function QuestionEditor({
                     <option value="youtube">YouTube</option>
                   </select>
                 </label>
+                {draft.mediaKind !== "youtube" && (
+                  <div className="theory-media-upload">
+                    <label className={uploading ? "theory-media-upload-control busy" : "theory-media-upload-control"}>
+                      <input
+                        type="file"
+                        accept={THEORY_MEDIA_ACCEPT}
+                        disabled={uploading || busy}
+                        onChange={uploadMedia}
+                      />
+                      <Upload size={20} aria-hidden="true" />
+                      <span>
+                        <strong>{uploading ? "Enviando arquivo…" : "Escolher arquivo"}</strong>
+                        <small>Imagem, áudio ou vídeo de até 50 MB</small>
+                      </span>
+                    </label>
+                    {uploadMessage && (
+                      <p className="theory-media-uploaded" role="status">
+                        <CheckCircle2 size={16} aria-hidden="true" /> {uploadMessage}
+                      </p>
+                    )}
+                  </div>
+                )}
                 <label>
-                  URL HTTPS
+                  URL HTTPS <small>preenchida após o upload ou informada manualmente</small>
                   <input
                     type="url"
                     required
                     value={draft.sourceUrl}
-                    onChange={(event) => setDraft({ ...draft, sourceUrl: event.target.value })}
+                    onChange={(event) => {
+                      setUploadMessage("");
+                      setDraft({ ...draft, sourceUrl: event.target.value });
+                    }}
                     placeholder="https://…"
                   />
                 </label>
@@ -723,8 +801,8 @@ function QuestionEditor({
           {error && <div className="management-error" role="alert">{error}</div>}
           <div className="theory-dialog-actions sticky">
             <button type="button" className="management-secondary" onClick={onClose}>Cancelar</button>
-            <button className="management-primary" disabled={busy}>
-              <Save size={18} /> {busy ? "Salvando…" : "Salvar questão"}
+            <button className="management-primary" disabled={busy || uploading}>
+              <Save size={18} /> {busy ? "Salvando…" : uploading ? "Aguarde o envio…" : "Salvar questão"}
             </button>
           </div>
         </form>

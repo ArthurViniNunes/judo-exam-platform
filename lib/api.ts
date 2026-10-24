@@ -54,7 +54,7 @@ export async function apiRequest<T>(path: string, init?: RequestInit): Promise<T
   const token = getAuthToken();
   const device = getDeviceIdentity();
   const headers = {
-    ...(init?.body ? { "Content-Type": "application/json" } : {}),
+    ...(typeof init?.body === "string" ? { "Content-Type": "application/json" } : {}),
     ...(token ? { Authorization: `Bearer ${token}` } : {}),
     ...(device ? {
       "X-Device-Id": device.id,
